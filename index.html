@@ -2321,13 +2321,18 @@ function auInit(){if(AU.ctx)return;const C=window.AudioContext||window.webkitAud
  const nb=c.createBuffer(1,c.sampleRate,c.sampleRate),d=nb.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;AU.noise=nb;
  AU.musT=c.currentTime+0.1;AU.timer=setInterval(musTick,50);}
 /* the player's own tracks: menu theme while the lobby is on screen, the Titan theme while a Titan is on its way (finale); each loops and cross-fades */
+/* music volume that also works on iPhone: there <audio>.volume is read-only (always full), so a fade never reached zero and
+   the lobby tune never stopped. Each track is routed once through a Web Audio gain node and the level is set there. */
+function mVol(a,v){a._lv=v;if(AU.ctx&&a._g===undefined){try{const src=AU.ctx.createMediaElementSource(a),g=AU.ctx.createGain();src.connect(g);g.connect(AU.ctx.destination);a._g=g;a.volume=1;}catch(_){a._g=null;}}
+ if(a._g){try{a._g.gain.value=v;}catch(_){}}else{try{a.volume=v;}catch(_){}}}
+function mGet(a){return a._lv!=null?a._lv:a.volume;}
 const SONGS={menu:{src:'intro.mp3',vol:0.55},titan:{src:'titan.mp3',vol:0.38},desert:{src:'desert.mp3',vol:0.6},forest:{src:'forest.mp3',vol:0.45},winter:{src:'winter.mp3',vol:0.32}};let auGest=false;
 let LOBBY_EL=null;function lobbyOn(){const lb=LOBBY_EL||(LOBBY_EL=document.getElementById('lobby'));return !!lb&&!lb.hidden;}
 function wantedTrack(){if(lobbyOn())return'menu';if(mode!=='menu'&&viewW&&viewW.finale&&!viewW.over)return'titan';if(mode!=='menu'&&viewW&&!viewW.over&&MAP&&MAP.song)return MAP.song;return null;}
 function menuMusicTick(dt){const w=auGest&&AU.music?wantedTrack():null;
- for(const k in SONGS){const tr=SONGS[k];if(k===w){if(!tr.a){tr.a=new Audio(tr.src);tr.a.loop=true;tr.a.preload='auto';tr.a.volume=0;tr.a.onerror=()=>{tr.bad=true;};}
-   if(tr.a.paused){if(k==='titan'&&!tr.started){tr.a.currentTime=0;tr.started=true;}tr.a.play().catch(()=>{});}tr.a.volume=Math.min(tr.vol,tr.a.volume+dt*0.8);}
-  else if(tr.a&&!tr.a.paused){tr.a.volume=Math.max(0,tr.a.volume-dt*0.9);if(tr.a.volume<=0.01)tr.a.pause();}}}
+ for(const k in SONGS){const tr=SONGS[k];if(k===w){if(!tr.a){tr.a=new Audio(tr.src);tr.a.loop=true;tr.a.preload='auto';mVol(tr.a,0);tr.a.onerror=()=>{tr.bad=true;};}
+   if(tr.a.paused){if(k==='titan'&&!tr.started){tr.a.currentTime=0;tr.started=true;}tr.a.play().catch(()=>{});}mVol(tr.a,Math.min(tr.vol,mGet(tr.a)+dt*0.8));}
+  else if(tr.a&&!tr.a.paused){mVol(tr.a,Math.max(0,mGet(tr.a)-dt*0.9));if(mGet(tr.a)<=0.01)tr.a.pause();}}}
 /* the synthesized loop steps aside while one of the player's tracks is playing */
 function ownTrackPlaying(){const w=wantedTrack();return !!w&&!!SONGS[w].a&&!SONGS[w].bad&&!SONGS[w].a.paused;}
 function auUnlock(){auInit();if(AU.ctx&&AU.ctx.state==='suspended')AU.ctx.resume().catch(()=>{});if(!auGest){auGest=true;menuMusicTick(0.02);}}
@@ -2429,7 +2434,7 @@ function musStep(step,t,spb){if(!AU.music||AU.mode==='end'||lobbyOn()||ownTrackP
  const n=MEL[bar%8][s];if(n&&(battle||bar%2===0))tn(o,t,spb*(battle?1.8:3),battle?'square':'triangle',mf(n+(battle?0:12)),0,battle?0.045:0.06,0.01);}
 
 /* ---------------- loop ---------------- */
-function resize(){const st=document.getElementById('stage');const w=st.clientWidth,h=st.clientHeight;let cw=w,ch=w/2;if(ch>h){ch=h;cw=h*2;}cv.style.width=Math.floor(cw)+'px';cv.style.height=Math.floor(ch)+'px';DPR=Math.min(3,Math.max(1,(window.devicePixelRatio||1)*cw/VW));cv.width=Math.round(VW*DPR);cv.height=Math.round(VH*DPR);bgCache=null;}
+function resize(){const st=document.getElementById('stage');const w=st.clientWidth,h=st.clientHeight;let cw=w,ch=w/2;if(ch>h){ch=h;cw=h*2;}cv.style.width=Math.floor(cw)+'px';cv.style.height=Math.floor(ch)+'px';/* at most 2× the logical size: on 3× phone screens (iPhone) a full-resolution canvas made every frame twice as heavy */DPR=Math.min(2,Math.max(1,(window.devicePixelRatio||1)*cw/VW));cv.width=Math.round(VW*DPR);cv.height=Math.round(VH*DPR);bgCache=null;}
 window.addEventListener('resize',resize);resize();
 let frameErr=0;
 /* selling asks for 3 s: the sell button turns into "Отмена"; untouched, the tower is sold when the time runs out */
@@ -2510,9 +2515,9 @@ function ensureLost(){voiceLoad();voiceReset();for(const k in ENDS){const e=ENDS
 /* the end tune starts at 20% (of full volume) while the victory/defeat line speaks, then fades back up to full once the line is over
    (a fallback brings it up anyway if no line plays) */
 let END_DUCK=null;
-function endUnduck(){const d=END_DUCK;if(!d||d.up)return;d.up=true;clearTimeout(d.fb);const a=d.a,v0=a.volume,t0=performance.now(),T=1500;
- const st=()=>{if(END_DUCK!==d)return;const f=Math.min(1,(performance.now()-t0)/T);try{a.volume=Math.min(1,v0+(d.vol-v0)*f);}catch(_){}if(f<1)setTimeout(st,40);};st();}
-function playEnd(k){const e=ENDS[k];try{if(!e.a)ensureLost();if(AU.music&&e.a&&!e.bad){e.a.currentTime=0;e.a.volume=0.2;END_DUCK={a:e.a,vol:e.vol};END_DUCK.fb=setTimeout(endUnduck,12000);e.a.play().catch(()=>{try{e.fb();}catch(_){}});}else e.fb();}catch(_){}}
+function endUnduck(){const d=END_DUCK;if(!d||d.up)return;d.up=true;clearTimeout(d.fb);const a=d.a,v0=mGet(a),t0=performance.now(),T=1500;
+ const st=()=>{if(END_DUCK!==d)return;const f=Math.min(1,(performance.now()-t0)/T);try{mVol(a,Math.min(1,v0+(d.vol-v0)*f));}catch(_){}if(f<1)setTimeout(st,40);};st();}
+function playEnd(k){const e=ENDS[k];try{if(!e.a)ensureLost();if(AU.music&&e.a&&!e.bad){e.a.currentTime=0;mVol(e.a,0.2);END_DUCK={a:e.a,vol:e.vol};END_DUCK.fb=setTimeout(endUnduck,12000);e.a.play().catch(()=>{try{e.fb();}catch(_){}});}else e.fb();}catch(_){}}
 function frameBody(nowMs){if(viewW&&viewW.nuke&&mode!=='menu'){const N=viewW.nuke,tv=N.t<NK.launch?N.s:N.tg;if(view!==tv){view=tv;}menu=null;}if(viewW&&viewW.over&&mode!=='menu'){const o=viewW.over;if(!endSeen){endSeen=true;AU.mode='end';const won=o.w===me;playEnd(won?'win':'lost');{/* 2 s after the end of any kind: the victory or the defeat line */const g=won?'win':'lose',w0=viewW;setTimeout(()=>{if(endSeen&&viewW===w0||endSeen&&viewW&&viewW.over)voiceGrp(g);},2000);}}
  if(!o.done){const tv=(o.why==='titan'&&o.ts!=null)?o.ts:1-o.w;if(view!==tv){view=tv;menu=null;}}}{const lb=document.getElementById('lobby');document.body.classList.toggle('playing',!!lb&&lb.hidden);}if(viewW&&mode!=='menu'&&AU.mode!=='menu'&&AU.mode!=='end'){const fm=viewW.finale&&!viewW.over?'finale':'battle';if(AU.mode!==fm)AU.mode=fm;}
 if(menu&&menu.until&&now()>menu.until)menu=null;
@@ -2530,9 +2535,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.04-2317</div>
+<div id="appVer">v2026.11.05-0919</div>
 <script>
-window.APP_VERSION='2026.11.04-2317';
+window.APP_VERSION='2026.11.05-0919';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
