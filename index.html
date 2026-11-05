@@ -1984,8 +1984,8 @@ function drawHud(t){const M=viewW.sides[me],O=viewW.sides[1-me];const gt=mode===
  if(M.dep&&M.dep[1]<=0){if(richGoneAt==null)richGoneAt=now();if(now()-richGoneAt<7)topMsg('Богатое поле опустело — харвестеры возвращены (+500 за каждый)','rgba(20,28,18,0.92)','#FFE07A');}
  else if(!M.hv.length){const ft=Math.ceil(M.freeT??0);topMsg('Харвестеров нет — бесплатный выедет через '+ft+' с','rgba(20,28,18,0.92)','#FFE07A');}
  // arrow towards the other half of the battlefield
- ctx.save();ctx.globalAlpha=0.7+0.2*Math.sin(t*3);const ex=view===0?VW-26:6;RR(ctx,ex,VH/2-34,20,68,10,'rgba(20,28,18,0.86)');T(view===0?'›':'‹',ex+10,VH/2,22,'#fff','center',800);ctx.restore();
- if(view!==me&&!(viewW.over&&!viewW.over.done)&&!viewW.nuke)topMsg('Территория соперника. Свайп '+(me===0?'вправо':'влево')+' — назад','rgba(20,28,18,0.9)','#fff',true,1);
+ ctx.save();ctx.globalAlpha=0.7+0.2*Math.sin(t*3);const ex=view===me?VW-26:6;RR(ctx,ex,VH/2-34,20,68,10,'rgba(20,28,18,0.86)');T(view===me?'›':'‹',ex+10,VH/2,22,'#fff','center',800);ctx.restore();
+ if(view!==me&&!(viewW.over&&!viewW.over.done)&&!viewW.nuke)topMsg('Территория соперника. Свайп вправо — назад','rgba(20,28,18,0.9)','#fff',true,1);
 }
 /* fullscreen: only offered where the browser/viewer actually allows it */
 const FS_OK=!!(document.fullscreenEnabled||document.webkitFullscreenEnabled);
@@ -2012,10 +2012,13 @@ function drawCtrl(){const pz=!!viewW.pause,fast=(viewW.speed||1)===2;
   if(b.k==='pause'){if(pz)P(ctx,[[cx-6,cy-9],[cx+9,cy],[cx-6,cy+9]],col);else{RR(ctx,cx-8,cy-9,6,18,2,col);RR(ctx,cx+2,cy-9,6,18,2,col);}}
   else{P(ctx,[[cx-11,cy-8],[cx-1,cy],[cx-11,cy+8]],col);P(ctx,[[cx-1,cy-8],[cx+9,cy],[cx-1,cy+8]],col);if(fast){RR(ctx,cx+3,cy+6,17,12,5,'#1C2416');T('×2',cx+11.5,cy+12,9,'#F2C232','center',900);}}}}
 let shake=0,titanMsg=null;
-function render(t){ctx.setTransform(DPR,0,0,DPR,0,0);ctx.clearRect(0,0,VW,VH);if(mode==='editor'){drawEditor(t);return;}if(!viewW)return;const off=viewT*VW;
+function render(t){ctx.setTransform(DPR,0,0,DPR,0,0);ctx.clearRect(0,0,VW,VH);if(mode==='editor'){drawEditor(t);return;}if(!viewW)return;
+ /* each player sees their own field on the left page (as drawn, base on the left, attacking to the right) and the opponent's
+    mirrored on the right page — the guest (side 1) too, so both phones look the same way round */
+ const L=me===1?1:0,P=me===1?1-viewT:viewT,off=P*VW;
  shake*=0.88;if(shake<0.2)shake=0;const shx=(Math.random()-0.5)*2*shake,shy=(Math.random()-0.5)*2*shake;ctx.save();ctx.translate(shx,shy);
- if(viewT<0.99){ctx.save();ctx.translate(-off,0);drawMap(0,t);drawNuke(0,t);ctx.restore();}
- if(viewT>0.01){ctx.save();ctx.translate(2*VW-off,0);ctx.scale(-1,1);FLIP=true;drawMap(1,t);drawNuke(1,t);FLIP=false;ctx.restore();}
+ if(P<0.99){ctx.save();ctx.translate(-off,0);drawMap(L,t);drawNuke(L,t);ctx.restore();}
+ if(P>0.01){ctx.save();ctx.translate(2*VW-off,0);ctx.scale(-1,1);FLIP=true;drawMap(1-L,t);drawNuke(1-L,t);FLIP=false;ctx.restore();}
  if(viewW.sides[view]&&viewW.sides[view].frzT>0){const k=Math.min(1,viewW.sides[view].frzT/1.5);const gr=ctx.createRadialGradient(VW/2,VH/2,VH*0.35,VW/2,VH/2,VW*0.62);gr.addColorStop(0,'rgba(200,240,255,0)');gr.addColorStop(1,'rgba(200,240,255,'+(0.45*k)+')');ctx.fillStyle=gr;ctx.fillRect(0,0,VW,VH);}
  drawNukeFlash();ctx.restore();
  // cinematic: the interface slides away while a nuclear strike is on screen
@@ -2023,7 +2026,7 @@ function render(t){ctx.setTransform(DPR,0,0,DPR,0,0);ctx.clearRect(0,0,VW,VH);if
  if(hudA<0.02)return;ctx.save();ctx.globalAlpha=hudA;
  drawHud(t);if(mode!=='menu'){drawBar(t);drawFree(t);drawAbil(t);drawCtrl();drawMsgs();}else MSGS.length=0;if(menu&&view===me&&Math.abs(viewT-view)<0.05&&!viewW.pause)drawMenu();ctx.restore();}
 let hudA=1,hudT=0;
-const toScr=(x)=>me===1?VW-x:x;
+/* own field is never mirrored now, so taps map straight onto it */const toScr=(x)=>x;
 
 /* ---------------- input ---------------- */
 function toLocal(ev){const r=cv.getBoundingClientRect();return[(ev.clientX-r.left)*VW/r.width,(ev.clientY-r.top)*VH/r.height];}
@@ -2034,7 +2037,7 @@ cv.addEventListener('pointerdown',e=>{if(mode!=='editor')return;try{cv.setPointe
 cv.addEventListener('pointermove',e=>{if(mode==='editor'&&ED_DRAG)edMove(...toLocal(e));});
 for(const ev of ['pointerup','pointercancel'])cv.addEventListener(ev,()=>{if(mode==='editor')edUp();});
 cv.addEventListener('pointerup',e=>{if(!down||mode==='menu'||mode==='editor')return;const dx=e.clientX-down.x,dy=e.clientY-down.y;const dist=Math.hypot(dx,dy);const r=cv.getBoundingClientRect();
- if(Math.abs(dx)>r.width*0.08&&Math.abs(dx)>Math.abs(dy)*1.3){menu=null;view=dx<0?1:0;down=null;return;}
+ if(Math.abs(dx)>r.width*0.08&&Math.abs(dx)>Math.abs(dy)*1.3){menu=null;view=dx<0?1-me:me;down=null;return;}
  down=null;if(dist>12)return;tap(...toLocal(e));});
 function menuHit(x,y){if(!menu||view!==me)return false;const lay=radialLayout();return !!lay&&lay.pos.some(p=>Math.hypot(p.x-x,p.y-y)<(p.it.big?32:22));}
 function tap(x,y){if(!viewW)return;const onMenu=mode!=='menu'&&!viewW.pause&&menuHit(x,y);
@@ -2047,7 +2050,7 @@ function tap(x,y){if(!viewW)return;const onMenu=mode!=='menu'&&!viewW.pause&&men
  if(mode!=='menu'&&!viewW.pause&&!onMenu){const S1=viewW.sides[me];for(const b of freeRects())if(x>=b.x-3&&x<=b.x+b.w+3&&y>=b.y-6&&y<=b.y+b.h+3){menu=null;if(((S1.fcd||{})[b.k]||0)>0)SFX.deny();else{SFX.click();sendCmd({a:'fsend',k:b.k});if(mode==='guest'&&S1.fcd)S1.fcd[b.k]=FREE_SQ[b.k].cd;}return;}}
  if(mode!=='menu'&&!viewW.pause&&!onMenu){for(const b of barRects())if(x>=b.x-3&&x<=b.x+b.w+3&&y>=b.y-3&&y<=b.y+b.h+3){menu=null;pressK=b.it.k;pressT=now();if(b.it.dis)SFX.deny();else{SFX.click();sendCmd(b.it.cmd);}return;}}
  if(viewW.pause){for(const b of pauseBtns())if(x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h){if(b.k==='mus')auSetMusic(!AU.music);else if(b.k==='sfx')auSetOn(!AU.on);else PZ_PEND=PZ_PEND&&PZ_PEND.k===b.k?null:{k:b.k,at:now()+PZ_WAIT};auUnlock();SFX.click();}return;}
- if(y>VH/2-36&&y<VH/2+36&&!menu){if(view===0&&x>VW-30){view=1;return;}if(view===1&&x<30){view=0;return;}}
+ if(y>VH/2-36&&y<VH/2+36&&!menu){if(view===me&&x>VW-30){view=1-me;return;}if(view!==me&&x<30){view=me;return;}}
  if(view!==me)return;const S=viewW.sides[me];
  if(menu){const lay=radialLayout();if(lay){for(const {it,x:bx,y:by} of lay.pos){if(Math.hypot(bx-x,by-y)<(it.big?32:22)){if(!it.dis&&it.sellReq){SFX.click();PEND_SELL={id:it.sellReq,at:now()+SELL_WAIT};return;}if(it.cancel){SFX.click();PEND_SELL=null;return;}if(!it.dis){SFX.click();sendCmd(it.cmd);if(menu.kind==='factory'){menu.until=now()+2;}else menu=null;}else{SFX.deny();if(menu.until)menu.until=now()+2;}return;}}}
   if(menu.kind==='harv')sendCmd({a:'hgo',id:menu.id});menu=null;return;}
@@ -2459,7 +2462,7 @@ function jetTick(){const c=AU.ctx;if(!c||c.state!=='running')return;
   const o=c.createOscillator();o.type='sawtooth';o.frequency.value=210;const og=c.createGain();og.gain.value=0.06;const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1200;o.connect(lp);lp.connect(og);og.connect(JET.g);JET.o=o;
   if(JET.pan){JET.g.connect(JET.pan);JET.pan.connect(AU.sfx);}else JET.g.connect(AU.sfx);src.start();o.start();}
  let n=0,sx=0;const S=viewW&&mode!=='menu'&&!viewW.pause&&!viewW.over?viewW.sides[view]:null;
- if(S)for(const u of S.units){if(u.k!=='plane')continue;const p=uat(u,u.dd??u.d);const x=view===1?VW-p[0]:p[0];n++;sx+=x;
+ if(S)for(const u of S.units){if(u.k!=='plane')continue;const p=uat(u,u.dd??u.d);const x=view!==me?VW-p[0]:p[0];n++;sx+=x;
   const key=view+':'+u.id;if(!JET.seen[key]){JET.seen[key]=1;if(AU.on){const t=c.currentTime,b=bus(0.35);nz(b,t,1.1,'bandpass',2600,500,1.2,0.5,0.25);}}}
  const tgt=AU.on&&n?Math.min(0.32,0.14+0.05*n):0;JET.g.gain.setTargetAtTime(tgt,c.currentTime,0.25);
  if(n){JET.o.frequency.setTargetAtTime(200+15*Math.min(4,n)+8*Math.sin(now()*2),c.currentTime,0.2);if(JET.pan)JET.pan.pan.setTargetAtTime(Math.max(-0.8,Math.min(0.8,(sx/n/VW-0.5)*1.6)),c.currentTime,0.15);}}
@@ -2542,9 +2545,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.05-2110</div>
+<div id="appVer">v2026.11.05-2209</div>
 <script>
-window.APP_VERSION='2026.11.05-2110';
+window.APP_VERSION='2026.11.05-2209';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
