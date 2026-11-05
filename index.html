@@ -2025,7 +2025,7 @@ function render(t){ctx.setTransform(DPR,0,0,DPR,0,0);ctx.clearRect(0,0,VW,VH);if
  {const tgt=viewW.nuke?0:1,n=now();hudA+=(tgt-hudA)*Math.min(1,(n-(hudT||n))*4);hudT=n;}
  if(hudA<0.02)return;ctx.save();ctx.globalAlpha=hudA;
  drawHud(t);if(mode!=='menu'){drawBar(t);drawFree(t);drawAbil(t);drawCtrl();drawMsgs();}else MSGS.length=0;if(menu&&view===me&&Math.abs(viewT-view)<0.05&&!viewW.pause)drawMenu();ctx.restore();}
-let hudA=1,hudT=0;
+let hudA=1,hudT=0,NK_BACK=0;
 /* own field is never mirrored now, so taps map straight onto it */const toScr=(x)=>x;
 
 /* ---------------- input ---------------- */
@@ -2403,7 +2403,7 @@ if(e.e==='mineboom'&&e.s===me)voiceGrp('mine');
 /* my first mine of the game: "mine set" (later ones are placed silently) */
 if(e.e==='mset'){if(e.s===me&&!VQ.mset){VQ.mset=true;voiceGrp('mset');}return;}/* an enemy rocket hits my mine (the white flash) */
 if(e.e==='nkb'&&e.s===me)voiceGrp('nkb');/* my own Titan rolls out */
-if(e.e==='tout'){if(e.s===me)voiceGrp('tout');return;}if(e.e==='vrain'){if(e.s===me)voiceGrp('rain');return;}if(e.e==='vtw'){if(e.s===me)voiceGrp('tw4');return;}if(e.e==='vbig'){if(e.s===me)voice(Math.random()<0.5?'mazor1':'mazor2');return;}if(e.e==='nkc'){if(e.n===NUKE_COUNT&&e.s!==me)voice('nuke');if(e.n===2&&e.s===me)voice('rzap1');if(e.s===me||e.s===view){const t=AU.ctx.currentTime,o=bus(0.4);tn(o,t,0.12,'square',e.n<=3?1320:880,0,0.18,0.005);}return;}if(e.e==='nkl'){SFX.nukeLaunch();return;}if(e.e==='nkf'){SFX.whistle(NK.fall);return;}if(e.e==='nkb'){SFX.nukeBoom();return;}if(e.e==='bigboom'){if(e.s===view){SFX.boom(2.6,1);SFX.boom(2,0.8);}return;}if(e.e==='fw'){if(e.s===view){SFX.small(0.4);setTimeout(()=>{try{SFX.crack(0.9);}catch(_){}},550);}return;}if(e.e==='cap'){if(e.s===view)SFX.upgrade();return;}if(e.e==='mineboom'&&e.s===view){SFX.boom(3,1);SFX.boom(2.2,1);return;}if(e.e==='freeze'&&e.s===me){SFX.freeze();return;}if(e.e==='rainfall'&&e.s===view){SFX.whistle(e.T);return;}if(e.e==='ff'){if(e.s===view)SFX.enemyShot(e.k,1);return;}if(e.e==='zap'){if(e.s===view||e.s===me){const tw=towerById(e.s,e.t);SFX.zap(tw?tw.lv:1,e.s===view?1:0.3);}return;}if(e.e==='mineset'&&e.s===me){SFX.build();return;}
+if(e.e==='tout'){voiceGrp(e.s===me?'tout':'etout');return;}if(e.e==='vrain'){if(e.s===me)voiceGrp('rain');return;}if(e.e==='vtw'){if(e.s===me)voiceGrp('tw4');return;}if(e.e==='vbig'){if(e.s===me)voice(Math.random()<0.5?'mazor1':'mazor2');return;}if(e.e==='nkc'){if(e.n===NUKE_COUNT&&e.s!==me)voice('nuke');if(e.n===2&&e.s===me)voice('rzap1');if(e.s===me||e.s===view){const t=AU.ctx.currentTime,o=bus(0.4);tn(o,t,0.12,'square',e.n<=3?1320:880,0,0.18,0.005);}return;}if(e.e==='nkl'){SFX.nukeLaunch();return;}if(e.e==='nkf'){SFX.whistle(NK.fall);return;}if(e.e==='nkb'){SFX.nukeBoom();return;}if(e.e==='bigboom'){if(e.s===view){SFX.boom(2.6,1);SFX.boom(2,0.8);}return;}if(e.e==='fw'){if(e.s===view){SFX.small(0.4);setTimeout(()=>{try{SFX.crack(0.9);}catch(_){}},550);}return;}if(e.e==='cap'){if(e.s===view)SFX.upgrade();return;}if(e.e==='mineboom'&&e.s===view){SFX.boom(3,1);SFX.boom(2.2,1);return;}if(e.e==='freeze'&&e.s===me){SFX.freeze();return;}if(e.e==='rainfall'&&e.s===view){SFX.whistle(e.T);return;}if(e.e==='ff'){if(e.s===view)SFX.enemyShot(e.k,1);return;}if(e.e==='zap'){if(e.s===view||e.s===me){const tw=towerById(e.s,e.t);SFX.zap(tw?tw.lv:1,e.s===view?1:0.3);}return;}if(e.e==='mineset'&&e.s===me){SFX.build();return;}
  /* the opponent's half is heard only while you are looking at it; your own half stays audible (quieter) when you look away */
  if(e.s!==view&&e.s!==me&&!(e.e==='breach'))return;const v=(e.s===view?1:0.3);
  if(e.e==='mg'||e.e==='cn'||e.e==='rk'){const tw=towerById(e.s,e.t);const lv=tw?tw.lv||1:1;if(e.e==='mg')SFX.mg(lv,v);else if(e.e==='cn')SFX.cannon(lv,v);else SFX.rocket(lv,v);}
@@ -2479,6 +2479,7 @@ const VOICE={mine:{src:'voice_mine2.mp3',vol:0.9,pri:1},nuke:{src:'voice_nuke2.m
  win1:{src:'voice_win1.mp3',vol:0.95,pri:1},win2:{src:'voice_win2.mp3',vol:0.95,pri:1},win3:{src:'voice_win3.mp3',vol:0.95,pri:1},win4:{src:'voice_win4.mp3',vol:0.95,pri:1},win5:{src:'voice_win5.mp3',vol:0.95,pri:1},
  lose1:{src:'voice_lose1.mp3',vol:0.95,pri:1},lose2:{src:'voice_lose2.mp3',vol:0.95,pri:1},lose3:{src:'voice_lose3.mp3',vol:0.95,pri:1},lose4:{src:'voice_lose4.mp3',vol:0.95,pri:1},lose5:{src:'voice_lose5.mp3',vol:0.95,pri:1},lose6:{src:'voice_lose6.mp3',vol:0.95,pri:1},
  tout1:{src:'voice_tout1.mp3',vol:0.95,pri:1},tout2:{src:'voice_tout2.mp3',vol:0.95,pri:1},tout3:{src:'voice_tout3.mp3',vol:0.95,pri:1},tout4:{src:'voice_tout4.mp3',vol:0.95,pri:1},tout5:{src:'voice_tout5.mp3',vol:0.95,pri:1},tout6:{src:'voice_tout6.mp3',vol:0.95,pri:1},tout7:{src:'voice_tout7.mp3',vol:0.95,pri:1},tout8:{src:'voice_tout8.mp3',vol:0.95,pri:1},tout9:{src:'voice_tout9.mp3',vol:0.95,pri:1},
+ etout1:{src:'voice_etout1.mp3',vol:0.95,pri:1},etout2:{src:'voice_etout2.mp3',vol:0.95,pri:1},etout3:{src:'voice_etout3.mp3',vol:0.95,pri:1},etout4:{src:'voice_etout4.mp3',vol:0.95,pri:1},etout5:{src:'voice_etout5.mp3',vol:0.95,pri:1},
  batk1:{src:'voice_batk1.mp3',vol:0.95,pri:1},
  rzap1:{src:'voice_rzap1.mp3',vol:0.95,pri:1},
  balist1:{src:'voice_balist1.mp3',vol:0.95,pri:1},
@@ -2509,7 +2510,7 @@ function voiceReset(){END_DUCK=null;try{if(VQ.src)VQ.src.stop();}catch(_){}VQ.cu
 /* enemy units on my side of the river: a random line from a group (never the same one twice running) when a unit, for the first time,
    - is halfway along the road (between 65% and 80% of its length): "the enemy broke through";
    - is right at my base (the last 90 px): a taunt */
-const VGRP={tout:{ks:['tout1','tout2','tout3','tout4','tout5','tout6','tout7','tout8','tout9'],seen:new Set(),last:''},mset:{ks:['mset1','mset2','mset3','mset4'],seen:new Set(),last:''},nkb:{ks:['nkb1','nkb2','nkb3','nkb4','nkb5','nkb6'],seen:new Set(),last:''},win:{ks:['win1','win2','win3','win4','win5'],seen:new Set(),last:'',keep:1},lose:{ks:['lose1','lose2','lose3','lose4','lose5','lose6'],seen:new Set(),last:'',keep:1},first:{ks:['first1','first2','first3','first4','first5','first6','first7'],seen:new Set(),last:''},mine:{ks:['mvz1','mvz2'],seen:new Set(),last:''},rain:{ks:['bomb1','bomb2','bomb3','bomb4','bomb5','bomb6','bomb7'],seen:new Set(),last:''},tw4:{ks:['orud1'],seen:new Set(),last:''},mid:{ks:['vrag1','vrag2','vrag3','vrag4','vrag5','vrag6','vrag7','vrag8','vrag9'],seen:new Set(),last:''},near:{ks:['loh1','loh2','loh3','loh4','loh5','loh6','loh7','loh8','loh9','loh10'],seen:new Set(),last:''}},LOH_D=90;
+const VGRP={etout:{ks:['etout1','etout2','etout3','etout4','etout5'],seen:new Set(),last:''},tout:{ks:['tout1','tout2','tout3','tout4','tout5','tout6','tout7','tout8','tout9'],seen:new Set(),last:''},mset:{ks:['mset1','mset2','mset3','mset4'],seen:new Set(),last:''},nkb:{ks:['nkb1','nkb2','nkb3','nkb4','nkb5','nkb6'],seen:new Set(),last:''},win:{ks:['win1','win2','win3','win4','win5'],seen:new Set(),last:'',keep:1},lose:{ks:['lose1','lose2','lose3','lose4','lose5','lose6'],seen:new Set(),last:'',keep:1},first:{ks:['first1','first2','first3','first4','first5','first6','first7'],seen:new Set(),last:''},mine:{ks:['mvz1','mvz2'],seen:new Set(),last:''},rain:{ks:['bomb1','bomb2','bomb3','bomb4','bomb5','bomb6','bomb7'],seen:new Set(),last:''},tw4:{ks:['orud1'],seen:new Set(),last:''},mid:{ks:['vrag1','vrag2','vrag3','vrag4','vrag5','vrag6','vrag7','vrag8','vrag9'],seen:new Set(),last:''},near:{ks:['loh1','loh2','loh3','loh4','loh5','loh6','loh7','loh8','loh9','loh10'],seen:new Set(),last:''}},LOH_D=90;
 function voiceFree(){return !VQ.cur&&!VQ.q.length&&vNow()>=VQ.end+VOICE_GAP;}
 function voiceGrp(g){const G=VGRP[g],c=G.ks.length>1?G.ks.filter(k=>k!==G.last):G.ks,k=c[Math.floor(Math.random()*c.length)];
  /* a priority group keeps at most one of its lines waiting or playing (a whole wave at the base gives one line, not a string of them) */
@@ -2528,7 +2529,10 @@ let END_DUCK=null;
 function endUnduck(){const d=END_DUCK;if(!d||d.up)return;d.up=true;clearTimeout(d.fb);const a=d.a,v0=mGet(a),t0=performance.now(),T=1500;
  const st=()=>{if(END_DUCK!==d)return;const f=Math.min(1,(performance.now()-t0)/T);try{mVol(a,Math.min(1,v0+(d.vol-v0)*f));}catch(_){}if(f<1)setTimeout(st,40);};st();}
 function playEnd(k){const e=ENDS[k];try{if(!e.a)ensureLost();if(AU.music&&e.a&&!e.bad){e.a.currentTime=0;mVol(e.a,0.2);END_DUCK={a:e.a,vol:e.vol};END_DUCK.fb=setTimeout(endUnduck,12000);e.a.play().catch(()=>{try{e.fb();}catch(_){}});}else e.fb();}catch(_){}}
-function frameBody(nowMs){if(viewW&&viewW.nuke&&mode!=='menu'){const N=viewW.nuke,tv=N.t<NK.launch?N.s:N.tg;if(view!==tv){view=tv;}menu=null;}if(viewW&&viewW.over&&mode!=='menu'){const o=viewW.over;if(!endSeen){endSeen=true;AU.mode='end';const won=o.w===me;playEnd(won?'win':'lost');{/* 2 s after the end of any kind: the victory or the defeat line */const g=won?'win':'lose',w0=viewW;setTimeout(()=>{if(endSeen&&viewW===w0||endSeen&&viewW&&viewW.over)voiceGrp(g);},2000);}}
+function frameBody(nowMs){if(viewW&&viewW.nuke&&mode!=='menu'){const N=viewW.nuke,tv=N.t<NK.launch?N.s:N.tg;if(view!==tv){view=tv;}menu=null;NK_BACK=-1;}
+ /* after a rocket strike: once the interface has slid back in, wait a second and bring the player home to their own field */
+ else if(NK_BACK===-1&&viewW&&mode!=='menu'){if(hudA>0.98)NK_BACK=now()+1;}
+ if(NK_BACK>0&&now()>=NK_BACK){NK_BACK=0;if(viewW&&!viewW.over&&!viewW.nuke&&view!==me){view=me;menu=null;}}if(viewW&&viewW.over&&mode!=='menu'){const o=viewW.over;if(!endSeen){endSeen=true;AU.mode='end';const won=o.w===me;playEnd(won?'win':'lost');{/* 2 s after the end of any kind: the victory or the defeat line */const g=won?'win':'lose',w0=viewW;setTimeout(()=>{if(endSeen&&viewW===w0||endSeen&&viewW&&viewW.over)voiceGrp(g);},2000);}}
  if(!o.done){const tv=(o.why==='titan'&&o.ts!=null)?o.ts:1-o.w;if(view!==tv){view=tv;menu=null;}}}{const lb=document.getElementById('lobby');document.body.classList.toggle('playing',!!lb&&lb.hidden);}if(viewW&&mode!=='menu'&&AU.mode!=='menu'&&AU.mode!=='end'){const fm=viewW.finale&&!viewW.over?'finale':'battle';if(AU.mode!==fm)AU.mode=fm;}
 if(menu&&menu.until&&now()>menu.until)menu=null;
 if(viewW&&viewW.sides&&mode!=='menu'){const M=viewW.sides[me];if(M&&!viewW.over){const c=M.mineCd||0;if(VOICE_PREV>0&&c<=0)voice('mine');VOICE_PREV=c;const nc=M.nkCd||0;if(VOICE_NKP>0&&nc<=0){const O=viewW.sides[1-me];if(O&&O.dep&&O.dep[1]>0)voice('balist1');}VOICE_NKP=nc;try{voiceNear(M);}catch(_){}}}
@@ -2545,9 +2549,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.05-2209</div>
+<div id="appVer">v2026.11.05-2325</div>
 <script>
-window.APP_VERSION='2026.11.05-2209';
+window.APP_VERSION='2026.11.05-2325';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
