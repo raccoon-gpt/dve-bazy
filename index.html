@@ -2323,8 +2323,13 @@ function auInit(){if(AU.ctx)return;const C=window.AudioContext||window.webkitAud
 /* the player's own tracks: menu theme while the lobby is on screen, the Titan theme while a Titan is on its way (finale); each loops and cross-fades */
 /* music volume that also works on iPhone: there <audio>.volume is read-only (always full), so a fade never reached zero and
    the lobby tune never stopped. Each track is routed once through a Web Audio gain node and the level is set there. */
-function mVol(a,v){a._lv=v;if(AU.ctx&&a._g===undefined){try{const src=AU.ctx.createMediaElementSource(a),g=AU.ctx.createGain();src.connect(g);g.connect(AU.ctx.destination);a._g=g;a.volume=1;}catch(_){a._g=null;}}
- if(a._g){try{a._g.gain.value=v;}catch(_){}}else{try{a.volume=v;}catch(_){}}}
+/* <audio>.volume read-only? (iPhone/iPad) — checked once on a spare element */
+let VOL_RO=null;function volReadOnly(){if(VOL_RO===null){try{const t=new Audio();t.volume=0.5;VOL_RO=Math.abs(t.volume-0.5)>0.01;}catch(_){VOL_RO=false;}}return VOL_RO;}
+function mVol(a,v){v=Math.max(0,Math.min(1,v));if(a._lv!=null&&Math.abs(a._lv-v)<0.002)return;a._lv=v;
+ if(!volReadOnly()){try{a.volume=v;}catch(_){}return;}
+ /* only where the element's volume can't be set: route it once through a gain node, change the level smoothly */
+ if(AU.ctx&&a._g===undefined){try{const src=AU.ctx.createMediaElementSource(a),g=AU.ctx.createGain();src.connect(g);g.connect(AU.ctx.destination);a._g=g;}catch(_){a._g=null;}}
+ if(a._g){try{a._g.gain.setTargetAtTime(v,AU.ctx.currentTime,0.03);}catch(_){}}}
 function mGet(a){return a._lv!=null?a._lv:a.volume;}
 const SONGS={menu:{src:'intro.mp3',vol:0.55},titan:{src:'titan.mp3',vol:0.38},desert:{src:'desert.mp3',vol:0.6},forest:{src:'forest.mp3',vol:0.45},winter:{src:'winter.mp3',vol:0.32}};let auGest=false;
 let LOBBY_EL=null;function lobbyOn(){const lb=LOBBY_EL||(LOBBY_EL=document.getElementById('lobby'));return !!lb&&!lb.hidden;}
@@ -2535,9 +2540,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.05-0919</div>
+<div id="appVer">v2026.11.05-1748</div>
 <script>
-window.APP_VERSION='2026.11.05-0919';
+window.APP_VERSION='2026.11.05-1748';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
