@@ -2468,7 +2468,7 @@ const ENDS={lost:{src:'lost.mp3',vol:0.5,fb:()=>SFX.dirge()},win:{src:'victory.m
 /* voice lines (recorded by the player). Never two at once:
    - ordinary lines (taunts when the enemy is at the base) play only if no voice is on and the last one ended at least 5 s ago, else they are skipped;
    - priority lines (mine ready, air-raid warning) wait for the voice that is on to finish, then play 1 s after it */
-const VOICE={mine:{src:'voice_mine2.mp3',vol:0.9,pri:1},nuke:{src:'voice_nuke2.mp3',vol:0.95,pri:1},
+const VOICE={mine:{src:'voice_mine2.mp3',vol:0.9,pri:1},mrdy2:{src:'voice_mrdy2.mp3',vol:0.9,pri:1},mrdy3:{src:'voice_mrdy3.mp3',vol:0.9,pri:1},mrdy4:{src:'voice_mrdy4.mp3',vol:0.9,pri:1},nuke:{src:'voice_nuke2.mp3',vol:0.95,pri:1},
  mazor1:{src:'voice_mazor1.mp3',vol:0.9},mazor2:{src:'voice_mazor2.mp3',vol:0.9},
  first1:{src:'voice_first1.mp3',vol:0.95,pri:1},first2:{src:'voice_first2.mp3',vol:0.95,pri:1},first3:{src:'voice_first3.mp3',vol:0.95,pri:1},first4:{src:'voice_first4.mp3',vol:0.95,pri:1},first5:{src:'voice_first5.mp3',vol:0.95,pri:1},first6:{src:'voice_first6.mp3',vol:0.95,pri:1},first7:{src:'voice_first7.mp3',vol:0.95,pri:1},
  hvdie1:{src:'voice_hvdie1.mp3',vol:0.95,pri:1},
@@ -2477,7 +2477,7 @@ const VOICE={mine:{src:'voice_mine2.mp3',vol:0.9,pri:1},nuke:{src:'voice_nuke2.m
  batk1:{src:'voice_batk1.mp3',vol:0.95,pri:1},
  rzap1:{src:'voice_rzap1.mp3',vol:0.95,pri:1},
  balist1:{src:'voice_balist1.mp3',vol:0.95,pri:1},
- orud1:{src:'voice_orud1.mp3',vol:0.9},mvz1:{src:'voice_mvz1.mp3',vol:0.9},mvz2:{src:'voice_mvz2.mp3',vol:0.9},mset1:{src:'voice_mset1.mp3',vol:0.9,pri:1},bomb1:{src:'voice_bomb1.mp3',vol:0.9},
+ orud1:{src:'voice_orud1.mp3',vol:0.9},mvz1:{src:'voice_mvz1.mp3',vol:0.9},mvz2:{src:'voice_mvz2.mp3',vol:0.9},mset1:{src:'voice_mset1.mp3',vol:0.9,pri:1},bomb1:{src:'voice_bomb1.mp3',vol:0.9},bomb2:{src:'voice_bomb2.mp3',vol:0.9},bomb3:{src:'voice_bomb3.mp3',vol:0.9},bomb4:{src:'voice_bomb4.mp3',vol:0.9},bomb5:{src:'voice_bomb5.mp3',vol:0.9},bomb6:{src:'voice_bomb6.mp3',vol:0.9},bomb7:{src:'voice_bomb7.mp3',vol:0.9},
  ogon1:{src:'voice_ogon1.mp3',vol:0.95,pri:1},
  nkb1:{src:'voice_nkb1.mp3',vol:0.9,pri:1},nkb2:{src:'voice_nkb2.mp3',vol:0.9,pri:1},nkb3:{src:'voice_nkb3.mp3',vol:0.9,pri:1},nkb4:{src:'voice_nkb4.mp3',vol:0.9,pri:1},nkb5:{src:'voice_nkb5.mp3',vol:0.9,pri:1},nkb6:{src:'voice_nkb6.mp3',vol:0.9,pri:1},
  vrag1:{src:'voice_vrag1.mp3',vol:0.9},vrag2:{src:'voice_vrag2.mp3',vol:0.9},vrag3:{src:'voice_vrag3.mp3',vol:0.9},vrag4:{src:'voice_vrag4.mp3',vol:0.9},vrag5:{src:'voice_vrag5.mp3',vol:0.9},vrag6:{src:'voice_vrag6.mp3',vol:0.9},vrag7:{src:'voice_vrag7.mp3',vol:0.9},vrag8:{src:'voice_vrag8.mp3',vol:0.9},vrag9:{src:'voice_vrag9.mp3',vol:0.9},
@@ -2494,7 +2494,7 @@ function voicePlay(k){const v=VOICE[k];if(!v||!v.buf||!AU.ctx)return false;const
   src.onended=()=>voiceDone(tok);VQ.src=src;clearTimeout(VQ.g);VQ.g=setTimeout(()=>voiceDone(tok),(v.buf.duration+0.6)*1000);src.start();}catch(_){voiceDone(tok);return false;}return true;}
 /* priority lines: the first in the queue plays 1 s after the last voice ended; one still downloading is waited for, a broken one dropped */
 /* "mine ready" / "reload done" make no sense once the game is over: dropped even if they were already waiting */
-const VOICE_NOEND=['mine','balist1'];const voiceOver=()=>typeof viewW!=='undefined'&&viewW&&viewW.over;
+const VOICE_NOEND=['mine','mrdy2','mrdy3','mrdy4','balist1'];const voiceOver=()=>typeof viewW!=='undefined'&&viewW&&viewW.over;
 function voicePump(){if(VQ.cur||!VQ.q.length)return;if(voiceOver())VQ.q=VQ.q.filter(k=>!VOICE_NOEND.includes(k));while(VQ.q.length&&VOICE[VQ.q[0]].bad)VQ.q.shift();if(!VQ.q.length)return;const v=VOICE[VQ.q[0]];
  if(!v.buf){voiceLoad();return;}const w=VQ.end+VOICE_PRI_GAP-vNow();if(w>0){clearTimeout(VQ.t);VQ.t=setTimeout(voicePump,w*1000+20);return;}voicePlay(VQ.q.shift());}
 function voice(k){if(!AU.on||!AU.ctx)return;const v=VOICE[k];if(!v)return;if(VOICE_NOEND.includes(k)&&voiceOver())return;voiceLoad();
@@ -2504,7 +2504,7 @@ function voiceReset(){END_DUCK=null;try{if(VQ.src)VQ.src.stop();}catch(_){}VQ.cu
 /* enemy units on my side of the river: a random line from a group (never the same one twice running) when a unit, for the first time,
    - is halfway along the road (between 65% and 80% of its length): "the enemy broke through";
    - is right at my base (the last 90 px): a taunt */
-const VGRP={nkb:{ks:['nkb1','nkb2','nkb3','nkb4','nkb5','nkb6'],seen:new Set(),last:''},win:{ks:['win1','win2','win3','win4','win5'],seen:new Set(),last:'',keep:1},lose:{ks:['lose1','lose2','lose3','lose4','lose5','lose6'],seen:new Set(),last:'',keep:1},first:{ks:['first1','first2','first3','first4','first5','first6','first7'],seen:new Set(),last:''},mine:{ks:['mvz1','mvz2'],seen:new Set(),last:''},rain:{ks:['bomb1'],seen:new Set(),last:''},tw4:{ks:['orud1'],seen:new Set(),last:''},mid:{ks:['vrag1','vrag2','vrag3','vrag4','vrag5','vrag6','vrag7','vrag8','vrag9'],seen:new Set(),last:''},near:{ks:['loh1','loh2','loh3','loh4','loh5','loh6','loh7','loh8','loh9','loh10'],seen:new Set(),last:''}},LOH_D=90;
+const VGRP={mready:{ks:['mine','mrdy2','mrdy3','mrdy4'],seen:new Set(),last:''},nkb:{ks:['nkb1','nkb2','nkb3','nkb4','nkb5','nkb6'],seen:new Set(),last:''},win:{ks:['win1','win2','win3','win4','win5'],seen:new Set(),last:'',keep:1},lose:{ks:['lose1','lose2','lose3','lose4','lose5','lose6'],seen:new Set(),last:'',keep:1},first:{ks:['first1','first2','first3','first4','first5','first6','first7'],seen:new Set(),last:''},mine:{ks:['mvz1','mvz2'],seen:new Set(),last:''},rain:{ks:['bomb1','bomb2','bomb3','bomb4','bomb5','bomb6','bomb7'],seen:new Set(),last:''},tw4:{ks:['orud1'],seen:new Set(),last:''},mid:{ks:['vrag1','vrag2','vrag3','vrag4','vrag5','vrag6','vrag7','vrag8','vrag9'],seen:new Set(),last:''},near:{ks:['loh1','loh2','loh3','loh4','loh5','loh6','loh7','loh8','loh9','loh10'],seen:new Set(),last:''}},LOH_D=90;
 function voiceFree(){return !VQ.cur&&!VQ.q.length&&vNow()>=VQ.end+VOICE_GAP;}
 function voiceGrp(g){const G=VGRP[g],c=G.ks.length>1?G.ks.filter(k=>k!==G.last):G.ks,k=c[Math.floor(Math.random()*c.length)];
  /* a priority group keeps at most one of its lines waiting or playing (a whole wave at the base gives one line, not a string of them) */
@@ -2526,7 +2526,7 @@ function playEnd(k){const e=ENDS[k];try{if(!e.a)ensureLost();if(AU.music&&e.a&&!
 function frameBody(nowMs){if(viewW&&viewW.nuke&&mode!=='menu'){const N=viewW.nuke,tv=N.t<NK.launch?N.s:N.tg;if(view!==tv){view=tv;}menu=null;}if(viewW&&viewW.over&&mode!=='menu'){const o=viewW.over;if(!endSeen){endSeen=true;AU.mode='end';const won=o.w===me;playEnd(won?'win':'lost');{/* 2 s after the end of any kind: the victory or the defeat line */const g=won?'win':'lose',w0=viewW;setTimeout(()=>{if(endSeen&&viewW===w0||endSeen&&viewW&&viewW.over)voiceGrp(g);},2000);}}
  if(!o.done){const tv=(o.why==='titan'&&o.ts!=null)?o.ts:1-o.w;if(view!==tv){view=tv;menu=null;}}}{const lb=document.getElementById('lobby');document.body.classList.toggle('playing',!!lb&&lb.hidden);}if(viewW&&mode!=='menu'&&AU.mode!=='menu'&&AU.mode!=='end'){const fm=viewW.finale&&!viewW.over?'finale':'battle';if(AU.mode!==fm)AU.mode=fm;}
 if(menu&&menu.until&&now()>menu.until)menu=null;
-if(viewW&&viewW.sides&&mode!=='menu'){const M=viewW.sides[me];if(M&&!viewW.over){const c=M.mineCd||0;if(VOICE_PREV>0&&c<=0)voice('mine');VOICE_PREV=c;const nc=M.nkCd||0;if(VOICE_NKP>0&&nc<=0){const O=viewW.sides[1-me];if(O&&O.dep&&O.dep[1]>0)voice('balist1');}VOICE_NKP=nc;try{voiceNear(M);}catch(_){}}}
+if(viewW&&viewW.sides&&mode!=='menu'){const M=viewW.sides[me];if(M&&!viewW.over){const c=M.mineCd||0;if(VOICE_PREV>0&&c<=0)voiceGrp('mready');VOICE_PREV=c;const nc=M.nkCd||0;if(VOICE_NKP>0&&nc<=0){const O=viewW.sides[1-me];if(O&&O.dep&&O.dep[1]>0)voice('balist1');}VOICE_NKP=nc;try{voiceNear(M);}catch(_){}}}
 if(viewW&&viewW.sides){const M=viewW.sides[me];AU.hot=!!M&&M.units.filter(u=>u.o!==me).length>=4;}
 const dt=Math.min(0.05,(nowMs-lastFrame)/1000);lastFrame=nowMs;const t=now();menuMusicTick(dt);try{jetTick();}catch(_){}
  if((mode==='solo'||mode==='host')&&!paused&&W){if(W.pause)acc=0;else acc+=dt*W.speed;while(acc>=1/30){simStep(1/30);if(mode==='solo')botThink(1/30,1);acc-=1/30;}
@@ -2540,9 +2540,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.05-1748</div>
+<div id="appVer">v2026.11.05-1942</div>
 <script>
-window.APP_VERSION='2026.11.05-1748';
+window.APP_VERSION='2026.11.05-1942';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
