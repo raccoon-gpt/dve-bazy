@@ -2487,7 +2487,7 @@ const VOICE={mine:{src:'voice_mine2.mp3',vol:0.9,pri:1},nuke:{src:'voice_nuke2.m
  batk1:{src:'voice_batk1.mp3',vol:0.95,pri:1},
  rzap1:{src:'voice_rzap1.mp3',vol:0.95,pri:1},
  balist1:{src:'voice_balist1.mp3',vol:0.95,pri:1},
- orud1:{src:'voice_orud1.mp3',vol:0.9},mvz1:{src:'voice_mvz1.mp3',vol:0.9},mvz2:{src:'voice_mvz2.mp3',vol:0.9},mset1:{src:'voice_mset1.mp3',vol:0.9,pri:1},mset2:{src:'voice_mset2.mp3',vol:0.9,pri:1},mset3:{src:'voice_mset3.mp3',vol:0.9,pri:1},mset4:{src:'voice_mset4.mp3',vol:0.9,pri:1},bomb1:{src:'voice_bomb1.mp3',vol:0.9},bomb2:{src:'voice_bomb2.mp3',vol:0.9},bomb3:{src:'voice_bomb3.mp3',vol:0.9},bomb4:{src:'voice_bomb4.mp3',vol:0.9},bomb5:{src:'voice_bomb5.mp3',vol:0.9},bomb6:{src:'voice_bomb6.mp3',vol:0.9},bomb7:{src:'voice_bomb7.mp3',vol:0.9},
+ orud1:{src:'voice_orud1.mp3',vol:0.9},orud2:{src:'voice_orud2.mp3',vol:0.9},orud3:{src:'voice_orud3.mp3',vol:0.9},orud4:{src:'voice_orud4.mp3',vol:0.9},orud5:{src:'voice_orud5.mp3',vol:0.9},mvz1:{src:'voice_mvz1.mp3',vol:0.9},mvz2:{src:'voice_mvz2.mp3',vol:0.9},mset1:{src:'voice_mset1.mp3',vol:0.9,pri:1},mset2:{src:'voice_mset2.mp3',vol:0.9,pri:1},mset3:{src:'voice_mset3.mp3',vol:0.9,pri:1},mset4:{src:'voice_mset4.mp3',vol:0.9,pri:1},bomb1:{src:'voice_bomb1.mp3',vol:0.9},bomb2:{src:'voice_bomb2.mp3',vol:0.9},bomb3:{src:'voice_bomb3.mp3',vol:0.9},bomb4:{src:'voice_bomb4.mp3',vol:0.9},bomb5:{src:'voice_bomb5.mp3',vol:0.9},bomb6:{src:'voice_bomb6.mp3',vol:0.9},bomb7:{src:'voice_bomb7.mp3',vol:0.9},
  ogon1:{src:'voice_ogon1.mp3',vol:0.95,pri:1},
  nkb1:{src:'voice_nkb1.mp3',vol:0.9,pri:1},nkb2:{src:'voice_nkb2.mp3',vol:0.9,pri:1},nkb3:{src:'voice_nkb3.mp3',vol:0.9,pri:1},nkb4:{src:'voice_nkb4.mp3',vol:0.9,pri:1},nkb5:{src:'voice_nkb5.mp3',vol:0.9,pri:1},nkb6:{src:'voice_nkb6.mp3',vol:0.9,pri:1},
  vrag1:{src:'voice_vrag1.mp3',vol:0.9},vrag2:{src:'voice_vrag2.mp3',vol:0.9},vrag3:{src:'voice_vrag3.mp3',vol:0.9},vrag4:{src:'voice_vrag4.mp3',vol:0.9},vrag5:{src:'voice_vrag5.mp3',vol:0.9},vrag6:{src:'voice_vrag6.mp3',vol:0.9},vrag7:{src:'voice_vrag7.mp3',vol:0.9},vrag8:{src:'voice_vrag8.mp3',vol:0.9},vrag9:{src:'voice_vrag9.mp3',vol:0.9},
@@ -2514,7 +2514,7 @@ function voiceReset(){END_DUCK=null;try{if(VQ.src)VQ.src.stop();}catch(_){}VQ.cu
 /* enemy units on my side of the river: a random line from a group (never the same one twice running) when a unit, for the first time,
    - is halfway along the road (between 65% and 80% of its length): "the enemy broke through";
    - is right at my base (the last 90 px): a taunt */
-const VGRP={etout:{ks:['etout1','etout2','etout3','etout4','etout5'],seen:new Set(),last:''},tout:{ks:['tout1','tout2','tout3','tout4','tout5','tout6','tout7','tout8','tout9'],seen:new Set(),last:''},mset:{ks:['mset1','mset2','mset3','mset4'],seen:new Set(),last:''},nkb:{ks:['nkb1','nkb2','nkb3','nkb4','nkb5','nkb6'],seen:new Set(),last:''},win:{ks:['win1','win2','win3','win4','win5'],seen:new Set(),last:'',keep:1},lose:{ks:['lose1','lose2','lose3','lose4','lose5','lose6'],seen:new Set(),last:'',keep:1},first:{ks:['first1','first2','first3','first4','first5','first6','first7'],seen:new Set(),last:''},mine:{ks:['mvz1','mvz2'],seen:new Set(),last:''},rain:{ks:['bomb1','bomb2','bomb3','bomb4','bomb5','bomb6','bomb7'],seen:new Set(),last:''},tw4:{ks:['orud1'],seen:new Set(),last:''},mid:{ks:['vrag1','vrag2','vrag3','vrag4','vrag5','vrag6','vrag7','vrag8','vrag9'],seen:new Set(),last:''},near:{ks:['loh1','loh2','loh3','loh4','loh5','loh6','loh7','loh8','loh9','loh10'],seen:new Set(),last:''}},LOH_D=90;
+const VGRP={etout:{ks:['etout1','etout2','etout3','etout4','etout5'],seen:new Set(),last:''},tout:{ks:['tout1','tout2','tout3','tout4','tout5','tout6','tout7','tout8','tout9'],seen:new Set(),last:''},mset:{ks:['mset1','mset2','mset3','mset4'],seen:new Set(),last:''},nkb:{ks:['nkb1','nkb2','nkb3','nkb4','nkb5','nkb6'],seen:new Set(),last:''},win:{ks:['win1','win2','win3','win4','win5'],seen:new Set(),last:'',keep:1},lose:{ks:['lose1','lose2','lose3','lose4','lose5','lose6'],seen:new Set(),last:'',keep:1},first:{ks:['first1','first2','first3','first4','first5','first6','first7'],seen:new Set(),last:''},mine:{ks:['mvz1','mvz2'],seen:new Set(),last:''},rain:{ks:['bomb1','bomb2','bomb3','bomb4','bomb5','bomb6','bomb7'],seen:new Set(),last:''},tw4:{ks:['orud1','orud2','orud3','orud4','orud5'],seen:new Set(),last:''},mid:{ks:['vrag1','vrag2','vrag3','vrag4','vrag5','vrag6','vrag7','vrag8','vrag9'],seen:new Set(),last:''},near:{ks:['loh1','loh2','loh3','loh4','loh5','loh6','loh7','loh8','loh9','loh10'],seen:new Set(),last:''}},LOH_D=90;
 function voiceFree(){return !VQ.cur&&!VQ.q.length&&vNow()>=VQ.end+VOICE_GAP;}
 function voiceGrp(g){const G=VGRP[g],c=G.ks.length>1?G.ks.filter(k=>k!==G.last):G.ks,k=c[Math.floor(Math.random()*c.length)];
  /* a priority group keeps at most one of its lines waiting or playing (a whole wave at the base gives one line, not a string of them) */
@@ -2553,9 +2553,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.06-1049</div>
+<div id="appVer">v2026.11.06-1511</div>
 <script>
-window.APP_VERSION='2026.11.06-1049';
+window.APP_VERSION='2026.11.06-1511';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
