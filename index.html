@@ -700,7 +700,11 @@ function newWorld(){nextId=1000;return{t:0,sides:[newSide(),newSide()],over:null
 /* unit price grows with armour level: a max-armour tank costs 500 */
 function unitCost(k,ua){return Math.round(UN[k].cost*(1+(ua||0)*(500/180-1)/5)/5)*5;}
 /* the crystal inside the refinery gives a steady income from the start: 5/s, +5 per refinery level, ×3 once the rich field is empty; it holds 25 000 */
-function crystalInc(S){const d=S.dep||[1,1];return d[0]>0?CRY_INC*(1+(S.rl|0))*(S.incK||1)*(d[1]<=0?SAFE_BOOST:1):0;}
+/* once the rich mine is worked out the refinery crystal speeds up: ×3 for the bot, ×9 for a player */
+const SAFE_BOOST_P=9;
+function crystalInc(S){const d=S.dep||[1,1];if(!(d[0]>0))return 0;let k=1;
+ if(d[1]<=0){let si=typeof W!=='undefined'&&W?W.sides.indexOf(S):-1;if(si<0&&typeof viewW!=='undefined'&&viewW)si=viewW.sides.indexOf(S);k=si>=0&&humanSide(si)?SAFE_BOOST_P:SAFE_BOOST;}
+ return CRY_INC*(1+(S.rl|0))*(S.incK||1)*k;}
 function income(S){return Math.round(crystalInc(S));}
 const DIFF={easy:{name:'Лёгкий',hl:200,inc:1,wave:45,waveN:0.6,tw:1,cash:1,uaK:1,uaT:1},normal:{name:'Нормальный',hl:300,inc:1.2,wave:30,waveN:1,tw:1,cash:1.25,uaK:0.75,uaT:0.85},hard:{name:'Сложный',hl:400,inc:1.5,wave:22,waveN:1.5,tw:1,cash:1.6,uaK:0.55,uaT:0.65}};
 const uaCost=S=>Math.round(UPG_COSTS[Math.min(S.ua,UPG_MAX - 1)]*(S.uaK||1)/10)*10;
@@ -2549,9 +2553,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.05-2325</div>
+<div id="appVer">v2026.11.06-1049</div>
 <script>
-window.APP_VERSION='2026.11.05-2325';
+window.APP_VERSION='2026.11.06-1049';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
