@@ -2056,7 +2056,7 @@ function tap(x,y){if(!viewW)return;const onMenu=mode!=='menu'&&!viewW.pause&&men
  if(viewW.pause){for(const b of pauseBtns())if(x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h){if(b.k==='mus')auSetMusic(!AU.music);else if(b.k==='sfx')auSetOn(!AU.on);else PZ_PEND=PZ_PEND&&PZ_PEND.k===b.k?null:{k:b.k,at:now()+PZ_WAIT};auUnlock();SFX.click();}return;}
  if(y>VH/2-36&&y<VH/2+36&&!menu){if(view===me&&x>VW-30){view=1-me;return;}if(view!==me&&x<30){view=me;return;}}
  if(view!==me)return;const S=viewW.sides[me];
- if(menu){const lay=radialLayout();if(lay){for(const {it,x:bx,y:by} of lay.pos){if(Math.hypot(bx-x,by-y)<(it.big?32:22)){if(!it.dis&&it.sellReq){SFX.click();PEND_SELL={id:it.sellReq,at:now()+SELL_WAIT};return;}if(it.cancel){SFX.click();PEND_SELL=null;return;}if(!it.dis){SFX.click();sendCmd(it.cmd);if(menu.kind==='factory'){menu.until=now()+2;}else menu=null;}else{SFX.deny();if(menu.until)menu.until=now()+2;}return;}}}
+ if(menu){const lay=radialLayout();if(lay){for(const {it,x:bx,y:by} of lay.pos){if(Math.hypot(bx-x,by-y)<(it.big?32:22)){if(!it.dis&&it.sellReq){SFX.click();PEND_SELL={id:it.sellReq,at:now()+SELL_WAIT};return;}if(it.cancel){SFX.click();PEND_SELL=null;return;}if(!it.dis){SFX.click();sendCmd(it.cmd);/* buying the rocket closes the menu at once: the countdown over the HQ shows straight away */if(menu.kind==='factory'&&it.cmd.a!=='nukebuy'){menu.until=now()+2;}else menu=null;}else{SFX.deny();if(menu.until)menu.until=now()+2;}return;}}}
   if(menu.kind==='harv')sendCmd({a:'hgo',id:menu.id});menu=null;return;}
  x=toScr(x);
  for(const h of S.hv){const p=hat(h.dd??h.d);if(Math.hypot(p[0]-x,p[1]-y)<26){if(!h.stopped){sendCmd({a:'hstop',id:h.id});if(mode==='guest')h.stopped=true;}else{menu={kind:'harv',id:h.id};}return;}}
@@ -2535,10 +2535,10 @@ function endUnduck(){const d=END_DUCK;if(!d||d.up)return;d.up=true;clearTimeout(
 function playEnd(k){const e=ENDS[k];try{if(!e.a)ensureLost();if(AU.music&&e.a&&!e.bad){e.a.currentTime=0;mVol(e.a,0.2);END_DUCK={a:e.a,vol:e.vol};END_DUCK.fb=setTimeout(endUnduck,12000);e.a.play().catch(()=>{try{e.fb();}catch(_){}});}else e.fb();}catch(_){}}
 function frameBody(nowMs){if(viewW&&viewW.nuke&&mode!=='menu'){const N=viewW.nuke,tv=N.t<NK.launch?N.s:N.tg;if(view!==tv){view=tv;}menu=null;NK_BACK=-1;}
  /* after a rocket strike: once the interface has slid back in, wait a second and bring the player home to their own field */
- else if(NK_BACK===-1&&viewW&&mode!=='menu'){if(hudA>0.98)NK_BACK=now()+1;}
+ else if(NK_BACK===-1&&viewW&&mode!=='menu'){if(hudA>0.98)NK_BACK=now()+0.3;}
  if(NK_BACK>0&&now()>=NK_BACK){NK_BACK=0;if(viewW&&!viewW.over&&!viewW.nuke&&view!==me){view=me;menu=null;}}if(viewW&&viewW.over&&mode!=='menu'){const o=viewW.over;if(!endSeen){endSeen=true;AU.mode='end';const won=o.w===me;playEnd(won?'win':'lost');{/* 2 s after the end of any kind: the victory or the defeat line */const g=won?'win':'lose',w0=viewW;setTimeout(()=>{if(endSeen&&viewW===w0||endSeen&&viewW&&viewW.over)voiceGrp(g);},2000);}}
  if(!o.done){const tv=(o.why==='titan'&&o.ts!=null)?o.ts:1-o.w;if(view!==tv){view=tv;menu=null;}}}{const lb=document.getElementById('lobby');document.body.classList.toggle('playing',!!lb&&lb.hidden);}if(viewW&&mode!=='menu'&&AU.mode!=='menu'&&AU.mode!=='end'){const fm=viewW.finale&&!viewW.over?'finale':'battle';if(AU.mode!==fm)AU.mode=fm;}
-if(menu&&menu.until&&now()>menu.until)menu=null;
+if(menu&&menu.until&&now()>menu.until)menu=null;if(menu&&menu.kind==='factory'&&viewW&&viewW.sides[me]&&viewW.sides[me].nkT>0)menu=null;
 if(viewW&&viewW.sides&&mode!=='menu'){const M=viewW.sides[me];if(M&&!viewW.over){const c=M.mineCd||0;if(VOICE_PREV>0&&c<=0)voice('mine');VOICE_PREV=c;const nc=M.nkCd||0;if(VOICE_NKP>0&&nc<=0){const O=viewW.sides[1-me];if(O&&O.dep&&O.dep[1]>0)voice('balist1');}VOICE_NKP=nc;try{voiceNear(M);}catch(_){}}}
 if(viewW&&viewW.sides){const M=viewW.sides[me];AU.hot=!!M&&M.units.filter(u=>u.o!==me).length>=4;}
 const dt=Math.min(0.05,(nowMs-lastFrame)/1000);lastFrame=nowMs;const t=now();menuMusicTick(dt);try{jetTick();}catch(_){}
@@ -2553,15 +2553,19 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.06-1511</div>
+<div id="appVer">v2026.11.06-1524</div>
 <script>
-window.APP_VERSION='2026.11.06-1511';
+window.APP_VERSION='2026.11.06-1524';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
  navigator.serviceWorker.addEventListener('controllerchange',()=>{const l=document.getElementById('lobby');if(reloaded)return;
   /* a new version arrived: reload at once if we're in the lobby, otherwise on the next visit to it */
   const go=()=>{reloaded=true;location.reload();};if(!l||!l.hidden)go();else{const t=setInterval(()=>{if(!l.hidden){clearInterval(t);go();}},1000);}});
+ /* a newer version on the site: reload (in the lobby only, never mid-battle) */
+ let newer=false;const chk=()=>fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(j=>{if(j&&j.v&&j.v!==window.APP_VERSION)newer=true;}).catch(()=>{});
+ setInterval(()=>{const l=document.getElementById('lobby');if(newer&&l&&!l.hidden&&!reloaded){reloaded=true;location.reload();}},1000);
+ chk();setInterval(chk,60*1000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});
  window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').then(r=>{setInterval(()=>r.update().catch(()=>{}),10*60*1000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)r.update().catch(()=>{});});}).catch(()=>{});});}
 </script>
 </body></html>
