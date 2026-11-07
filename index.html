@@ -1400,9 +1400,9 @@ function paintBg(){const bg=document.createElement('canvas');bg.width=Math.round
  const lineR=(w,col)=>{b.strokeStyle=col;b.lineWidth=w;b.lineJoin='round';b.lineCap='butt';b.beginPath();for(const road of ROADS)road.forEach((p,i)=>i?b.lineTo(p[0],p[1]):b.moveTo(p[0],p[1]));b.stroke();};
  // harvester track: drawn under the road so crossings look like crossings
  const tp=TRACK_PL;b.strokeStyle=sand?'#9A6E44':snow?'#8C7C6C':GP.track[0];b.lineWidth=20;b.lineJoin='round';b.lineCap='round';b.beginPath();tp.forEach((p,i)=>i?b.lineTo(p[0],p[1]):b.moveTo(p[0],p[1]));b.stroke();b.strokeStyle=sand?'#C29868':snow?'#ADA090':GP.track[1];b.lineWidth=15;b.stroke();b.setLineDash([3,5]);b.strokeStyle=snow?'rgba(70,55,40,0.5)':'rgba(90,60,30,0.55)';b.lineWidth=2;for(const o of [-4,4]){b.beginPath();offsetLine(tp,o).forEach((p,i)=>i?b.lineTo(p[0],p[1]):b.moveTo(p[0],p[1]));b.stroke();}b.setLineDash([]);
- if(GP===GPAL.swamp&&!snow&&!sand)lineR(58,'rgba(16,48,12,0.35)');b.save();b.translate(3,5);lineR(46,snow?'rgba(30,50,85,0.2)':GP.shadow);b.restore();
+ if(GP===GPAL.swamp&&!snow&&!sand)lineR(51,'rgba(16,48,12,0.22)');b.save();b.translate(3,5);lineR(46,snow?'rgba(30,50,85,0.2)':GP.shadow);b.restore();
  if(sand){lineR(46,'#C99A60');lineR(43,'#7A4A2A');lineR(40,'#A8653C');lineR(34,'#B8744A');}
- else if(GP===GPAL.swamp){lineR(48,GP.road[0]);lineR(44,GP.road[1]);lineR(38,GP.road[2]);lineR(26,GP.road[3]);}
+ else if(GP===GPAL.swamp){lineR(46,GP.road[0]);lineR(44,GP.road[1]);lineR(38,GP.road[2]);lineR(26,GP.road[3]);}
  else if(!snow){lineR(46,GP.road[0]);lineR(43,GP.road[1]);lineR(40,GP.road[2]);lineR(34,GP.road[3]);}
  else{lineR(50,'#FFFFFF');lineR(46,'#9FB4C6');lineR(43,'#5E4A3A');lineR(40,'#8E7660');lineR(34,'#A08670');}
  for(const road of ROADS)for(let i=0;i<road.length-1;i++){const a=road[i],q=road[i+1],n=Math.hypot(q[0]-a[0],q[1]-a[1])/4;for(let k=0;k<n;k++){const x=a[0]+(q[0]-a[0])*k/n,y=a[1]+(q[1]-a[1])*k/n;b.fillStyle=sand?(rnd()<0.6?'rgba(90,45,20,0.45)':'rgba(240,200,150,0.5)'):snow?(rnd()<0.55?'rgba(70,55,40,0.45)':'rgba(255,255,255,0.75)'):(rnd()<0.6?GP.grit[0]:GP.grit[1]);b.fillRect(x+(rnd()-0.5)*26,y+(rnd()-0.5)*26,1.8,1.8);}}
@@ -1427,7 +1427,7 @@ function paintBg(){const bg=document.createElement('canvas');bg.width=Math.round
    const inw=rnd()<0.5,o=(inw?18.4:21.4)*sd,px=x-uy*o,py=y+ux*o,r=1.4+rnd()*1.8;if(roadDist(px,py)<(inw?18.2:20.8))continue;
    b.save();b.translate(px,py);b.rotate(Math.atan2(uy,ux));blob(b,0,0,r*(1.2+rnd()*0.8),r,inw?GP.road[1]:GP.road[2],0.25);b.restore();}
   for(let i=0;i<tot*6;i++){const sg=pickSeg(),a=sg[0],q=sg[1],t=rnd(),L2=Math.hypot(q[0]-a[0],q[1]-a[1])||1,ux=(q[0]-a[0])/L2,uy=(q[1]-a[1])/L2,sd=rnd()<0.5?-1:1,x=a[0]+(q[0]-a[0])*t,y=a[1]+(q[1]-a[1])*t;
-   const o=(23.6+rnd()*0.8)*sd,px=x-uy*o,py=y+ux*o,r=0.8+rnd()*1.4;if(roadDist(px,py)<23)continue;b.save();b.translate(px,py);b.rotate(Math.atan2(uy,ux));blob(b,0,0,r*(1.2+rnd()*0.8),r,GP.road[0],0.25);b.restore();}
+   const o=(22.6+rnd()*0.6)*sd,px=x-uy*o,py=y+ux*o,r=0.7+rnd()*1.1;if(roadDist(px,py)<22.2)continue;b.save();b.translate(px,py);b.rotate(Math.atan2(uy,ux));blob(b,0,0,r*(1.2+rnd()*0.8),r,GP.road[0],0.25);b.restore();}
   b.restore();}
  if(snow){// packed snow along the road edges
   for(const road of ROADS)for(let i=0;i<road.length-1;i++){const a=road[i],q=road[i+1],L=Math.hypot(q[0]-a[0],q[1]-a[1]),ux=(q[0]-a[0])/L,uy=(q[1]-a[1])/L;for(let t=rnd()*20;t<L;t+=14+rnd()*22){for(const sd of [-1,1]){if(rnd()<0.5)continue;const o=15+rnd()*3,x=a[0]+ux*t-uy*o*sd,y=a[1]+uy*t+ux*o*sd,rr=2+rnd()*4;E(b,x,y,rr+rnd()*2,rr*0.6,'rgba(245,250,255,0.75)');}}}}
@@ -2655,9 +2655,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.07-1336</div>
+<div id="appVer">v2026.11.07-1343</div>
 <script>
-window.APP_VERSION='2026.11.07-1336';
+window.APP_VERSION='2026.11.07-1343';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
