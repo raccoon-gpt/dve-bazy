@@ -1242,7 +1242,7 @@ const GPAL={
   bush:['#A04A18','#D27A2E'],moss:'#B08A30',water:['#2A6E9E','#3A86B8'],bank:'#7A5E3A',road:['#6E6428','#6B4A2A','#C08A4E','#D09A5C'],grit:['rgba(140,90,45,0.5)','rgba(255,220,170,0.45)'],track:['#8A6A3A','#B08A55'],shadow:'rgba(40,25,5,0.25)'},
  swamp:{ground:'#3A762A',patch:['rgba(30,80,22,0.45)','rgba(110,170,60,0.22)'],blade:['rgba(22,60,14,0.55)','rgba(130,190,70,0.45)'],
   trees:[['#1E4A1A','#2C6424','#448A32','#7AB050','rgba(10,30,10,0.5)']],bush:['#2C6424','#4E9636'],moss:'#7AB648',
-  water:['#163A36','#24564C'],bank:'#2A4A1C',road:['#22341A','#3A2614','#6A4428','#7A5232'],grit:['rgba(40,24,10,0.55)','rgba(190,150,100,0.4)'],track:['#4E3A22','#6A5034'],shadow:'rgba(5,20,5,0.35)'}};
+  water:['#163A36','#24564C'],bank:'#2A4A1C',road:['#1E2E12','#3E2614','#7A4E2E','#85583A'],grit:['rgba(50,30,14,0.55)','rgba(200,160,110,0.45)'],track:['#4E3A22','#6A5034'],shadow:'rgba(5,20,5,0.35)'}};
 let GP=GPAL.grass;
 function tree(c,x,y,s){const t=GP.trees.length>1?GP.trees[Math.floor(rnd()*GP.trees.length)]:GP.trees[0];E(c,x+5*s,y+7*s,15*s,9*s,SH);E(c,x,y,15*s,14*s,t[0],2,OL);E(c,x-3*s,y-3*s,11*s,10*s,t[1]);E(c,x-5*s,y-6*s,6*s,5*s,t[2]);E(c,x-6*s,y-8*s,2.5*s,2*s,t[3]);for(let i=0;i<3;i++){c.beginPath();c.arc(x+4*s,y+3*s,4*s+i*3*s,0.2,1.3);c.strokeStyle=t[4];c.lineWidth=1;c.stroke();}}
 function rock(c,x,y,s,moss){E(c,x+4*s,y+5*s,14*s,7*s,SH);P(c,[[x-13*s,y+4*s],[x-11*s,y-7*s],[x-2*s,y-12*s],[x+10*s,y-9*s],[x+14*s,y+1*s],[x+8*s,y+8*s],[x-6*s,y+9*s]],'#8C9196',2,OL);P(c,[[x-11*s,y-7*s],[x-2*s,y-12*s],[x+10*s,y-9*s],[x+3*s,y-3*s],[x-8*s,y-1*s]],'#B5BABE');P(c,[[x+3*s,y-3*s],[x+10*s,y-9*s],[x+14*s,y+1*s],[x+8*s,y+8*s]],'#73787D');if(moss){E(c,x-6*s,y-6*s,4*s,2*s,GP.moss);E(c,x+2*s,y-10*s,3*s,1.6*s,GP.moss);}}
@@ -1400,15 +1400,31 @@ function paintBg(){const bg=document.createElement('canvas');bg.width=Math.round
  const lineR=(w,col)=>{b.strokeStyle=col;b.lineWidth=w;b.lineJoin='round';b.lineCap='butt';b.beginPath();for(const road of ROADS)road.forEach((p,i)=>i?b.lineTo(p[0],p[1]):b.moveTo(p[0],p[1]));b.stroke();};
  // harvester track: drawn under the road so crossings look like crossings
  const tp=TRACK_PL;b.strokeStyle=sand?'#9A6E44':snow?'#8C7C6C':GP.track[0];b.lineWidth=20;b.lineJoin='round';b.lineCap='round';b.beginPath();tp.forEach((p,i)=>i?b.lineTo(p[0],p[1]):b.moveTo(p[0],p[1]));b.stroke();b.strokeStyle=sand?'#C29868':snow?'#ADA090':GP.track[1];b.lineWidth=15;b.stroke();b.setLineDash([3,5]);b.strokeStyle=snow?'rgba(70,55,40,0.5)':'rgba(90,60,30,0.55)';b.lineWidth=2;for(const o of [-4,4]){b.beginPath();offsetLine(tp,o).forEach((p,i)=>i?b.lineTo(p[0],p[1]):b.moveTo(p[0],p[1]));b.stroke();}b.setLineDash([]);
- b.save();b.translate(3,5);lineR(46,snow?'rgba(30,50,85,0.2)':GP.shadow);b.restore();
+ if(GP===GPAL.swamp&&!snow&&!sand)lineR(58,'rgba(16,48,12,0.35)');b.save();b.translate(3,5);lineR(46,snow?'rgba(30,50,85,0.2)':GP.shadow);b.restore();
  if(sand){lineR(46,'#C99A60');lineR(43,'#7A4A2A');lineR(40,'#A8653C');lineR(34,'#B8744A');}
+ else if(GP===GPAL.swamp){lineR(48,GP.road[0]);lineR(44,GP.road[1]);lineR(38,GP.road[2]);lineR(26,GP.road[3]);}
  else if(!snow){lineR(46,GP.road[0]);lineR(43,GP.road[1]);lineR(40,GP.road[2]);lineR(34,GP.road[3]);}
  else{lineR(50,'#FFFFFF');lineR(46,'#9FB4C6');lineR(43,'#5E4A3A');lineR(40,'#8E7660');lineR(34,'#A08670');}
  for(const road of ROADS)for(let i=0;i<road.length-1;i++){const a=road[i],q=road[i+1],n=Math.hypot(q[0]-a[0],q[1]-a[1])/4;for(let k=0;k<n;k++){const x=a[0]+(q[0]-a[0])*k/n,y=a[1]+(q[1]-a[1])*k/n;b.fillStyle=sand?(rnd()<0.6?'rgba(90,45,20,0.45)':'rgba(240,200,150,0.5)'):snow?(rnd()<0.55?'rgba(70,55,40,0.45)':'rgba(255,255,255,0.75)'):(rnd()<0.6?GP.grit[0]:GP.grit[1]);b.fillRect(x+(rnd()-0.5)*26,y+(rnd()-0.5)*26,1.8,1.8);}}
- if(GP===GPAL.swamp&&!snow&&!sand){for(const road of ROADS){for(const o of [-8,8]){b.strokeStyle='rgba(40,24,10,0.2)';b.lineWidth=3;b.lineJoin='round';b.beginPath();offsetLine(road,o).forEach((p,i)=>i?b.lineTo(p[0],p[1]):b.moveTo(p[0],p[1]));b.stroke();}
-  for(let i=0;i<road.length-1;i++){const a=road[i],q=road[i+1],Ln=Math.hypot(q[0]-a[0],q[1]-a[1]),ux=(q[0]-a[0])/Ln,uy=(q[1]-a[1])/Ln;
-   for(let t=rnd()*30;t<Ln;t+=30+rnd()*45){const o=(rnd()-0.5)*18,mx=a[0]+ux*t-uy*o,my=a[1]+uy*t+ux*o,rx=6+rnd()*9;softBlob(b,mx,my,rx,rx*(0.45+rnd()*0.3),'44,26,12',0.75,0.3);if(rnd()<0.3)softBlob(b,mx+(rnd()-0.5)*4,my,rx*0.45,rx*0.2,'40,60,52',0.8,0.25);}
-   for(let t=rnd()*40;t<Ln;t+=40+rnd()*70){const sd=rnd()<0.5?-1:1,o=(12+rnd()*6)*sd;swStone(b,a[0]+ux*t-uy*o,a[1]+uy*t+ux*o,0.45+rnd()*0.4);}}}}
+ if(GP===GPAL.swamp&&!snow&&!sand){
+  /* the wet dirt road: points spread over the road surface only */
+  const onRoad=(m)=>{for(let k=0;k<40;k++){const rd=ROADS[Math.floor(rnd()*ROADS.length)],i=Math.floor(rnd()*(rd.length-1)),a=rd[i],q=rd[i+1],t=rnd(),o=(rnd()-0.5)*2*m;const L=Math.hypot(q[0]-a[0],q[1]-a[1])||1,ux=(q[0]-a[0])/L,uy=(q[1]-a[1])/L;const x=a[0]+(q[0]-a[0])*t-uy*o,y=a[1]+(q[1]-a[1])*t+ux*o;if(roadDist(x,y)<=m)return[x,y];}return null;};
+  const tot=ROADS.reduce((n,rd)=>n+rd.slice(1).reduce((m,p,i)=>m+Math.hypot(p[0]-rd[i][0],p[1]-rd[i][1]),0),0)/100;
+  b.save();
+  /* soft light and dark mottling */
+  for(let i=0;i<tot*22;i++){const p=onRoad(14);if(!p)continue;const r=4+rnd()*9;softBlob(b,p[0],p[1],r,r*(0.5+rnd()*0.4),rnd()<0.5?'60,36,16':'176,128,80',0.22,0.35);}
+  /* fine speckles */
+  for(let i=0;i<tot*120;i++){const p=onRoad(17);if(!p)continue;b.fillStyle=rnd()<0.55?'rgba(52,30,12,0.4)':'rgba(214,170,118,0.35)';b.fillRect(p[0],p[1],1+rnd(),1+rnd());}
+  /* little cracks */
+  for(let i=0;i<tot*3;i++){const p=onRoad(12);if(!p)continue;let x=p[0],y=p[1],a=rnd()*6.3;const pts=[[x,y]];for(let k=0;k<3+Math.floor(rnd()*3);k++){a+=(rnd()-0.5)*1.4;x+=Math.cos(a)*(3+rnd()*4);y+=Math.sin(a)*(3+rnd()*4);pts.push([x,y]);}L(b,pts,'rgba(40,22,8,0.45)',0.9);}
+  /* a few small pebbles, brownish */
+  for(let i=0;i<tot*1.1;i++){const p=onRoad(15);if(!p)continue;const k=0.55+rnd()*0.35,r=1.6+rnd()*1.8;E(b,p[0]+0.8,p[1]+1,r,r*0.7,'rgba(30,18,8,0.45)');E(b,p[0],p[1],r,r*0.72,swShade('#9A8670',k),0.7,'rgba(40,25,12,0.8)');E(b,p[0]-r*0.3,p[1]-r*0.3,r*0.4,r*0.25,'rgba(255,240,215,0.35)');}
+  /* ragged rim: bites of the dark edge into the road and tufts of moss over it */
+  for(let i=0;i<tot*9;i++){const rd=ROADS[Math.floor(rnd()*ROADS.length)],k=Math.floor(rnd()*(rd.length-1)),a=rd[k],q=rd[k+1],t=rnd(),L2=Math.hypot(q[0]-a[0],q[1]-a[1])||1,ux=(q[0]-a[0])/L2,uy=(q[1]-a[1])/L2,sd=rnd()<0.5?-1:1;
+   const x=a[0]+(q[0]-a[0])*t,y=a[1]+(q[1]-a[1])*t;
+   if(rnd()<0.5){const o=19.5*sd,r=1.2+rnd()*1.6;if(roadDist(x-uy*o,y+ux*o)>=19)blob(b,x-uy*o,y+ux*o,r*1.8,r,'#3E2614',0.3);}
+   else{const o=(23.5+rnd())*sd,r=1.4+rnd()*1.8;if(roadDist(x-uy*o,y+ux*o)>=22.5)blob(b,x-uy*o,y+ux*o,r*1.7,r,rnd()<0.5?'#3E7A2A':'#4E8E34',0.3);}}
+  b.restore();}
  if(snow){// packed snow along the road edges
   for(const road of ROADS)for(let i=0;i<road.length-1;i++){const a=road[i],q=road[i+1],L=Math.hypot(q[0]-a[0],q[1]-a[1]),ux=(q[0]-a[0])/L,uy=(q[1]-a[1])/L;for(let t=rnd()*20;t<L;t+=14+rnd()*22){for(const sd of [-1,1]){if(rnd()<0.5)continue;const o=15+rnd()*3,x=a[0]+ux*t-uy*o*sd,y=a[1]+uy*t+ux*o*sd,rr=2+rnd()*4;E(b,x,y,rr+rnd()*2,rr*0.6,'rgba(245,250,255,0.75)');}}}}
  for(const BY of [BRIDGE_Y,...BRS.map(q=>q.by)]){b.save();b.translate(VW,BY);RR(b,-30,-21,60,42,3,snow?'#6E5236':'#7A5230',2,OL);for(let i=-26;i<30;i+=7)L(b,[[i,-19],[i,19]],'rgba(60,35,15,0.6)',1.2);
@@ -2630,9 +2646,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.07-1322</div>
+<div id="appVer">v2026.11.07-1327</div>
 <script>
-window.APP_VERSION='2026.11.07-1322';
+window.APP_VERSION='2026.11.07-1327';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
