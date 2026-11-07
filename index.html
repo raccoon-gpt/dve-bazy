@@ -205,8 +205,8 @@ function genRandomMap(seed){let s=(seed>>>0)||1;const R=()=>{s=(s*1103515245+123
   track=track.filter((p,i)=>i===0||i===track.length-1||!((track[i-1][0]===p[0]&&p[0]===track[i+1][0])||(track[i-1][1]===p[1]&&p[1]===track[i+1][1])));
   const fx=fc*CS+CS,fy=fr*CS+CS,first=fieldEntry(fc,fr,track[0]);
   const hway=[[fx+(first[0]-fx)*0.5,fy+(first[1]-fy)*0.5],...track],tr=[first,...track];
-  const theme=['grass','snow','sand','lava'][ri(0,3)];
-  const map={name:'Случайная',theme,song:theme==='snow'?'winter':theme==='sand'?'desert':'forest',px:true,rnd:seed>>>0,way,fields:[{c:0,r:5},{c:fc,r:fr}],hway,track:tr,pads:[],maxPads:15};
+  const theme=['grass','snow','sand','lava','autumn','swamp'][ri(0,5)];
+  const map={name:'Случайная',theme,song:themeSong(theme),px:true,rnd:seed>>>0,way,fields:[{c:0,r:5},{c:fc,r:fr}],hway,track:tr,pads:[],maxPads:15};
   if(theme==='lava')map.noPond=true;
   // a pond in some free corner (the desert needs its oasis)
   if(theme==='sand'||(theme!=='lava'&&R()<0.5)){let best=null;for(let k=0;k<80;k++){const x=ri(150,720),y=ri(110,290),rx=ri(32,46),ry=ri(26,36);
@@ -231,6 +231,8 @@ const ED_HINT=['Нажмите, где поставить главную баз�
  'Выберите тему. Пруд — нажмите на свободное место (ещё раз — убрать)',
  'Нажмите на контур — поставить площадку, на площадку — убрать'];
 let ED=null,ED_PREV=0,ED_DRAG=null,ED_MSG=null,ED_W=null;
+/* music per theme (autumn and swamp borrow tracks for now) */
+function themeSong(th){return th==='snow'?'winter':th==='sand'?'desert':th==='swamp'?'winter':'forest';}
 function edNew(){return{v:4,step:0,theme:'grass',fac:null,ref:null,f0:null,f1:null,road:[],br:[],pond:null,pads:null,tool:'pads'};}
 const edCc=c=>c*CS+CS/2;
 function edFoot(){const Q=ED,o=[];if(Q.fac){const [g,r]=Q.fac;o.push({k:'fac',c0:g-1,c1:g+1,r0:r-1,r1:r+1});}
@@ -302,7 +304,7 @@ function edBuild(){const Q=ED,jn=new Set(Q.br.flatMap(b=>b.to!=null?[b.j,b.to]:[
  const cells=edTrack()||[];const [fc,fr]=Q.f1,[rc,rr]=Q.ref;
  let tr=cells.length?edCollapse(cells.map(([c,r])=>[edCc(c),edCc(r),0])):[[0,0]];{const n=tr.length,L=tr[n-1],N=[rc*CS+140,rr*CS+40];if(n>1){const a=tr[n-2]=tr[n-2].slice();/* keep the last run straight: it moves with the dock */if(a[1]===L[1])a[1]=N[1];else if(a[0]===L[0])a[0]=N[0];}tr[n-1]=N;}tr.push([rc*CS+100,rr*CS+40]);
  const fx=fc*CS+CS,fy=fr*CS+CS,first=fieldEntry(fc,fr,tr[0]);
- const th=Q.theme;const m={name:Q.name||'Своя карта',theme:th,song:th==='snow'?'winter':th==='sand'?'desert':'forest',px:true,split:true,custom:true,
+ const th=Q.theme;const m={name:Q.name||'Своя карта',theme:th,song:themeSong(th),px:true,split:true,custom:true,
   hq:[edCc(Q.fac[0]),edCc(Q.fac[1])],fac:[edCc(Q.fac[0])-36,edCc(Q.fac[1])-100],ref:[rc*CS,rr*CS-112],way,fields:[null,{c:fc,r:fr}],
   hway:[[fx+(first[0]-fx)*0.5,fy+(first[1]-fy)*0.5],...tr],track:[first,...tr],pads:[]};
  if(branches.length)m.branches=branches;if(Q.pond&&th!=='lava')m.pond={...Q.pond};else m.noPond=true;
@@ -329,8 +331,8 @@ function edButtons(){const Q=ED,s=Q.step,b=[{k:'exit',x:8,y:6,w:76,h:36,t:'✕ �
  if(s>0)b.push({k:'back',x:634,y:6,w:76,h:36,t:'‹ Назад'});
  if(s===4)b.push({k:'undo',x:8,y:362,w:130,h:32,t:'↶ Убрать клетку'},{k:'clear',x:144,y:362,w:130,h:32,t:'Очистить дорогу'});
  if(s===5)b.push({k:'undobr',x:8,y:362,w:170,h:32,t:'↶ Убрать последнее'},{k:'clearbr',x:184,y:362,w:150,h:32,t:'Удалить все'});
- if(s===6){[['grass','Луг'],['snow','Снег'],['sand','Пустыня'],['lava','Лава']].forEach(([k,t],i)=>b.push({k:'th:'+k,x:8+i*84,y:362,w:80,h:32,t,on:Q.theme===k}));
-  if(Q.pond)b.push({k:'nopond',x:352,y:362,w:150,h:32,t:'Убрать пруд'});}
+ if(s===6){[['grass','Луг'],['autumn','Осень'],['swamp','Болото'],['snow','Снег'],['sand','Пустыня'],['lava','Лава']].forEach(([k,t],i)=>b.push({k:'th:'+k,x:8+i*68,y:362,w:64,h:32,t,on:Q.theme===k}));
+  if(Q.pond)b.push({k:'nopond',x:420,y:362,w:130,h:32,t:'Убрать пруд'});}
  if(s===7)b.push({k:'clearpads',x:8,y:362,w:190,h:32,t:'Убрать все площадки'},{k:'fillpads',x:204,y:362,w:150,h:32,t:'Заполнить всё'});
  return b;}
 function edDown(x,y){const btn=edButtons().find(b=>x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h);if(btn){edBtn(btn.k);return;}
@@ -399,7 +401,7 @@ function edPadTap(x,y){const Q=ED;const i=Q.pads.findIndex(p=>Math.abs(p[0]-x)<=
  Q.pads.push([best.x,best.y,best.zone]);SFX.build();edRebuild();}
 function edCanNext(){const Q=ED,s=Q.step;return s===0?!!Q.fac:s===1?!!Q.ref:s===2?!!Q.f0:s===3?!!Q.f1:s===4?edRoadDone()&&Q.road.length>=18:s===5?Q.br.every(b=>b.edge||b.to!=null||b.cells.length&&b.cells[b.cells.length-1][0]===18):true;}
 function edGround(){const th=ED.theme;/* dark checkerboard, one square per cell */ctx.fillStyle='#2C2F34';ctx.fillRect(0,0,VW,VH);ctx.fillStyle='#232528';for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++)if((c+r)&1)ctx.fillRect(c*CS,r*CS,CS,CS);
- RR(ctx,VW-24,-10,48,VH+20,6,th==='lava'?'#8A2410':'#2B86C9',2,OL);RR(ctx,VW-12,-10,24,VH+20,4,th==='lava'?'#FF9A30':'#3A9EE0');}
+ RR(ctx,VW-24,-10,48,VH+20,6,th==='lava'?'#8A2410':(GPAL[th]||GPAL.grass).water[0],2,OL);RR(ctx,VW-12,-10,24,VH+20,4,th==='lava'?'#FF9A30':(GPAL[th]||GPAL.grass).water[1]);}
 function edBridge(r){const y=edCc(r),x0=18*CS+CS-6,x1=VW+2;ctx.save();
  RR(ctx,x0,y-17,x1-x0,34,3,'#6B4A2A',2,OL);for(let x=x0+3;x<x1;x+=6)RR(ctx,x,y-15,4,30,1,'#B07A45');
  for(const yy of [y-19,y+15]){RR(ctx,x0-2,yy,x1-x0+2,5,2,'#2B2B2B',1.2,OL);for(let x=x0;x<x1;x+=8)P(ctx,[[x,yy+5],[x+4,yy+5],[x+7,yy],[x+3,yy]],'#F2C232');}ctx.restore();}
@@ -449,7 +451,7 @@ function drawEditor(t){const Q=ED;if(!E)return;const s=Q.step;
 /* ================= random maps built with the editor model (so they can be edited and saved) ================= */
 function genRandomEd(seed){let s=(seed>>>0)||1;const R=()=>{s=(s*1103515245+12345)>>>0;return s/4294967296;};const ri=(a,b)=>a+Math.floor(R()*(b-a+1));const pick=a=>a[Math.floor(R()*a.length)];
  const sv=ED;try{
- for(let tries=0;tries<400;tries++){ED=edNew();const Q=ED;Q.theme=pick(['grass','snow','sand','lava']);TRK.sig=null;
+ for(let tries=0;tries<400;tries++){ED=edNew();const Q=ED;Q.theme=pick(['grass','snow','sand','lava','autumn','swamp']);TRK.sig=null;
   Q.fac=[ri(2,4),ri(3,6)];
   let ok=false;for(let k=0;k<40&&!ok;k++){const c=ri(0,4),r=ri(2,6);if(edRectOk('ref',c,c+2,r,r+1)&&!edOcc(c+3,r)&&!(c+3===Q.fac[0]+1&&r===Q.fac[1])){Q.ref=[c,r];ok=true;}}if(!ok)continue;
   // road: alternating horizontal and vertical runs from the gate to the river
@@ -666,7 +668,7 @@ function setupMap(id){MAPI=MAPS[id]?id:0;MAP=MAPS[MAPI];way=MAP.way;
  hl=[0];for(let i=1;i<HWAY.length;i++)hl.push(hl[i-1]+Math.hypot(HWAY[i][0]-HWAY[i-1][0],HWAY[i][1]-HWAY[i-1][1]));HTOT=hl[hl.length-1];
  EDGE_D=road[0][0]-VW; // road distance where a unit crosses the border
  PLANE_K=(TOTAL-EDGE_D)/Math.max(1,VW-road[road.length-1][0]);ROAD_SAMPLES.length=0;for(let d=EDGE_D;d<=TOTAL;d+=10)ROAD_SAMPLES.push(at(d));BRS.forEach((r,i)=>{for(let d=EDGE_D;d<r.dm;d+=10)ROAD_SAMPLES.push(at(d,i+1));});
- SH=MAP.theme==='lava'?'rgba(0,0,0,0.35)':MAP.theme==='snow'?'rgba(30,50,85,0.26)':MAP.theme==='sand'?'rgba(80,45,10,0.28)':'rgba(10,30,5,0.30)';
+ SH=MAP.theme==='lava'?'rgba(0,0,0,0.35)':MAP.theme==='snow'?'rgba(30,50,85,0.26)':MAP.theme==='sand'?'rgba(80,45,10,0.28)':MAP.theme==='autumn'?'rgba(50,30,5,0.30)':MAP.theme==='swamp'?'rgba(5,20,5,0.36)':'rgba(10,30,5,0.30)';
  ROAD_CLIP=null;bgCache=null;}
 setupMap(MAPI);
 function hat(d){d=Math.max(0,Math.min(HTOT,d));let i=1;while(i<hl.length-1&&hl[i]<d)i++;const k=(d-hl[i-1])/(hl[i]-hl[i-1]||1);return [HWAY[i-1][0]+(HWAY[i][0]-HWAY[i-1][0])*k,HWAY[i-1][1]+(HWAY[i][1]-HWAY[i-1][1])*k];}
@@ -1230,10 +1232,27 @@ function stepFx(dt){for(let s=0;s<2;s++){const fx=FX[s];for(let i=fx.length-1;i>
   for(const h of S.hv||[])if(!h.stopped&&Math.random()<dt*6){const p=hat(h.dd??h.d);SMOKE[s].push({x:p[0]-5,y:p[1]-12,r:2,life:1.1,max:1.1,o:0.4,c:'70,70,70',vy:-9});}}}}
 
 /* ---------------- background ---------------- */
-function tree(c,x,y,s){E(c,x+5*s,y+7*s,15*s,9*s,SH);E(c,x,y,15*s,14*s,'#2F6B22',2,OL);E(c,x-3*s,y-3*s,11*s,10*s,'#3F8A2C');E(c,x-5*s,y-6*s,6*s,5*s,'#62AE3E');E(c,x-6*s,y-8*s,2.5*s,2*s,'#9AD268');for(let i=0;i<3;i++){c.beginPath();c.arc(x+4*s,y+3*s,4*s+i*3*s,0.2,1.3);c.strokeStyle='rgba(20,60,15,0.45)';c.lineWidth=1;c.stroke();}}
-function rock(c,x,y,s,moss){E(c,x+4*s,y+5*s,14*s,7*s,SH);P(c,[[x-13*s,y+4*s],[x-11*s,y-7*s],[x-2*s,y-12*s],[x+10*s,y-9*s],[x+14*s,y+1*s],[x+8*s,y+8*s],[x-6*s,y+9*s]],'#8C9196',2,OL);P(c,[[x-11*s,y-7*s],[x-2*s,y-12*s],[x+10*s,y-9*s],[x+3*s,y-3*s],[x-8*s,y-1*s]],'#B5BABE');P(c,[[x+3*s,y-3*s],[x+10*s,y-9*s],[x+14*s,y+1*s],[x+8*s,y+8*s]],'#73787D');if(moss){E(c,x-6*s,y-6*s,4*s,2*s,'#6FAE45');E(c,x+2*s,y-10*s,3*s,1.6*s,'#6FAE45');}}
-function bush(c,x,y,s){E(c,x+3,y+4,9*s,5*s,SH);E(c,x,y,9*s,7*s,'#3E8A2A',1.6,OL);E(c,x-2*s,y-2*s,5*s,4*s,'#5FB13C');}
-function flowers(c,x,y){for(let i=0;i<4;i++){const fx=x+(rnd()-0.5)*14,fy=y+(rnd()-0.5)*10;E(c,fx,fy,1.8,1.8,rnd()<0.5?'#FFFFFF':'#FFE36B');}}
+/* colours of the grassy themes: meadow, autumn, swamp (trees, bushes, ground, water, road) */
+const GPAL={
+ grass:{ground:'#5FA83A',patch:['rgba(40,110,25,0.22)','rgba(140,200,80,0.18)'],blade:['rgba(35,95,20,0.55)','rgba(150,210,90,0.5)'],
+  trees:[['#2F6B22','#3F8A2C','#62AE3E','#9AD268','rgba(20,60,15,0.45)']],bush:['#3E8A2A','#5FB13C'],moss:'#6FAE45',
+  water:['#2B86C9','#3A9EE0'],bank:'#7A6A4A',road:['#4E6B2A','#6B4A2A','#C98A4E','#D99B5C'],grit:['rgba(140,90,45,0.5)','rgba(255,220,170,0.45)'],track:['#8A6A3A','#B08A55'],shadow:'rgba(10,30,5,0.25)'},
+ autumn:{ground:'#A39A45',patch:['rgba(150,90,30,0.25)','rgba(215,185,85,0.22)'],blade:['rgba(115,90,30,0.55)','rgba(225,200,115,0.5)'],
+  trees:[['#8E3E10','#C2601A','#E68C2C','#F8C060','rgba(90,40,10,0.45)'],['#7A2214','#A6381E','#CE562C','#F09060','rgba(80,20,10,0.45)'],['#836210','#BC961C','#E2BE36','#FAE48A','rgba(90,70,10,0.45)'],['#2F6B22','#4F8A2C','#8AA83E','#C8D268','rgba(20,60,15,0.45)']],
+  bush:['#A04A18','#D27A2E'],moss:'#B08A30',water:['#2A6E9E','#3A86B8'],bank:'#7A5E3A',road:['#6E6428','#6B4A2A','#C08A4E','#D09A5C'],grit:['rgba(140,90,45,0.5)','rgba(255,220,170,0.45)'],track:['#8A6A3A','#B08A55'],shadow:'rgba(40,25,5,0.25)'},
+ swamp:{ground:'#4E6A38',patch:['rgba(40,52,22,0.38)','rgba(110,140,70,0.2)'],blade:['rgba(25,45,15,0.6)','rgba(120,150,70,0.45)'],
+  trees:[['#1E3A1C','#2C5426','#426E32','#6E9850','rgba(10,30,10,0.5)'],['#26401E','#38582A','#56763A','#86A060','rgba(10,30,10,0.5)']],bush:['#2C5426','#4A7434'],moss:'#5E8A3A',
+  water:['#2C4A3C','#46735C'],bank:'#3E3626',road:['#34461E','#4E3A24','#94704A','#A47E54'],grit:['rgba(60,45,25,0.55)','rgba(170,150,110,0.35)'],track:['#5E4E34','#7E6A48'],shadow:'rgba(5,20,5,0.3)'}};
+let GP=GPAL.grass;
+function tree(c,x,y,s){const t=GP.trees.length>1?GP.trees[Math.floor(rnd()*GP.trees.length)]:GP.trees[0];E(c,x+5*s,y+7*s,15*s,9*s,SH);E(c,x,y,15*s,14*s,t[0],2,OL);E(c,x-3*s,y-3*s,11*s,10*s,t[1]);E(c,x-5*s,y-6*s,6*s,5*s,t[2]);E(c,x-6*s,y-8*s,2.5*s,2*s,t[3]);for(let i=0;i<3;i++){c.beginPath();c.arc(x+4*s,y+3*s,4*s+i*3*s,0.2,1.3);c.strokeStyle=t[4];c.lineWidth=1;c.stroke();}}
+function rock(c,x,y,s,moss){E(c,x+4*s,y+5*s,14*s,7*s,SH);P(c,[[x-13*s,y+4*s],[x-11*s,y-7*s],[x-2*s,y-12*s],[x+10*s,y-9*s],[x+14*s,y+1*s],[x+8*s,y+8*s],[x-6*s,y+9*s]],'#8C9196',2,OL);P(c,[[x-11*s,y-7*s],[x-2*s,y-12*s],[x+10*s,y-9*s],[x+3*s,y-3*s],[x-8*s,y-1*s]],'#B5BABE');P(c,[[x+3*s,y-3*s],[x+10*s,y-9*s],[x+14*s,y+1*s],[x+8*s,y+8*s]],'#73787D');if(moss){E(c,x-6*s,y-6*s,4*s,2*s,GP.moss);E(c,x+2*s,y-10*s,3*s,1.6*s,GP.moss);}}
+function bush(c,x,y,s){E(c,x+3,y+4,9*s,5*s,SH);E(c,x,y,9*s,7*s,GP.bush[0],1.6,OL);E(c,x-2*s,y-2*s,5*s,4*s,GP.bush[1]);}
+function flowers(c,x,y){
+ if(GP===GPAL.autumn){/* fallen leaves */for(let i=0;i<5;i++){const fx=x+(rnd()-0.5)*18,fy=y+(rnd()-0.5)*12;E(c,fx,fy,2.4,1.4,['#C8501C','#E2902E','#D8B034','#A8381E'][Math.floor(rnd()*4)]);}return;}
+ if(GP===GPAL.swamp){/* reeds with brown cat-tails */for(let i=0;i<4;i++){const fx=x+(rnd()-0.5)*14,fy=y+(rnd()-0.5)*8,h=7+rnd()*5;c.strokeStyle='#5E7E34';c.lineWidth=1.2;c.beginPath();c.moveTo(fx,fy);c.lineTo(fx+(rnd()-0.5)*2,fy-h);c.stroke();if(rnd()<0.6)E(c,fx,fy-h,1.3,2.6,'#6A4424');}return;}
+ for(let i=0;i<4;i++){const fx=x+(rnd()-0.5)*14,fy=y+(rnd()-0.5)*10;E(c,fx,fy,1.8,1.8,rnd()<0.5?'#FFFFFF':'#FFE36B');}}
+/* swamp puddle: murky water, a muddy rim, maybe a lily pad */
+function puddle(c,x,y,s){E(c,x+2,y+3,13*s,7*s,'rgba(20,30,10,0.3)');E(c,x,y,13*s,7*s,'#3E3A26');E(c,x,y,11*s,5.6*s,GP.water[0]);E(c,x-3*s,y-1.5*s,5*s,2*s,'rgba(180,220,190,0.25)');if(rnd()<0.55){const lx=x+(rnd()-0.5)*8*s,ly=y+(rnd()-0.5)*2*s;E(c,lx,ly,3.2*s,2*s,'#5E9A3E',1,OL);P(c,[[lx,ly],[lx+3.2*s,ly-1],[lx+3.2*s,ly+1]],GP.water[0]);}}
 /* parallel copy of a polyline at distance o (miter joins), used for the wheel ruts of the harvester track */
 function offsetLine(pts,o){const n=pts.length,out=[];const nrm=(a,b)=>{const dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy)||1;return[-dy/l,dx/l];};
  for(let i=0;i<n;i++){const n1=i>0?nrm(pts[i-1],pts[i]):null,n2=i<n-1?nrm(pts[i],pts[i+1]):null;let nx,ny;
@@ -1300,14 +1319,15 @@ function paintLava(bg,b){
   const sx=rnd();if(sx<0.45)deadTree(b,cx+(rnd()-0.5)*10,cy+(rnd()-0.5)*6,0.9+rnd()*0.3);else if(sx<0.75)obsidian(b,cx,cy,0.75+rnd()*0.3);else if(sx<0.9)ventRock(b,cx,cy,0.9);else ashSpecks(b,cx,cy);}
  return bg;}
 function paintBg(){const bg=document.createElement('canvas');bg.width=Math.round(VW*DPR);bg.height=Math.round(VH*DPR);const b=bg.getContext('2d');b.scale(DPR,DPR);seed=11;
- if(MAP.theme==='lava')return paintLava(bg,b);const snow=MAP.theme==='snow',sand=MAP.theme==='sand',BY=BRIDGE_Y;
+ if(MAP.theme==='lava')return paintLava(bg,b);const snow=MAP.theme==='snow',sand=MAP.theme==='sand',BY=BRIDGE_Y;GP=GPAL[MAP.theme]||GPAL.grass;
  if(sand){b.fillStyle='#E2C084';b.fillRect(0,0,VW,VH);
   for(let i=0;i<110;i++){const x=rnd()*VW,y=rnd()*VH,r=14+rnd()*46;b.fillStyle=rnd()<0.55?'rgba(200,150,90,0.22)':'rgba(250,228,180,0.4)';b.beginPath();b.ellipse(x,y,r,r*0.5,rnd()*0.5-0.25,0,6.3);b.fill();}
   // dune ripples
   for(let i=0;i<320;i++){const x=rnd()*VW,y=rnd()*VH,l=8+rnd()*16;b.strokeStyle=rnd()<0.65?'rgba(175,125,65,0.45)':'rgba(255,240,205,0.8)';b.lineWidth=1;b.beginPath();b.moveTo(x,y);b.bezierCurveTo(x+l*0.3,y-3,x+l*0.6,y+2,x+l,y-1);b.stroke();}}
- else if(!snow){b.fillStyle='#5FA83A';b.fillRect(0,0,VW,VH);
-  for(let i=0;i<120;i++){const x=rnd()*VW,y=rnd()*VH,r=10+rnd()*40;b.fillStyle=rnd()<0.5?'rgba(40,110,25,0.22)':'rgba(140,200,80,0.18)';b.beginPath();b.ellipse(x,y,r,r*0.6,rnd()*3,0,6.3);b.fill();}
-  for(let i=0;i<1400;i++){const x=rnd()*VW,y=rnd()*VH;b.strokeStyle=rnd()<0.5?'rgba(35,95,20,0.55)':'rgba(150,210,90,0.5)';b.lineWidth=1;b.beginPath();b.moveTo(x,y);b.lineTo(x+(rnd()-0.5)*3,y-3-rnd()*3);b.stroke();}}
+ else if(!snow){b.fillStyle=GP.ground;b.fillRect(0,0,VW,VH);
+  for(let i=0;i<120;i++){const x=rnd()*VW,y=rnd()*VH,r=10+rnd()*40;b.fillStyle=rnd()<0.5?GP.patch[0]:GP.patch[1];b.beginPath();b.ellipse(x,y,r,r*0.6,rnd()*3,0,6.3);b.fill();}
+  for(let i=0;i<1400;i++){const x=rnd()*VW,y=rnd()*VH;b.strokeStyle=rnd()<0.5?GP.blade[0]:GP.blade[1];b.lineWidth=1;b.beginPath();b.moveTo(x,y);b.lineTo(x+(rnd()-0.5)*3,y-3-rnd()*3);b.stroke();}
+  if(GP===GPAL.autumn)for(let i=0;i<260;i++){const x=rnd()*VW,y=rnd()*VH;E(b,x,y,2.2,1.3,['rgba(200,80,28,0.7)','rgba(226,144,46,0.7)','rgba(216,176,52,0.7)','rgba(168,56,30,0.6)'][Math.floor(rnd()*4)]);}}
  else{b.fillStyle='#E3ECF2';b.fillRect(0,0,VW,VH);
   for(let i=0;i<110;i++){const x=rnd()*VW,y=rnd()*VH,r=12+rnd()*44;b.fillStyle=rnd()<0.55?'rgba(150,185,215,0.22)':'rgba(255,255,255,0.6)';b.beginPath();b.ellipse(x,y,r,r*0.55,rnd()*0.6-0.3,0,6.3);b.fill();}
   // wind ripples in the snow
@@ -1315,31 +1335,31 @@ function paintBg(){const bg=document.createElement('canvas');bg.width=Math.round
  // pond (frozen in winter)
  if(sand){if(MAP.pond){const o=MAP.pond;E(b,o.x+3,o.y+5,o.rx+10,o.ry+9,'rgba(120,150,60,0.35)');E(b,o.x,o.y,o.rx+8,o.ry+7,'#8FB45A');E(b,o.x,o.y,o.rx,o.ry,'#2B86C9',2,OL);E(b,o.x-4,o.y-3,o.rx-10,o.ry-8,'#3A9EE0');E(b,o.x-14,o.y-10,o.rx*0.35,o.ry*0.25,'rgba(255,255,255,0.35)');
   for(let i=0;i<10;i++){const a=i*0.63+0.2;E(b,o.x+Math.cos(a)*(o.rx+6),o.y+Math.sin(a)*(o.ry+5),3,5,'#6E9A42',1,OL);}}}
- else if(MAP.pond&&!snow){const o=MAP.pond;E(b,o.x+3,o.y+5,o.rx+12,o.ry+10,'rgba(10,30,5,0.3)');E(b,o.x,o.y,o.rx+9,o.ry+8,'#7A6A4A');E(b,o.x,o.y,o.rx,o.ry,'#2B86C9',2,OL);E(b,o.x-3,o.y-3,o.rx-8,o.ry-8,'#3A9EE0');E(b,o.x-o.rx*0.35,o.y-o.ry*0.4,o.rx*0.3,o.ry*0.16,'rgba(255,255,255,0.35)');
+ else if(MAP.pond&&!snow){const o=MAP.pond;E(b,o.x+3,o.y+5,o.rx+12,o.ry+10,'rgba(10,30,5,0.3)');E(b,o.x,o.y,o.rx+9,o.ry+8,GP.bank);E(b,o.x,o.y,o.rx,o.ry,GP.water[0],2,OL);E(b,o.x-3,o.y-3,o.rx-8,o.ry-8,GP.water[1]);E(b,o.x-o.rx*0.35,o.y-o.ry*0.4,o.rx*0.3,o.ry*0.16,'rgba(255,255,255,0.35)');
   for(let i=0;i<11;i++){const a=i*0.571+0.3;rock(b,o.x+Math.cos(a)*(o.rx+10),o.y+Math.sin(a)*(o.ry+9),0.55,i%3===0);}
-  for(const [dx,dy] of [[-12,10],[10,-14],[14,16]]){const x=o.x+dx,y=o.y+dy;E(b,x,y,6,4,'#57A83A',1.2,OL);P(b,[[x,y],[x+6,y-2],[x+6,y+2]],'#2B86C9');}}
+  for(const [dx,dy] of [[-12,10],[10,-14],[14,16]]){const x=o.x+dx,y=o.y+dy;E(b,x,y,6,4,GP===GPAL.autumn?'#C8782C':'#57A83A',1.2,OL);P(b,[[x,y],[x+6,y-2],[x+6,y+2]],GP.water[0]);}}
  else if(MAP.pond&&snow){const o=MAP.pond;E(b,o.x+3,o.y+5,o.rx+12,o.ry+10,'rgba(30,50,85,0.2)');E(b,o.x,o.y,o.rx+9,o.ry+8,'#8FA3B3');E(b,o.x,o.y,o.rx,o.ry,'#A9D6F0',2,OL);E(b,o.x-3,o.y-3,o.rx-8,o.ry-8,'#C8E8FA');
   b.strokeStyle='rgba(255,255,255,0.9)';b.lineWidth=1.2;for(const pts of [[[-0.6,-0.2],[-0.2,0.05],[0.1,-0.1],[0.45,0.2]],[[-0.3,0.4],[0,0.2],[0.3,0.45]]]){b.beginPath();pts.forEach(([u,v],i)=>i?b.lineTo(o.x+u*o.rx,o.y+v*o.ry):b.moveTo(o.x+u*o.rx,o.y+v*o.ry));b.stroke();}
   for(let i=0;i<11;i++){const a=i*0.571+0.3;snowRock(b,o.x+Math.cos(a)*(o.rx+10),o.y+Math.sin(a)*(o.ry+9),0.55,i%3===0);}}
  else if(MAP.noPond){}
- else if(!snow){RR(b,-10,316,170,100,40,'#7A6A4A');RR(b,-10,322,162,90,36,'#2B86C9',2,OL);RR(b,-4,330,140,70,30,'#3A9EE0');}
+ else if(!snow){RR(b,-10,316,170,100,40,GP.bank);RR(b,-10,322,162,90,36,GP.water[0],2,OL);RR(b,-4,330,140,70,30,GP.water[1]);}
  else{RR(b,-10,316,170,100,40,'#8FA3B3');RR(b,-10,322,162,90,36,'#A9D6F0',2,OL);RR(b,-4,330,140,70,30,'#C8E8FA');b.strokeStyle='rgba(255,255,255,0.9)';b.lineWidth=1.2;for(const pts of [[[20,340],[45,352],[60,348],[80,362]],[[70,335],[85,346],[110,350]],[[30,372],[55,365],[70,380]]]){b.beginPath();pts.forEach((p,i)=>i?b.lineTo(p[0],p[1]):b.moveTo(p[0],p[1]));b.stroke();}}
  if(!sand&&!MAP.pond&&!MAP.noPond){for(let i=0;i<9;i++)(snow?snowRock:rock)(b,8+i*18,322+(i%2)*3-2,0.7,i%2===0);for(let i=0;i<3;i++)(snow?snowRock:rock)(b,156,340+i*18,0.7,false);}
- if(!snow&&!sand&&!MAP.pond&&!MAP.noPond)[[40,360],[90,378]].forEach(([x,y])=>{E(b,x,y,7,5,'#57A83A',1.2,OL);P(b,[[x,y],[x+7,y-2],[x+7,y+2]],'#2B86C9');});
+ if(!snow&&!sand&&!MAP.pond&&!MAP.noPond)[[40,360],[90,378]].forEach(([x,y])=>{E(b,x,y,7,5,GP===GPAL.autumn?'#C8782C':'#57A83A',1.2,OL);P(b,[[x,y],[x+7,y-2],[x+7,y+2]],GP.water[0]);});
  // border river (ice floes in winter)
  const rx=VW;if(sand){RR(b,rx-26,-10,52,VH+20,6,'#9A5A34');RR(b,rx-21,-10,42,VH+20,4,'#5A3420',2,OL);RR(b,rx-14,-10,28,VH+20,4,'#3A2214');RR(b,rx-7,-10,14,VH+20,3,'#22140B');for(let i=0;i<24;i++){const y=rnd()*VH;L(b,[[rx-20+rnd()*4,y],[rx-12+rnd()*4,y+4+rnd()*6]],'rgba(200,120,70,0.5)',1.4);}}
- else{RR(b,rx-24,-10,48,VH+20,6,snow?'#8FA3B3':'#7A6A4A');RR(b,rx-20,-10,40,VH+20,4,snow?'#3F86B8':'#2B86C9',2,OL);RR(b,rx-10,-10,20,VH+20,4,snow?'#56A2D2':'#3A9EE0');}
- if(sand){}else if(!snow)for(let i=0;i<30;i++){const y=rnd()*VH;b.strokeStyle='rgba(200,235,255,0.55)';b.lineWidth=1.5;b.beginPath();b.arc(rx+(rnd()-0.5)*20,y,3+rnd()*4,3.6,5.8);b.stroke();}
+ else{RR(b,rx-24,-10,48,VH+20,6,snow?'#8FA3B3':GP.bank);RR(b,rx-20,-10,40,VH+20,4,snow?'#3F86B8':GP.water[0],2,OL);RR(b,rx-10,-10,20,VH+20,4,snow?'#56A2D2':GP.water[1]);}
+ if(sand){}else if(!snow)for(let i=0;i<30;i++){const y=rnd()*VH;b.strokeStyle=GP===GPAL.swamp?'rgba(170,200,160,0.35)':'rgba(200,235,255,0.55)';b.lineWidth=1.5;b.beginPath();b.arc(rx+(rnd()-0.5)*20,y,3+rnd()*4,3.6,5.8);b.stroke();}
  else for(let i=0;i<16;i++){const y=rnd()*VH;if(Math.abs(y-BY)<30)continue;const w=6+rnd()*9;RR(b,rx-15+rnd()*6,y,w,4+rnd()*5,3,'#F2F9FF',1,'rgba(90,130,170,0.7)');}
  for(let r=0;r<ROWS;r++){if(Math.abs(cy_(r)-BY)<30||BRS.some(q=>Math.abs(cy_(r)-q.by)<30))continue;for(const s of [-1])(sand?mesaRock:snow?snowRock:rock)(b,rx+s*22,cy_(r)+(rnd()-0.5)*14,0.75,rnd()<0.4);}
  const lineR=(w,col)=>{b.strokeStyle=col;b.lineWidth=w;b.lineJoin='round';b.lineCap='butt';b.beginPath();for(const road of ROADS)road.forEach((p,i)=>i?b.lineTo(p[0],p[1]):b.moveTo(p[0],p[1]));b.stroke();};
  // harvester track: drawn under the road so crossings look like crossings
- const tp=TRACK_PL;b.strokeStyle=sand?'#9A6E44':snow?'#8C7C6C':'#8A6A3A';b.lineWidth=20;b.lineJoin='round';b.lineCap='round';b.beginPath();tp.forEach((p,i)=>i?b.lineTo(p[0],p[1]):b.moveTo(p[0],p[1]));b.stroke();b.strokeStyle=sand?'#C29868':snow?'#ADA090':'#B08A55';b.lineWidth=15;b.stroke();b.setLineDash([3,5]);b.strokeStyle=snow?'rgba(70,55,40,0.5)':'rgba(90,60,30,0.55)';b.lineWidth=2;for(const o of [-4,4]){b.beginPath();offsetLine(tp,o).forEach((p,i)=>i?b.lineTo(p[0],p[1]):b.moveTo(p[0],p[1]));b.stroke();}b.setLineDash([]);
- b.save();b.translate(3,5);lineR(46,snow?'rgba(30,50,85,0.2)':'rgba(10,30,5,0.25)');b.restore();
+ const tp=TRACK_PL;b.strokeStyle=sand?'#9A6E44':snow?'#8C7C6C':GP.track[0];b.lineWidth=20;b.lineJoin='round';b.lineCap='round';b.beginPath();tp.forEach((p,i)=>i?b.lineTo(p[0],p[1]):b.moveTo(p[0],p[1]));b.stroke();b.strokeStyle=sand?'#C29868':snow?'#ADA090':GP.track[1];b.lineWidth=15;b.stroke();b.setLineDash([3,5]);b.strokeStyle=snow?'rgba(70,55,40,0.5)':'rgba(90,60,30,0.55)';b.lineWidth=2;for(const o of [-4,4]){b.beginPath();offsetLine(tp,o).forEach((p,i)=>i?b.lineTo(p[0],p[1]):b.moveTo(p[0],p[1]));b.stroke();}b.setLineDash([]);
+ b.save();b.translate(3,5);lineR(46,snow?'rgba(30,50,85,0.2)':GP.shadow);b.restore();
  if(sand){lineR(46,'#C99A60');lineR(43,'#7A4A2A');lineR(40,'#A8653C');lineR(34,'#B8744A');}
- else if(!snow){lineR(46,'#4E6B2A');lineR(43,'#6B4A2A');lineR(40,'#C98A4E');lineR(34,'#D99B5C');}
+ else if(!snow){lineR(46,GP.road[0]);lineR(43,GP.road[1]);lineR(40,GP.road[2]);lineR(34,GP.road[3]);}
  else{lineR(50,'#FFFFFF');lineR(46,'#9FB4C6');lineR(43,'#5E4A3A');lineR(40,'#8E7660');lineR(34,'#A08670');}
- for(const road of ROADS)for(let i=0;i<road.length-1;i++){const a=road[i],q=road[i+1],n=Math.hypot(q[0]-a[0],q[1]-a[1])/4;for(let k=0;k<n;k++){const x=a[0]+(q[0]-a[0])*k/n,y=a[1]+(q[1]-a[1])*k/n;b.fillStyle=sand?(rnd()<0.6?'rgba(90,45,20,0.45)':'rgba(240,200,150,0.5)'):snow?(rnd()<0.55?'rgba(70,55,40,0.45)':'rgba(255,255,255,0.75)'):(rnd()<0.6?'rgba(140,90,45,0.5)':'rgba(255,220,170,0.45)');b.fillRect(x+(rnd()-0.5)*26,y+(rnd()-0.5)*26,1.8,1.8);}}
+ for(const road of ROADS)for(let i=0;i<road.length-1;i++){const a=road[i],q=road[i+1],n=Math.hypot(q[0]-a[0],q[1]-a[1])/4;for(let k=0;k<n;k++){const x=a[0]+(q[0]-a[0])*k/n,y=a[1]+(q[1]-a[1])*k/n;b.fillStyle=sand?(rnd()<0.6?'rgba(90,45,20,0.45)':'rgba(240,200,150,0.5)'):snow?(rnd()<0.55?'rgba(70,55,40,0.45)':'rgba(255,255,255,0.75)'):(rnd()<0.6?GP.grit[0]:GP.grit[1]);b.fillRect(x+(rnd()-0.5)*26,y+(rnd()-0.5)*26,1.8,1.8);}}
  if(snow){// packed snow along the road edges
   for(const road of ROADS)for(let i=0;i<road.length-1;i++){const a=road[i],q=road[i+1],L=Math.hypot(q[0]-a[0],q[1]-a[1]),ux=(q[0]-a[0])/L,uy=(q[1]-a[1])/L;for(let t=rnd()*20;t<L;t+=14+rnd()*22){for(const sd of [-1,1]){if(rnd()<0.5)continue;const o=15+rnd()*3,x=a[0]+ux*t-uy*o*sd,y=a[1]+uy*t+ux*o*sd,rr=2+rnd()*4;E(b,x,y,rr+rnd()*2,rr*0.6,'rgba(245,250,255,0.75)');}}}}
  for(const BY of [BRIDGE_Y,...BRS.map(q=>q.by)]){b.save();b.translate(VW,BY);RR(b,-30,-21,60,42,3,snow?'#6E5236':'#7A5230',2,OL);for(let i=-26;i<30;i+=7)L(b,[[i,-19],[i,19]],'rgba(60,35,15,0.6)',1.2);
@@ -1353,8 +1373,11 @@ function paintBg(){const bg=document.createElement('canvas');bg.width=Math.round
   if(rd<60){if(rnd()<0.5)(sand?pebbles:snow?sparkles:flowers)(b,cx,cy);continue;}
   const sx=rnd();if(sand){if(sx<0.45)cactus(b,cx+(rnd()-0.5)*10,cy+(rnd()-0.5)*6,0.85+rnd()*0.25);else if(sx<0.7)mesaRock(b,cx,cy,0.8+rnd()*0.3);else{dryShrub(b,x+12,y+14,0.9);pebbles(b,x+28,y+28);}}
   else if(snow){if(sx<0.7)fir(b,cx+(rnd()-0.5)*8,cy+(rnd()-0.5)*6,0.85+rnd()*0.25);else if(sx<0.85)snowRock(b,cx,cy,0.8);else{snowBush(b,x+12,y+14,0.9);sparkles(b,x+28,y+28);}}
+  else if(GP===GPAL.swamp){if(sx<0.5)tree(b,cx+(rnd()-0.5)*8,cy+(rnd()-0.5)*6,0.85+rnd()*0.25);else if(sx<0.75){puddle(b,cx,cy,0.9+rnd()*0.3);flowers(b,cx+12,cy+10);}else if(sx<0.85)rock(b,cx,cy,0.75,true);else{bush(b,x+12,y+14,0.9);flowers(b,x+28,y+28);}}
   else{if(sx<0.7)tree(b,cx+(rnd()-0.5)*8,cy+(rnd()-0.5)*6,0.85+rnd()*0.25);else if(sx<0.85)rock(b,cx,cy,0.8,true);else{bush(b,x+12,y+14,0.9);flowers(b,x+28,y+28);}}}
  if(sand&&MAP.pond){const o=MAP.pond;for(const [a,d,sc] of [[-0.6,1.15,1],[0.5,1.2,0.9],[2.3,1.15,0.95],[3.6,1.2,1.05]])palm(b,o.x+Math.cos(a)*o.rx*d,o.y+Math.sin(a)*o.ry*d+4,sc);}
+ /* swamp: a light mist over everything */
+ if(GP===GPAL.swamp)for(let i=0;i<14;i++){const x=rnd()*VW,y=rnd()*VH,r=60+rnd()*90;const g=b.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,'rgba(220,235,215,0.16)');g.addColorStop(1,'rgba(220,235,215,0)');b.fillStyle=g;b.fillRect(x-r,y-r,2*r,2*r);}
  return bg;}
 
 /* ---------------- sprites ---------------- */
@@ -2558,9 +2581,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.07-1219</div>
+<div id="appVer">v2026.11.07-1255</div>
 <script>
-window.APP_VERSION='2026.11.07-1219';
+window.APP_VERSION='2026.11.07-1255';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
