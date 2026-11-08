@@ -2340,87 +2340,84 @@ function guestRestart(){guestW=null;endSeen=false;ensureLost();SONGS.titan.start
  for(let s=0;s<2;s++){FX[s].length=0;SMOKE[s].length=0;TRACKS[s].length=0;ROCK[s].length=0;}document.getElementById('over').hidden=true;AU.mode='battle';againUi();}
 let mapTimer=0;
 function beginGame(m){mapTimer=0;richGoneAt=null;endSeen=false;for(const k of ['desert','forest','winter'])if(SONGS[k].a){SONGS[k].a.pause();SONGS[k].a.currentTime=0;}ensureLost();SONGS.titan.started=false;mode=m;placing=false;AU.mode='battle';W=newWorld();netEvents=[];botGoal[0]=botGoal[1]=null;for(let i=0;i<2;i++){botPress[i]=0;botSeen[i]={};botThreat[i]={inf:1,jeep:1,tank:1,heli:0.3,plane:0.3};}me=0;view=0;viewT=0;menu=null;for(let s=0;s<2;s++){FX[s].length=0;SMOKE[s].length=0;TRACKS[s].length=0;ROCK[s].length=0;}viewW=W;document.getElementById('lobby').hidden=true;document.getElementById('over').hidden=true;}
-function showOver(won){const o=document.getElementById('over');if(!o.hidden)return;if(won&&mode==='solo')campWin();document.getElementById('bAgain').textContent=CAMP_RUN?'К карте':'В меню';document.getElementById('bRestart').hidden=false;againUi();AU.mode='menu';if(!endSeen)try{won?SFX.win():SFX.lose();}catch(_){}document.getElementById('overTitle').textContent=won?'Победа':'Поражение';const why=(viewW&&viewW.over&&viewW.over.why)||(W&&W.over&&W.over.why);document.getElementById('overText').textContent=why==='tbase'?(won?'Ваш Титан стёр базу соперника с лица земли.':'Титан соперника разрушил вашу базу.'):why==='titan'?(won?'Титан соперника уничтожен — это был его последний шанс.':'Ваш Титан уничтожен — это был последний шанс.'):(won?'База соперника захвачена.':'Ваша база захвачена. Попробуйте другую оборону или атакуйте харвестер соперника.');o.hidden=false;}
-/* ================= campaign: 15 bases across one continent, beaten one after another ================= */
-const CAMP_I=11,CAMP_STARS={easy:1,normal:2,hard:3};
-/* placeholder levels: random editor maps (fixed seeds) in the region's theme; a level with `code` uses the player's own map */
+function showOver(won){const o=document.getElementById('over');if(!o.hidden)return;if(won&&mode==='solo')campWin();document.getElementById('bAgain').textContent=CAMP_RUN?'К карте':'В меню';document.getElementById('bRestart').hidden=false;againUi();AU.mode='menu';if(!endSeen)try{won?SFX.win():SFX.lose();}catch(_){}document.getElementById('overTitle').textContent=won?'Победа':'Поражение';const why=(viewW&&viewW.over&&viewW.over.why)||(W&&W.over&&W.over.why);document.getElementById('overText').textContent=why==='tbase'?(won?'Ваш Титан стёр базу соперника с лица земли.':'Титан соперника разрушил вашу базу.'):why==='titan'?(won?'Титан соперника уничтожен — это был его последний шанс.':'Ваш Титан уничтожен — это был последний шанс.'):(won?'База соперника захвачена.':'Ваша база захвачена. Попробуйте другую оборону или атакуйте харвестер соперника.');if(won&&CAMP_RUN&&CAMP_RUN.won)document.getElementById('overText').textContent+=' Звёзды: '+'★'.repeat(CAMP_RUN.won)+'☆'.repeat(3-CAMP_RUN.won)+' (здоровье базы '+(W.sides[0].lives|0)+').';o.hidden=false;}
+/* ================= campaign: 25 bases on one painted world map — meadows, desert, snow, swamp, volcano — always at the hardest level ================= */
+const CAMP_I=11,CAMP_DIFF='hard';
+/* stars from the base health left on a win: 18–20 → 3, 10–17 → 2, less → 1 */
+const campStars=l=>l>=18?3:l>=10?2:1;
+/* levels: random editor maps (fixed seeds) in the region's theme; a level with `code` uses a hand-made map */
 const CAMP=[
- {n:'Тихий луг',th:'grass',seed:101},{n:'Речной брод',th:'grass',seed:202},{n:'Старая мельница',th:'grass',seed:303},{n:'Лесная опушка',th:'grass',seed:404},{n:'Тёмная чаща',th:'grass',seed:505},
- {n:'Песчаный перевал',th:'sand',seed:606},{n:'Оазис',th:'sand',seed:707},{n:'Каменные дюны',th:'sand',seed:808},
- {n:'Ледяной ручей',th:'snow',seed:909},{n:'Снежный перевал',th:'snow',seed:1010},{n:'Ледник',th:'snow',seed:1111},
- {n:'Пепельные поля',th:'lava',seed:1212},{n:'Огненная река',th:'lava',seed:1313},{n:'Кратер',th:'lava',seed:1414},{n:'Сердце вулкана',th:'lava',seed:1515}];
-/* where the bases sit on the continent (800×400), along one winding path */
-const CAMP_PT=[[78,322],[140,268],[112,205],[178,160],[250,196],[300,262],[372,300],[446,268],[404,160],[468,112],[548,120],[646,176],[660,226],[700,292],[742,214]];
-let CAMP_P={diff:null,stars:{}};try{const j=JSON.parse(localStorage.getItem('dvebazy-camp')||'null');if(j&&typeof j==='object')CAMP_P={diff:j.diff||null,stars:j.stars||{}};}catch(e){}
-function campSave(){try{localStorage.setItem('dvebazy-camp',JSON.stringify(CAMP_P));}catch(e){}}
+ {n:'Тихий луг',th:'grass',seed:101},{n:'Речной брод',th:'grass',seed:202},{n:'Старая мельница',th:'grass',seed:303},{n:'Водопады',th:'grass',seed:404},{n:'Каменный мост',th:'grass',seed:505},
+ {n:'Край пустыни',th:'sand',seed:606},{n:'Кристальная долина',th:'sand',seed:707},{n:'Каменные дюны',th:'sand',seed:808},{n:'Красные столовые горы',th:'sand',seed:1616},{n:'Буровая',th:'sand',seed:1717},
+ {n:'Ледяной ручей',th:'snow',seed:909},{n:'Радар',th:'snow',seed:1010},{n:'Снежный перевал',th:'snow',seed:1111},{n:'Ледник',th:'snow',seed:1818},{n:'Сосновый спуск',th:'snow',seed:1919},
+ {n:'Топкий берег',th:'swamp',seed:2020},{n:'Мёртвые деревья',th:'swamp',seed:2121},{n:'Туманная заводь',th:'swamp',seed:2222},{n:'Гнилые мостки',th:'swamp',seed:2323},{n:'Сердце трясины',th:'swamp',seed:2424},
+ {n:'Пепельные поля',th:'lava',seed:1212},{n:'Огненная река',th:'lava',seed:1313},{n:'Старый завод',th:'lava',seed:1414},{n:'Кратер',th:'lava',seed:2525},{n:'Крепость у вулкана',th:'lava',seed:1515}];
+/* the route on the map (800×400): [x,y] arrays are the bases in order, (x,y) tuples are bends of the road between them */
+const CAMP_ROUTE=[[385,216,0],[430,196,1],[470,176,1],[498,148,1],[532,120,1],[578,112,1],
+ [632,112,1],[670,150,1],[712,172,1],[745,122,1],[700,72,1],
+ [640,52,0],[560,46,0],[470,52,0],[380,56,0],[300,70,0],
+ [228,62,1],[165,90,1],[105,72,1],[80,128,1],[150,122,1],
+ [180,152,0],[250,176,0],[330,204,0],[385,216,0],[398,252,0],[425,282,0],
+ [455,300,1],[495,312,1],[530,282,1],[500,338,1],[420,330,1],
+ [370,312,0],[330,290,0],
+ [290,268,1],[232,252,1],[185,300,1],[140,335,1],[95,248,1]];
+const CAMP_PT=CAMP_ROUTE.filter(p=>p[2]).map(p=>[p[0],p[1]]);
+const CAMP_RI=[];CAMP_ROUTE.forEach((p,k)=>{if(p[2])CAMP_RI.push(k);});
+const CAMP_START=[385,216],CAMP_IMG=new Image();CAMP_IMG.src='campaign_map.webp';
+let CAMP_P={stars:{}};try{const j=JSON.parse(localStorage.getItem('dvebazy-camp2')||'null');if(j&&typeof j==='object')CAMP_P={stars:j.stars||{}};}catch(e){}
+function campSave(){try{localStorage.setItem('dvebazy-camp2',JSON.stringify(CAMP_P));}catch(e){}}
 const campOpenLv=i=>i===0||(CAMP_P.stars[i-1]|0)>0;
 function campMap(i){const L=CAMP[i];let st=null;if(L.code){const r=mmFromCode(L.code);if(r)st=r.st;}
  if(!st){st=genRandomEd(L.seed)||genRandomEd(L.seed+7)||genRandomEd(12345);st.theme=L.th;if(L.th==='lava')st.pond=null;}
  const m=mapFromEd({...st,name:L.n});m.name=L.n;return m;}
 let CAMP_RUN=null,CAMP_PREV=null,CAMP_SEL=null,CAMP_T0=0;
-function campStart(i){const d=CAMP_P.diff||'normal';if(CAMP_PREV==null)CAMP_PREV=MAPI;MAPS[CAMP_I]=campMap(i);setupMap(CAMP_I);bgCache=null;viewW=null;
+function campStart(i){const d=CAMP_DIFF;if(CAMP_PREV==null)CAMP_PREV=MAPI;MAPS[CAMP_I]=campMap(i);setupMap(CAMP_I);bgCache=null;viewW=null;
  const keep=diff;diff=d;soloGo();diff=keep;CAMP_RUN={i,diff:d};
  /* later bases fight harder: a little more income and loot for the bot, free waves a little more often */
- const B=W.sides[1],k=1+0.04*i;B.incK*=k;B.cashK*=k;W.waveK=1-0.02*i;document.getElementById('camp').hidden=true;}
-function campWin(){if(!CAMP_RUN)return;const s=CAMP_STARS[CAMP_RUN.diff]||1,i=CAMP_RUN.i;if((CAMP_P.stars[i]|0)<s){CAMP_P.stars[i]=s;campSave();}}
-function campOpen(){const o=document.getElementById('camp');o.hidden=false;document.getElementById('lobby').hidden=true;CAMP_SEL=null;CAMP_T0=now();if(CAMP_P.diff==null)CAMP_SEL='diff';campResize();}
+ const B=W.sides[1],k=1+0.025*i;B.incK*=k;B.cashK*=k;W.waveK=1-0.012*i;document.getElementById('camp').hidden=true;}
+function campWin(){if(!CAMP_RUN)return;const i=CAMP_RUN.i,S=W&&W.sides[0],s=campStars(S?S.lives:0);CAMP_RUN.won=s;if((CAMP_P.stars[i]|0)<s){CAMP_P.stars[i]=s;campSave();}}
+function campOpen(){const o=document.getElementById('camp');o.hidden=false;document.getElementById('lobby').hidden=true;CAMP_SEL=null;CAMP_T0=now();campResize();}
 function campClose(){document.getElementById('camp').hidden=true;if(CAMP_PREV!=null){setupMap(CAMP_PREV);CAMP_PREV=null;bgCache=null;try{markMap();lobbyPrev();}catch(e){}}document.getElementById('lobby').hidden=false;}
 function campResize(){const cv=document.getElementById('campCv'),r=cv.parentElement.getBoundingClientRect(),dpr=Math.min(2,window.devicePixelRatio||1);let w=r.width,h=w/2;if(h>r.height){h=r.height;w=h*2;}
  cv.style.width=w+'px';cv.style.height=h+'px';cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}
-/* ---- the continent: drawn once into a cache ---- */
-let CAMP_BG=null;
-function campBg(){if(CAMP_BG)return CAMP_BG;const cv=document.createElement('canvas');cv.width=1600;cv.height=800;const c=cv.getContext('2d');c.scale(2,2);
- let sd=7;const rnd=()=>{sd=(sd*16807)%2147483647;return sd/2147483647;};
- const sea=c.createLinearGradient(0,0,0,400);sea.addColorStop(0,'#2E78B8');sea.addColorStop(1,'#1F5E96');c.fillStyle=sea;c.fillRect(0,0,800,400);
- for(let i=0;i<40;i++){const x=rnd()*800,y=rnd()*400;L(c,[[x,y],[x+8,y]],'rgba(255,255,255,0.18)',1.5);}
- const land=[[40,350],[30,260],[60,170],[120,110],[210,90],[300,110],[380,70],[480,50],[600,60],[700,90],[770,160],[780,260],[750,350],[640,375],[520,360],[400,380],[260,372],[140,385]];
- const blob=(pts,f,lw,sc)=>{c.beginPath();pts.forEach((p,i)=>{const q=pts[(i+1)%pts.length],mx=(p[0]+q[0])/2,my=(p[1]+q[1])/2;i?c.quadraticCurveTo(p[0],p[1],mx,my):c.moveTo(mx,my);});c.closePath();if(f){c.fillStyle=f;c.fill();}if(lw){c.lineWidth=lw;c.strokeStyle=sc;c.stroke();}};
- c.save();c.translate(0,6);blob(land,'rgba(0,0,0,0.25)');c.restore();blob(land,'#E8D9A8',10,'#D8C690');blob(land,'#6BB548',3,'#3E7A2A');
- c.save();blob(land);c.clip();
- // regions: forest (left-middle), desert (centre-bottom), snow (top-middle), volcano (right)
- blob([[190,150],[260,140],[300,190],[290,250],[220,250],[170,210]],'#3F8A34');
- blob([[300,240],[400,230],[500,250],[520,330],[420,380],[300,370],[270,300]],'#E2C084');
- blob([[360,60],[480,40],[600,50],[600,150],[520,170],[420,170],[370,120]],'#E3ECF2');
- blob([[600,140],[700,100],[790,150],[790,380],[640,380],[620,260]],'#4A3A34');
- // decoration
- for(let i=0;i<70;i++){const x=40+rnd()*260,y=120+rnd()*250;if(x>180&&x<300&&y>140&&y<250){E(c,x,y,6,6,'#2D6E27',1,'#1D4A18');}else if(y>200&&rnd()<0.5)E(c,x,y,4,4,'#4F9A3A');}
- for(let i=0;i<26;i++){const x=180+rnd()*110,y=150+rnd()*90;P(c,[[x,y-9],[x+6,y+4],[x-6,y+4]],'#245E22',1,'#163E14');}
- for(let i=0;i<18;i++){const x=310+rnd()*190,y=250+rnd()*110;if(rnd()<0.5){RR(c,x-1.5,y-7,3,9,1.5,'#3E8A3A');RR(c,x-5,y-4,2.5,4,1,'#3E8A3A');}else E(c,x,y,5,2.5,'#C49A5E');}
- for(let i=0;i<14;i++){const x=380+rnd()*210,y=60+rnd()*90;P(c,[[x,y-14],[x+12,y+6],[x-12,y+6]],'#9FB0BE',1,'#6F808E');P(c,[[x,y-14],[x+5,y-6],[x-5,y-6]],'#fff');}
- P(c,[[720,170],[760,240],[680,240]],'#3A2C27',2,'#20160F');P(c,[[712,180],[728,180],[734,196],[706,196]],'#FF7A2A');E(c,720,176,7,3,'#FFB040');
- for(let i=0;i<10;i++){const x=630+rnd()*140,y=260+rnd()*100;L(c,[[x,y],[x+8,y+5],[x+14,y+2]],'rgba(255,120,40,0.8)',2);}
- c.restore();
- // the path between the bases
- c.save();c.setLineDash([7,6]);c.lineWidth=4;c.strokeStyle='rgba(90,60,30,0.75)';c.lineCap='round';c.beginPath();CAMP_PT.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.stroke();c.restore();
- return CAMP_BG=cv;}
-function campBtns(){const b=[{k:'back',x:8,y:8,w:92,h:30,t:'‹ Назад'}];['easy','normal','hard'].forEach((d,i)=>b.push({k:'d:'+d,x:452+i*114,y:8,w:108,h:30,t:DIFF[d].name,on:CAMP_P.diff===d}));return b;}
+/* the road between two route points, as a path of the route pieces */
+function campPath(c,k0,k1){c.beginPath();for(let k=k0;k<=k1;k++){const p=CAMP_ROUTE[k];k===k0?c.moveTo(p[0],p[1]):c.lineTo(p[0],p[1]);}}
 function campDraw(){const cv=document.getElementById('campCv');if(!cv||document.getElementById('camp').hidden)return;const c=cv.getContext('2d'),t=now();c.setTransform(cv.width/800,0,0,cv.height/400,0,0);
- c.drawImage(campBg(),0,0,800,400);
+ if(CAMP_IMG.complete&&CAMP_IMG.naturalWidth)c.drawImage(CAMP_IMG,0,0,800,400);else{c.fillStyle='#2E5A2A';c.fillRect(0,0,800,400);}
+ /* swamp mist drifting over the bog */
+ for(let k=0;k<6;k++){const x=380+((k*61+t*6)%200),y=285+(k%3)*22+Math.sin(t*0.5+k)*4,g=c.createRadialGradient(x,y,0,x,y,46);g.addColorStop(0,'rgba(220,235,225,0.22)');g.addColorStop(1,'rgba(220,235,225,0)');c.fillStyle=g;c.fillRect(x-46,y-46,92,92);}
+ const done=CAMP.findIndex((_,i)=>!(CAMP_P.stars[i]|0)),last=done<0?CAMP.length:done; /* bases 0..last-1 are beaten */
+ const kEnd=last>0?CAMP_RI[Math.min(last,CAMP.length-1)]:CAMP_RI[0];
+ c.save();c.lineCap='round';c.lineJoin='round';
+ /* the whole road: faint dashes; the part already walked: a bright gold line */
+ campPath(c,0,CAMP_ROUTE.length-1);c.setLineDash([5,6]);c.lineWidth=3;c.strokeStyle='rgba(255,245,215,0.55)';c.stroke();c.setLineDash([]);
+ if(last>0){campPath(c,0,kEnd);c.lineWidth=5;c.strokeStyle='rgba(30,20,5,0.55)';c.stroke();c.lineWidth=3;c.strokeStyle='#FFD84A';c.stroke();}
+ c.restore();
+ /* our base at the start, the enemy fortress at the end */
+ const hq=(im,x,y,s)=>{if(im.complete&&im.naturalWidth){E(c,x+2,y+s*0.36,s*0.5,s*0.18,'rgba(0,0,0,0.35)');c.drawImage(im,x-s/2,y-s/2,s,s);}};
+ hq(HQ_IMG.b,CAMP_START[0],CAMP_START[1],34);hq(HQ_IMG.r,CAMP_PT[CAMP.length-1][0]-30,CAMP_PT[CAMP.length-1][1]+16,34);
  const tot=Object.values(CAMP_P.stars).reduce((a,b)=>a+(b|0),0);
  RR(c,104,8,150,30,10,'rgba(15,22,13,0.85)');c.save();c.font='800 14px '+FONT;c.fillStyle='#fff';c.textBaseline='middle';c.fillText('Кампания',116,23);c.fillStyle='#F2C232';c.fillText('★ '+tot+'/'+CAMP.length*3,196,23);c.restore();
- for(const b of campBtns()){RR(c,b.x,b.y,b.w,b.h,10,b.on?'#3D7CC4':'rgba(15,22,13,0.85)',2,'#0C120B');c.save();c.font='800 12px '+FONT;c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';c.fillText(b.t,b.x+b.w/2,b.y+b.h/2);c.restore();}
+ for(const b of campBtns()){RR(c,b.x,b.y,b.w,b.h,10,'rgba(15,22,13,0.85)',2,'#0C120B');c.save();c.font='800 12px '+FONT;c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';c.fillText(b.t,b.x+b.w/2,b.y+b.h/2);c.restore();}
  const next=CAMP.findIndex((_,i)=>campOpenLv(i)&&!(CAMP_P.stars[i]|0));
- CAMP_PT.forEach(([x,y],i)=>{const open=campOpenLv(i),st=CAMP_P.stars[i]|0,pu=i===next?1+0.08*Math.sin(t*5):1,R=13*pu;
-  E(c,x+2,y+3,R,R*0.8,'rgba(0,0,0,0.35)');E(c,x,y,R,R,open?(st?'#3D7CC4':'#F2C232'):'#6A6F74',2.5,'#0C120B');
-  c.save();c.font='900 12px '+FONT;c.fillStyle=open?(st?'#fff':'#3A2A00'):'#C9CDD0';c.textAlign='center';c.textBaseline='middle';
-  if(open)c.fillText(''+(i+1),x,y+0.5);else{RR(c,x-5,y-1,10,8,2,'#C9CDD0');c.strokeStyle='#C9CDD0';c.lineWidth=2;c.beginPath();c.arc(x,y-2,3.5,Math.PI,0);c.stroke();}c.restore();
-  for(let k=0;k<3;k++){const sx=x-12+k*12,sy=y+R+7;c.save();c.font='900 11px '+FONT;c.textAlign='center';c.textBaseline='middle';c.fillStyle='rgba(0,0,0,0.5)';c.fillText('★',sx+1,sy+1);c.fillStyle=k<st?'#FFD84A':'rgba(255,255,255,0.35)';c.fillText('★',sx,sy);c.restore();}});
- // level card
- if(typeof CAMP_SEL==='number'){const i=CAMP_SEL,L=CAMP[i],st=CAMP_P.stars[i]|0,[x,y]=CAMP_PT[i],cx=Math.max(110,Math.min(690,x)),cy=y>200?y-92:y+40;
+ CAMP_PT.forEach(([x,y],i)=>{const open=campOpenLv(i),st=CAMP_P.stars[i]|0,pu=i===next?1+0.1*Math.sin(t*5):1,R=10.5*pu;
+  if(i===next){c.save();c.globalAlpha=0.35+0.25*Math.sin(t*5);E(c,x,y,R+6,R+6,'#FFE58A');c.restore();}
+  E(c,x+1.5,y+2.5,R,R*0.8,'rgba(0,0,0,0.4)');E(c,x,y,R,R,open?(st?'#3D7CC4':'#F2C232'):'#6A6F74',2.2,'#0C120B');
+  c.save();c.font='900 10px '+FONT;c.fillStyle=open?(st?'#fff':'#3A2A00'):'#C9CDD0';c.textAlign='center';c.textBaseline='middle';
+  if(open)c.fillText(''+(i+1),x,y+0.5);else{RR(c,x-4,y-0.5,8,6.5,1.5,'#C9CDD0');c.strokeStyle='#C9CDD0';c.lineWidth=1.6;c.beginPath();c.arc(x,y-1.5,2.8,Math.PI,0);c.stroke();}c.restore();
+  if(st)for(let k=0;k<3;k++){const sx=x-9+k*9,sy=y+R+5;c.save();c.font='900 9px '+FONT;c.textAlign='center';c.textBaseline='middle';c.fillStyle='rgba(0,0,0,0.6)';c.fillText('★',sx+0.8,sy+0.8);c.fillStyle=k<st?'#FFD84A':'rgba(255,255,255,0.45)';c.fillText('★',sx,sy);c.restore();}});
+ /* level card */
+ if(typeof CAMP_SEL==='number'){const i=CAMP_SEL,L=CAMP[i],st=CAMP_P.stars[i]|0,[x,y]=CAMP_PT[i],cx=Math.max(110,Math.min(690,x)),cy=y>200?y-90:y+28;
   RR(c,cx-104,cy,208,64,12,'rgba(15,22,13,0.94)',2,'#0C120B');c.save();c.textBaseline='middle';c.font='800 13px '+FONT;c.fillStyle='#fff';c.fillText((i+1)+'. '+L.n,cx-94,cy+16);
   c.font='800 12px '+FONT;c.fillStyle='#FFD84A';c.fillText('★'.repeat(st)+'☆'.repeat(3-st),cx-94,cy+42);c.restore();
   RR(c,cx+22,cy+28,72,26,9,'#F2C232',2,'#0C120B');c.save();c.font='900 12px '+FONT;c.fillStyle='#2A1E00';c.textAlign='center';c.textBaseline='middle';c.fillText('Играть',cx+58,cy+41.5);c.restore();CAMP_SEL_BOX={i,x:cx+22,y:cy+28,w:72,h:26};}
- else CAMP_SEL_BOX=null;
- // first visit: pick the difficulty
- if(CAMP_SEL==='diff'){c.fillStyle='rgba(0,0,0,0.45)';c.fillRect(0,0,800,400);RR(c,250,130,300,90,14,'rgba(15,22,13,0.96)',2,'#0C120B');c.save();c.font='800 14px '+FONT;c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';
-  c.fillText('Выберите сложность кампании',400,150);c.font='600 11px '+FONT;c.fillStyle='#CFE0C8';c.fillText('★ лёгкий · ★★ нормальный · ★★★ сложный',400,170);c.restore();
-  ['easy','normal','hard'].forEach((d,k)=>{RR(c,262+k*94,184,88,28,9,'#3D7CC4',2,'#0C120B');c.save();c.font='800 12px '+FONT;c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';c.fillText(DIFF[d].name,306+k*94,198);c.restore();});}}
+ else CAMP_SEL_BOX=null;}
+function campBtns(){return[{k:'back',x:8,y:8,w:92,h:30,t:'‹ Назад'}];}
 let CAMP_SEL_BOX=null;
 function campTap(ev){const cv=document.getElementById('campCv'),r=cv.getBoundingClientRect(),x=(ev.clientX-r.left)*800/r.width,y=(ev.clientY-r.top)*400/r.height;
- if(CAMP_SEL==='diff'){['easy','normal','hard'].forEach((d,k)=>{if(x>=262+k*94&&x<=350+k*94&&y>=184&&y<=212){CAMP_P.diff=d;campSave();CAMP_SEL=null;SFX.click();}});return;}
- for(const b of campBtns())if(x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h){SFX.click();if(b.k==='back')campClose();else{CAMP_P.diff=b.k.slice(2);campSave();}return;}
+ for(const b of campBtns())if(x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h){SFX.click();if(b.k==='back')campClose();return;}
  if(CAMP_SEL_BOX){const B=CAMP_SEL_BOX;if(x>=B.x&&x<=B.x+B.w&&y>=B.y&&y<=B.y+B.h){SFX.click();campStart(B.i);return;}}
- for(let i=0;i<CAMP_PT.length;i++){const [px,py]=CAMP_PT[i];if((px-x)**2+(py-y)**2<18*18){if(!campOpenLv(i)){SFX.deny();return;}SFX.click();CAMP_SEL=i;return;}}
+ for(let i=0;i<CAMP_PT.length;i++){const [px,py]=CAMP_PT[i];if((px-x)**2+(py-y)**2<15*15){if(!campOpenLv(i)){SFX.deny();return;}SFX.click();CAMP_SEL=i;return;}}
  CAMP_SEL=null;}
 
 function restartSolo(){if(CAMP_RUN)campStart(CAMP_RUN.i);else soloGo();}
@@ -2723,9 +2720,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.08-1457</div>
+<div id="appVer">v2026.11.08-1538</div>
 <script>
-window.APP_VERSION='2026.11.08-1457';
+window.APP_VERSION='2026.11.08-1538';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
