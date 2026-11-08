@@ -681,6 +681,9 @@ const TES_DMG=[50,60,70,80,90],TES_SLOW=[0.3,0.36,0.42,0.48,0.55],TES_R=[1,1.15,
 /* cost to upgrade a tower from level lv to lv+1 (the radar is much pricier: its top level is devastating) */
 /* level 4 was dropped: towers go 1 → 2 → 3 → 5 (shown as level 4), the 3→top step costs the two old steps together */
 const nextLv=lv=>lv===3?5:lv+1,showLv=lv=>lv>=5?lv-1:lv;
+/* campaign upgrade limits (both sides): W.caps={tw,tes,ua} — top tower level (internal: 1,2,3,5), tesla 0 = can't be built, armour top state (0,1,2,3,5) */
+const capOf=(w,k)=>{w=w||W;const c=w&&w.caps;if(!c)return k==='ua'?5:5;return k==='ua'?c.ua:k==='tes'?c.tes:c.tw;};
+function campCaps(L){const g=L<=1?1:L===2?2:L<=4?3:4,t=L<6?0:L===6?1:L===7?2:L<=9?3:4;return{tw:g>=4?5:g,ua:g-1,tes:t?(t>=4?5:t):0};}
 /* upgrades keep their old prices (based on the earlier build costs) */
 const UP_BASE={mg:90,can:180,rkt:450};
 /* cannon upgrades: as dear as possible while each level still gives a little more damage per crystal than more cannons of the level below */
@@ -717,8 +720,8 @@ function ev(e){netEvents.push(e);addFx(e);}
 function doCmd(si,cmd){if(!W||W.over)return;if(W.nuke&&cmd&&cmd.a!=='pause')return;if(cmd&&cmd.a==='nukebuy'){const S=W.sides[si];if(S.ore<NUKE_COST||S.nkCd>0||S.nkT>0||W.sides[1-si].dep[1]<=0)return;S.ore-=NUKE_COST;S.nkT=NUKE_COUNT;S.nkCd=NUKE_CD;ev({e:'nkc',s:si,n:NUKE_COUNT});return;}const S=W.sides[si],O=W.sides[1-si];if(!cmd||typeof cmd!=='object')return;
  const a=cmd.a;
  if(a==='pause'){W.pause=!W.pause;return;}if(a==='speed'){W.speed=W.speed===2?1:2;return;}if(W.pause)return;
- if(a==='build'){const i=cmd.s|0,k=cmd.k;const def=TW[k];if(!def)return;const sl=SLOTS[i];if(!slotFree(S,i))return;if(sl.zone==='far'&&!def.far)return;if(S.ore<def.cost)return;S.ore-=def.cost;S.towers.push({id:nextId++,s:i,k,lv:1,a:faceRoad(sl.x,sl.y),cd:0.5,spent:def.cost,x:sl.x,y:sl.y});ev({e:'built',s:si,x:sl.x,y:sl.y});}
- else if(a==='up'){const tw=S.towers.find(t=>t.id===cmd.id);if(!tw||tw.lv>=TW_MAXLV)return;const cost=upCost(tw.k,tw.lv);if(S.ore<cost)return;S.ore-=cost;tw.spent+=cost;tw.lv=nextLv(tw.lv);tw._cov=undefined;ev({e:'up',s:si,x:tw.x,y:tw.y});if(tw.lv>=TW_MAXLV)ev({e:'vtw',s:si});}
+ if(a==='build'){const i=cmd.s|0,k=cmd.k;const def=TW[k];if(!def)return;if(capOf(W,k)<1)return;const sl=SLOTS[i];if(!slotFree(S,i))return;if(sl.zone==='far'&&!def.far)return;if(S.ore<def.cost)return;S.ore-=def.cost;S.towers.push({id:nextId++,s:i,k,lv:1,a:faceRoad(sl.x,sl.y),cd:0.5,spent:def.cost,x:sl.x,y:sl.y});ev({e:'built',s:si,x:sl.x,y:sl.y});}
+ else if(a==='up'){const tw=S.towers.find(t=>t.id===cmd.id);if(!tw||tw.lv>=TW_MAXLV||tw.lv>=capOf(W,tw.k))return;const cost=upCost(tw.k,tw.lv);if(S.ore<cost)return;S.ore-=cost;tw.spent+=cost;tw.lv=nextLv(tw.lv);tw._cov=undefined;ev({e:'up',s:si,x:tw.x,y:tw.y});if(tw.lv>=TW_MAXLV)ev({e:'vtw',s:si});}
  else if(a==='sell'){if(W.finale)return;const i=S.towers.findIndex(t=>t.id===cmd.id);if(i<0)return;const tw=S.towers[i];S.ore+=Math.round(tw.spent*SELL_K);S.towers.splice(i,1);ev({e:'sold',s:si,x:tw.x,y:tw.y});}
  else if(a==='extup'){const f=cmd.f|0;if(f!==0||S.dep[f]<=0||!S.ext[f]||S.ext[f]>=EXT_MAXLV)return;const c=extUpCost(f);if(S.ore<c)return;S.ore-=c;S.ext[f]++;ev({e:'up',s:si,x:FIELDS[f].x,y:FIELDS[f].y});}
  else if(a==='ext'){const f=cmd.f|0;if(f!==0||S.dep[f]<=0||S.ext[f]||S.ore<EXT_COST)return;S.ore-=EXT_COST;S.ext[f]=1;ev({e:'built',s:si,c:FIELDS[f].c,r:FIELDS[f].r});}
@@ -726,7 +729,7 @@ function doCmd(si,cmd){if(!W||W.over)return;if(W.nuke&&cmd&&cmd.a!=='pause')retu
  else if(a==='mine'){const d=+cmd.d,b=cmd.b>=1&&cmd.b<=NB&&d<dmOf(cmd.b)?cmd.b|0:0;if(!(S.mineCd<=0)||!(d>=EDGE_D+10&&d<=TOTAL-50))return;S.mineCd=MINE_CD;ev({e:'mset',s:si});const p=at(d,b);S.mines.push({id:nextId++,d,b,x:p[0],y:p[1]});ev({e:'mineset',s:si,x:p[0]|0,y:p[1]|0});}
  else if(a==='rain'){if(!(S.rainCd<=0))return;S.rainCd=RAIN_CD;ev({e:'vrain',s:si});let last=0;for(let i=0;i<RAIN_N;i++){const d=EDGE_D+20+Math.random()*(TOTAL-EDGE_D-70);const p=at(d,Math.floor(Math.random()*(NB+1)));const T=0.55+i*0.14+Math.random()*0.1;last=Math.max(last,T);S.strikes.push({x:p[0],y:p[1],t:T});ev({e:'rainfall',s:si,x:p[0]|0,y:p[1]|0,T:+T.toFixed(2)});}S.confT=last+RAIN_CONF;}
  else if(a==='freeze'){if(!(S.frzCd<=0))return;S.frzCd=FRZ_CD;S.frzT=FRZ_T;ev({e:'freeze',s:si});}
- else if(a==='ua'){if(S.ua>=UPG_MAX||S.ore<uaCost(S))return;S.ore-=uaCost(S);S.ua=nextLv(S.ua);ev({e:'up',s:si});if(S.ua>=UPG_MAX)ev({e:'vbig',s:si});}
+ else if(a==='ua'){if(S.ua>=UPG_MAX||S.ua>=capOf(W,'ua')||S.ore<uaCost(S))return;S.ore-=uaCost(S);S.ua=nextLv(S.ua);ev({e:'up',s:si});if(S.ua>=UPG_MAX)ev({e:'vbig',s:si});}
  else if(a==='rup'){const l=S.rl|0;if(l>=RUP_MAX||S.ore<RUP_COST[l])return;S.ore-=RUP_COST[l];S.rl=l+1;S.uh=S.rl;S.uc=S.rl;ev({e:'up',s:si});if(S.rl>=RUP_MAX)ev({e:'vbig',s:si});
   if(S.hv.length<HARV_MAXN&&S.dep[1]>0){const h=newHarv();h.d=HTOT;h.dir=-1;h.load=0;h.wait=0.5;S.hv.push(h);}}
  else if(a==='harv'){if((S.rl|0)<RUP_MAX||S.hv.length>=HARV_MAXN||S.ore<HARV_COST2)return;S.ore-=HARV_COST2;const h=newHarv();h.d=HTOT;h.dir=-1;h.load=0;h.wait=0.5;S.hv.push(h);}
@@ -980,12 +983,12 @@ function botExec(si,cmd){const S=W.sides[si];
  if(cmd.a==='build'&&botPress[si]<400&&!W.sides[1-si].titanOut&&W.t-(S.breachT??-99)>40&&S.towers.length>=Math.min(7,3+Math.floor(W.t/150)))return;if(cmd.a==='replace'&&W.finale)return;if(cmd.a!=='replace'){doCmd(si,cmd);return;}const tw=S.towers.find(t=>t.id===cmd.id);if(!tw)return;const s=tw.s;doCmd(si,{a:'sell',id:tw.id});doCmd(si,{a:'build',s,k:cmd.k});const nt=S.towers.find(t=>t.s===s);if(nt)for(let l=1;l<cmd.lv;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});}
 function bestDefence(si,o){o=o||{};const S=W.sides[si];let best=null;const consider=(score,cost,cmd)=>{if(o.maxCost&&cost>o.maxCost)return;if(W.finale&&cmd.a==='replace')return;/* towers can't be sold in the finale */if(o.buildOnly&&cmd.a!=='build')return;const s=score/cost;if(!best||s>best.s)best={s,cost,cmd};};
  const freeNear=NEAR_SLOTS.filter(i=>slotFree(S,i)),freeFar=FAR_SLOTS.filter(i=>slotFree(S,i));
- for(const i of freeNear.slice().sort((a,b)=>SLOTS[a].x-SLOTS[b].x).slice(0,10))for(const k of ['mg','can','tes','rkt'])consider(towerValue(si,k,1,SLOTS[i].x,SLOTS[i].y),TW[k].cost,{a:'build',s:i,k});
+ for(const i of freeNear.slice().sort((a,b)=>SLOTS[a].x-SLOTS[b].x).slice(0,10))for(const k of ['mg','can','tes','rkt'])if(capOf(W,k)>0)consider(towerValue(si,k,1,SLOTS[i].x,SLOTS[i].y),TW[k].cost,{a:'build',s:i,k});
  for(const i of freeFar)consider(towerValue(si,'rkt',1,SLOTS[i].x,SLOTS[i].y),TW.rkt.cost,{a:'build',s:i,k:'rkt'});
- for(const tw of S.towers)if(tw.lv<TW_MAXLV){const c=upCost(tw.k,tw.lv);consider(towerValue(si,tw.k,nextLv(tw.lv),tw.x,tw.y)-towerValue(si,tw.k,tw.lv,tw.x,tw.y),c,{a:'up',id:tw.id});}
+ for(const tw of S.towers)if(tw.lv<Math.min(TW_MAXLV,capOf(W,tw.k))){const c=upCost(tw.k,tw.lv);consider(towerValue(si,tw.k,nextLv(tw.lv),tw.x,tw.y)-towerValue(si,tw.k,tw.lv,tw.x,tw.y),c,{a:'up',id:tw.id});}
  /* rebuild: selling refunds 100%, so swap a tower that no longer fits the threat for the best other kind the same money (plus a bit) can buy */
  const budget=S.ore*0.6;for(const tw of S.towers){const old=towerValue(si,tw.k,tw.lv,tw.x,tw.y);const far=SLOTS[tw.s].zone==='far';
-  for(const k2 of far?['rkt']:['mg','can','tes','rkt']){if(k2===tw.k)continue;let L=0;for(let l=1;l<=TW_MAXLV;l=nextLv(l)){if(cumCost(k2,l)<=tw.spent*SELL_K+budget)L=l;}if(!L)continue;
+  for(const k2 of far?['rkt']:['mg','can','tes','rkt']){if(k2===tw.k||capOf(W,k2)<1)continue;let L=0;for(let l=1;l<=Math.min(TW_MAXLV,capOf(W,k2));l=nextLv(l)){if(cumCost(k2,l)<=tw.spent*SELL_K+budget)L=l;}if(!L)continue;
    const gain=towerValue(si,k2,L,tw.x,tw.y)-old;if(gain<=old*0.3||gain<=0)continue;consider(gain,Math.max(40,cumCost(k2,L)-tw.spent*SELL_K),{a:'replace',id:tw.id,k:k2,lv:L});}}
  return best;}
 function botThink(dt,si){if(!W||W.over||W.nuke)return;botT[si]-=dt;if(botT[si]>0)return;botT[si]=1.2+Math.random()*0.8;const S=W.sides[si];const t=W.t;updThreat(si);
@@ -1002,7 +1005,7 @@ function botThink(dt,si){if(!W||W.over||W.nuke)return;botT[si]-=dt;if(botT[si]>0
  {const foes=[...S.units,...W.sides[1-si].units].filter(u=>u.o!==si);if(foes.length){let cap=0;for(const tw of S.towers)cap+=towerValue(si,tw.k,tw.lv,tw.x,tw.y)*(S.twK||1);
   const hpAvg=foes.reduce((a,u)=>a+u.hp,0)/foes.length;if(cap<hpAvg*1.4){const o0=S.ore;for(let n=0;n<4;n++){const b=bestDefence(si);if(!b||S.ore<b.cost)break;botExec(si,b.cmd);}if(S.ore<o0){botGoal[si]='tower';return;}/* nothing left to build or upgrade: fall through and spend on armour and attacks */}}}
  // finale: no more income, nothing to save for — armour first, then keep the queue full (mostly jets, the rest whatever breaks through best)
- if(W.finale&&!W.over){if(S.ua<UPG_MAX&&S.ore>=uaCost(S)){doCmd(si,{a:'ua'});return;}
+ if(W.finale&&!W.over){if(S.ua<Math.min(UPG_MAX,capOf(W,'ua'))&&S.ore>=uaCost(S)){doCmd(si,{a:'ua'});return;}
   const paid=S.queue.filter(q=>q.indexOf(':')<0).length;let room=QUEUE_MAX-paid;if(room<=0)return;
   const pk=unitCost('plane',S.ua),np=Math.min(Math.ceil(room*0.6),Math.floor(S.ore/pk));for(let i=0;i<np;i++)doCmd(si,{a:'send',k:'plane'});room-=np;
   if(room>0){const p=bestWave(si,S.ore)||massWave(si);if(p){const uc=unitCost(p.k,S.ua),n=Math.min(room,p.n,Math.floor(S.ore/uc));for(let i=0;i<n;i++)doCmd(si,{a:'send',k:p.k});}}
@@ -1020,7 +1023,7 @@ function botThink(dt,si){if(!W||W.over||W.nuke)return;botT[si]-=dt;if(botT[si]>0
     else if((S.rl|0)>=RUP_MAX&&S.hv.length<wantHv&&S.dep[1]>3000)botGoal[si]='harv';
   else if(S.ua<wantUa&&Math.random()<0.55)botGoal[si]='ua';
   else if(S.ua===4&&S.ore>=uaCost(S)*0.8)botGoal[si]='ua';
-  else{const plan=bestWave(si,Math.max(S.ore,700));if(plan){botGoal[si]='attack';botPlan[si]=plan;}else if(S.ua<UPG_MAX)botGoal[si]='ua';else if(botPress[si]>=400)botGoal[si]='tower';else{botGoal[si]='mass';botPlan[si]=massWave(si);}}}
+  else{const plan=bestWave(si,Math.max(S.ore,700));if(plan){botGoal[si]='attack';botPlan[si]=plan;}else if(S.ua<Math.min(UPG_MAX,capOf(W,'ua')))botGoal[si]='ua';else if(botPress[si]>=400)botGoal[si]='tower';else{botGoal[si]='mass';botPlan[si]=massWave(si);}}}
  const g=botGoal[si];const cost={uc:UC_COST,extup0:extUpCost(0),extup1:extUpCost(1),attack:botPlan[si]?botPlan[si].cost:200,mass:botPlan[si]?botPlan[si].cost:2000,tower:(bestDefence(si)||{cost:140}).cost,harv:HARV_COST2,rup:RUP_COST[Math.min(2,S.rl|0)],ext1:EXT_COST,uh:UH_COST,ua:uaCost(S)}[g];
  if(S.ore<cost){if(S.ore>cost*0.5+1500){if(botPress[si]>=400){const b=bestDefence(si);if(b&&S.ore-b.cost>cost*0.5)botExec(si,b.cmd);}else{const p=bestWave(si,S.ore-cost*0.5);if(p&&S.queue.filter(q=>q.indexOf(':')<0).length===0)for(let i=0;i<p.n;i++)doCmd(si,{a:'send',k:p.k});}}return;}botGoal[si]=null; /* spare money while saving goes into defence */
  if(g==='mass'){const p=botPlan[si];if(p&&S.queue.filter(q=>q.indexOf(':')<0).length===0)for(let i=0;i<p.n;i++)doCmd(si,{a:'send',k:p.k});botPlan[si]=null;}
@@ -1941,7 +1944,7 @@ function drawMap(si,t){const S=viewW.sides[si];const owner=si,tmMine=tmOf(owner)
  for(const f of FX[si]){if(f.k==='scorch')drawScorch(f);else if(f.k==='crater'){if(!FIELDS.some(F=>Math.abs(F.x-f.x)<60&&Math.abs(F.y-f.y)<60))drawCrater(f,t);if(f.max-f.life<25&&Math.random()<0.12)SMOKE[si].push({x:f.x+(Math.random()-0.5)*f.r*0.8,y:f.y-4,r:5,life:2.6,max:2.6,o:0.3,c:'70,62,56',vy:-12});}}
  const objs=[];
  if(menu&&menu.kind==='tower'&&si===me){const tw=S.towers.find(x=>x.id===menu.id);if(tw){const R=TW[tw.k].range*lvR(tw.k,tw.lv-1);ctx.beginPath();ctx.arc(tw.x,tw.y,R,0,6.3);ctx.fillStyle='rgba(255,255,255,0.10)';ctx.fill();ctx.setLineDash([6,5]);ctx.lineWidth=2;ctx.strokeStyle='rgba(255,255,255,0.7)';ctx.stroke();ctx.setLineDash([]);
-  if(tw.lv<TW_MAXLV){const R2=TW[tw.k].range*lvR(tw.k,nextLv(tw.lv)-1);ctx.beginPath();ctx.arc(tw.x,tw.y,R2,0,6.3);ctx.setLineDash([2,6]);ctx.lineWidth=1.5;ctx.strokeStyle='rgba(140,230,110,0.8)';ctx.stroke();ctx.setLineDash([]);}}}
+  if(tw.lv<Math.min(TW_MAXLV,capOf(viewW,tw.k))){const R2=TW[tw.k].range*lvR(tw.k,nextLv(tw.lv)-1);ctx.beginPath();ctx.arc(tw.x,tw.y,R2,0,6.3);ctx.setLineDash([2,6]);ctx.lineWidth=1.5;ctx.strokeStyle='rgba(140,230,110,0.8)';ctx.stroke();ctx.setLineDash([]);}}}
  /* the refinery crystal's income, once a second, rising like a kill reward: above the crystal, or beside the building near the top panel */
  if(si===me&&viewW.sides[si]&&!viewW.over){objs.push({y:1e6,f:()=>{const q=refCrystal(),v=Math.round(crystalInc(S)),k=t%1;if(v<=0)return;const up=q[1]-44>58,x=up?q[0]:(q[0]-52>16?q[0]-52:q[0]+92),y=up?q[1]-14:q[1]+14;
   ctx.save();ctx.globalAlpha=Math.min(1,2-2*k);crystal(ctx,x-8,y-k*22,10,4);T('+'+v,x-1,y-4-k*22,12,'#BFE9FF','left',900);ctx.restore();}});}
@@ -2006,12 +2009,12 @@ function drawMap(si,t){const S=viewW.sides[si];const owner=si,tmMine=tmOf(owner)
   else if(f.k==='cash'&&si===me){const k=1-f.life/f.max,e=HWAY[HWAY.length-1],x=e[0]-10,y=e[1]-34-k*22;ctx.globalAlpha=Math.min(1,2.5-2.5*k);ctx.font='900 14px '+FONT;const w=ctx.measureText('+'+f.v).width+30;RR(ctx,x-w/2,y-11,w,22,11,'rgba(20,28,18,0.85)',1.5,'#5CB8FF');crystal(ctx,x-w/2+11,y+6,12,4.5);T('+'+f.v,x-w/2+20,y+0.5,14,'#BFE9FF','left',900);ctx.globalAlpha=1;}}
 }
 function towerTip(){const S=viewW.sides[me];const tw=menu&&S.towers.find(t=>t.id===menu.id);if(!tw)return'';const d=TW[tw.k],i=tw.lv-1;
- if(tw.k==='tes'){const s2=j=>'ток '+TES_DMG[j]+' ×5 целей · замедл. '+Math.round(TES_SLOW[j]*100)+'% · радиус '+Math.round(d.range*lvR(tw.k,j));return d.name+' ур.'+showLv(tw.lv)+': '+s2(i)+(tw.lv<TW_MAXLV?'  →  ур.'+showLv(nextLv(tw.lv))+': '+s2(nextLv(tw.lv)-1):'');}
+ if(tw.k==='tes'){const s2=j=>'ток '+TES_DMG[j]+' ×5 целей · замедл. '+Math.round(TES_SLOW[j]*100)+'% · радиус '+Math.round(d.range*lvR(tw.k,j));return d.name+' ур.'+showLv(tw.lv)+': '+s2(i)+(tw.lv<Math.min(TW_MAXLV,capOf(viewW,tw.k))?'  →  ур.'+showLv(nextLv(tw.lv))+': '+s2(nextLv(tw.lv)-1):'');}
  const st=j=>'урон '+Math.round(d.dmg*(tw.k==='can'?CAN_LVM:tw.k==='mg'?MG_LVM:LVM)[j])+(d.splash?' по области':'')+' · радиус '+Math.round(d.range*lvR(tw.k,j))+' · выстрел '+(d.cd*LVC[j]).toFixed(2).replace(/0$/,'')+' с';
- return d.name+' ур.'+showLv(tw.lv)+': '+st(i)+(tw.lv<TW_MAXLV?'  →  ур.'+showLv(nextLv(tw.lv))+': '+st(nextLv(tw.lv)-1):'');}
+ return d.name+' ур.'+showLv(tw.lv)+': '+st(i)+(tw.lv<Math.min(TW_MAXLV,capOf(viewW,tw.k))?'  →  ур.'+showLv(nextLv(tw.lv))+': '+st(nextLv(tw.lv)-1):'');}
 function radialItems(){if(!menu)return[];const S=viewW.sides[me];
- if(menu.kind==='cell'){const far=menu.zone==='far';return[{k:'mg',lab:far?'':''+TW.mg.cost,dis:far||S.ore<TW.mg.cost,cmd:{a:'build',s:menu.s,k:'mg'}},{k:'can',lab:far?'':''+TW.can.cost,dis:far||S.ore<TW.can.cost,cmd:{a:'build',s:menu.s,k:'can'}},{k:'tes',lab:far?'':''+TW.tes.cost,dis:far||S.ore<TW.tes.cost,cmd:{a:'build',s:menu.s,k:'tes'}},{k:'rkt',lab:''+TW.rkt.cost,dis:S.ore<TW.rkt.cost,cmd:{a:'build',s:menu.s,k:'rkt'}}];}
- if(menu.kind==='tower'){const tw=S.towers.find(t=>t.id===menu.id);if(!tw)return[];const cost=upCost(tw.k,tw.lv);const mx=tw.lv>=TW_MAXLV;return[{k:'up',lab:mx?'макс.':''+cost,dis:mx||S.ore<cost,cmd:{a:'up',id:tw.id}},PEND_SELL&&PEND_SELL.id===tw.id?{k:'cancel',lab:'Отмена',dis:false,cancel:true}:{k:'sell',lab:viewW.finale?'нельзя':'+'+Math.round(tw.spent*SELL_K),dis:!!viewW.finale,sellReq:tw.id}];}
+ if(menu.kind==='cell'){const far=menu.zone==='far';return[{k:'mg',lab:far?'':''+TW.mg.cost,dis:far||S.ore<TW.mg.cost,cmd:{a:'build',s:menu.s,k:'mg'}},{k:'can',lab:far?'':''+TW.can.cost,dis:far||S.ore<TW.can.cost,cmd:{a:'build',s:menu.s,k:'can'}},{k:'tes',lab:far?'':capOf(viewW,'tes')<1?'закрыто':''+TW.tes.cost,dis:far||capOf(viewW,'tes')<1||S.ore<TW.tes.cost,lock:!far&&capOf(viewW,'tes')<1,cmd:{a:'build',s:menu.s,k:'tes'}},{k:'rkt',lab:''+TW.rkt.cost,dis:S.ore<TW.rkt.cost,cmd:{a:'build',s:menu.s,k:'rkt'}}];}
+ if(menu.kind==='tower'){const tw=S.towers.find(t=>t.id===menu.id);if(!tw)return[];const cost=upCost(tw.k,tw.lv);const mx=tw.lv>=TW_MAXLV,lk=!mx&&tw.lv>=capOf(viewW,tw.k);return[{k:'up',lab:mx?'макс.':lk?'закрыто':''+cost,dis:mx||lk||S.ore<cost,lock:lk,cmd:{a:'up',id:tw.id}},PEND_SELL&&PEND_SELL.id===tw.id?{k:'cancel',lab:'Отмена',dis:false,cancel:true}:{k:'sell',lab:viewW.finale?'нельзя':'+'+Math.round(tw.spent*SELL_K),dis:!!viewW.finale,sellReq:tw.id}];}
  if(menu.kind==='field'){const lv=S.ext[menu.f];if(!lv)return[{k:'ext',lab:''+EXT_COST,dis:S.ore<EXT_COST,cmd:{a:'ext',f:menu.f}}];const c=extUpCost(menu.f);return[{k:'up',lab:lv>=EXT_MAXLV?'макс.':''+c,dis:lv>=EXT_MAXLV||S.ore<c,cmd:{a:'extup',f:menu.f}}];}
 
  if(menu.kind==='factory'){const busy=S.nkT>0,cd=S.nkCd||0,empty=((viewW.sides[1-me].dep||[1,1])[1]<=0);return[{k:'nuke',big:1,lab:busy?'пуск '+Math.ceil(S.nkT):empty?'рудник пуст':cd>0?Math.ceil(cd)+' с':''+NUKE_COST,dis:busy||empty||cd>0||S.ore<NUKE_COST,cmd:{a:'nukebuy'}}];}
@@ -2063,18 +2066,19 @@ else if(k==='harv'){ctx.scale(0.42,0.42);harvester(ctx,0,0,-0.5,1,0,false,0,tm,0
  else if(k==='ud'){E(ctx,0,0,9,9,null,2,'#FF8A6A');E(ctx,0,0,4,4,'#FF6A4A');L(ctx,[[-12,0],[-6,0]],'#FF8A6A',2);L(ctx,[[6,0],[12,0]],'#FF8A6A',2);L(ctx,[[0,-12],[0,-6]],'#FF8A6A',2);L(ctx,[[0,6],[0,12]],'#FF8A6A',2);}
  else if(k==='up'){P(ctx,[[0,-9],[8,0],[3,0],[3,8],[-3,8],[-3,0],[-8,0]],'#7CD04A',1.4,OL);}else if(k==='sell'){crystal(ctx,0,7,15,6);}else if(k==='cancel'){L(ctx,[[-6,-6],[6,6]],'#FF8A7A',3.2);L(ctx,[[6,-6],[-6,6]],'#FF8A7A',3.2);}
  else if(k==='rep'){RR(ctx,-8,-8,16,16,3,'#E9EDF0',1.2,OL);L(ctx,[[-4,0],[4,0]],'#E53B2E',3);L(ctx,[[0,-4],[0,4]],'#E53B2E',3);}else if(k==='go'){P(ctx,[[-5,-8],[8,0],[-5,8]],'#7FD4FF',1.4,OL);}}
+function drawLock(x,y,k){ctx.save();ctx.translate(x,y);ctx.scale(k,k);ctx.lineWidth=2.6;ctx.strokeStyle='#11161C';ctx.beginPath();ctx.arc(0,-3,4.2,Math.PI,0);ctx.stroke();ctx.lineWidth=1.6;ctx.strokeStyle='#E8D27A';ctx.stroke();RR(ctx,-6,-3,12,9,2,'#F2C232',1.4,'#11161C');E(ctx,0,0.8,1.3,1.3,'#11161C');ctx.restore();}
 function drawMenu(){const lay=radialLayout();if(!lay)return;ctx.fillStyle='rgba(0,0,0,0.18)';ctx.fillRect(0,0,VW,VH);
  /* all connector lines first, so they pass under every button */
  if(menu.kind!=='tower')for(const {it,x,y} of lay.pos)if(!it.big)L(ctx,[[lay.c[0],lay.c[1]],[x,y]],'rgba(255,255,255,0.6)',2);
  for(const {it,x,y} of lay.pos){if(it.big){/* one large button in the middle of the building */const R=27;E(ctx,x+2,y+4,R,R,'rgba(0,0,0,0.4)');E(ctx,x,y,R,R,it.dis?'#4A4F55':'#2B3440',3,'#11161C');E(ctx,x,y,R-5,R-5,it.dis?'#5D646B':'#3C4A5C');
    ctx.save();ctx.translate(x,y-2);if(it.dis)ctx.globalAlpha=0.5;ctx.scale(1.45,1.45);icon(it.k);ctx.restore();ctx.font='800 11px '+FONT;const w=ctx.measureText(it.lab).width+14;RR(ctx,x-w/2,y+R-4,w,17,8,'#11161C');T(it.lab,x,y+R+4.5,11,it.dis?'#B0B4B8':'#7FD4FF','center',800);continue;}E(ctx,x+2,y+3,20,20,'rgba(0,0,0,0.35)');E(ctx,x,y,20,20,it.dis?'#4A4F55':'#2B3440',2.5,'#11161C');E(ctx,x,y,16,16,it.dis?'#5D646B':'#3C4A5C');
   if(it.cancel&&PEND_SELL){const k=Math.max(0,Math.min(1,(PEND_SELL.at-now())/SELL_WAIT));ctx.beginPath();ctx.arc(x,y,20,-Math.PI/2,-Math.PI/2+6.283*k);ctx.strokeStyle='#FF6A4A';ctx.lineWidth=3;ctx.stroke();}
-  ctx.save();ctx.translate(x,y);if(it.dis)ctx.globalAlpha=0.45;icon(it.k);ctx.restore();if(!it.lab)continue;ctx.font='800 10px '+FONT;const w=ctx.measureText(it.lab).width+12;RR(ctx,x-w/2,y+15,w,15,7,'#11161C');T(it.lab,x,y+22.5,10,it.cancel?'#FFB4A6':it.dis?'#B0B4B8':'#7FD4FF','center',800);}
+  ctx.save();ctx.translate(x,y);if(it.dis)ctx.globalAlpha=0.45;icon(it.k);ctx.restore();if(it.lock)drawLock(x+11,y-10,1);if(!it.lab)continue;ctx.font='800 10px '+FONT;const w=ctx.measureText(it.lab).width+12;RR(ctx,x-w/2,y+15,w,15,7,'#11161C');T(it.lab,x,y+22.5,10,it.cancel?'#FFB4A6':it.dis?'#B0B4B8':'#7FD4FF','center',800);}
  if(!lay.pos.some(p=>p.it.big))E(ctx,lay.c[0],lay.c[1],7,7,'#F2C232',2,OL);
  const S_=viewW.sides[me];const tip={refinery:(()=>{const l=S_.rl|0,ld=k=>Math.round(HARV_LOAD*1.5**k*(MAP.hload||1)),sp=k=>Math.round((UH_K[k]-1)*100);const left=Math.round((S_.dep||DEPOSIT)[0]),lt=left<=0?'кристалл пуст':'в кристалле '+(left>=1000?(left/1000).toFixed(1)+'к':left);return l<RUP_MAX?lt+' · ур.'+(l+1)+': +1 харвестер · скорость +'+sp(l+1)+'% · кристалл +'+CRY_INC*(l+2)+'/с · груз '+ld(l)+' → '+ld(l+1):lt+' · харвестеров '+S_.hv.length+' из '+HARV_MAXN+' · груз '+ld(l);})(),cell:menu.zone==='far'?'Вдали от дороги — только ракеты':'Место у дороги',tower:towerTip(),field:menu.kind!=='field'?'':(()=>{const f=menu.f,left=Math.round((S_.dep||DEPOSIT)[f]),lv=S_.ext[f],inc=FIELDS[f].inc;if(left<=0)return 'Поле опустело';const boost=f===0&&(S_.dep||[1,1])[1]<=0;if(!lv)return 'Добывающая вышка: +'+inc+'/с, окупится за '+Math.round(EXT_COST/inc)+' с · осталось '+left;return 'Вышка ур.'+lv+': +'+inc*lv+'/с'+(lv<EXT_MAXLV?'  →  ур.'+(lv+1)+': +'+inc*(lv+1)+'/с · окупится за 60 с':'');})(),base_:'Отправить войска к сопернику',harv:'Харвестер'}[menu.kind];if(tip)hint(tip,12);}
 let barFlash=-9;
 const BAR={x:8,y:VH-62,b:46,gap:6};
-function barItems(){const S=viewW.sides[me];const uc=k=>unitCost(k,S.ua);return[{k:'inf',lab:''+uc('inf'),dis:S.ore<uc('inf'),cmd:{a:'send',k:'inf'}},{k:'jeep',lab:''+uc('jeep'),dis:S.ore<uc('jeep'),cmd:{a:'send',k:'jeep'}},{k:'tank',lab:''+uc('tank'),dis:S.ore<uc('tank'),cmd:{a:'send',k:'tank'}},{k:'heli',lab:''+uc('heli'),dis:S.ore<uc('heli'),cmd:{a:'send',k:'heli'}},{k:'plane',lab:''+uc('plane'),dis:S.ore<uc('plane'),cmd:{a:'send',k:'plane'}},{k:'ua',lab:S.ua>=UPG_MAX?'макс.':(UPG_COSTS[S.ua]>=1000?UPG_COSTS[S.ua]/1000+'к':''+UPG_COSTS[S.ua]),dis:S.ua>=UPG_MAX||S.ore<UPG_COSTS[S.ua],cmd:{a:'ua'},lv:S.ua}];}
+function barItems(){const S=viewW.sides[me];const uc=k=>unitCost(k,S.ua);return[{k:'inf',lab:''+uc('inf'),dis:S.ore<uc('inf'),cmd:{a:'send',k:'inf'}},{k:'jeep',lab:''+uc('jeep'),dis:S.ore<uc('jeep'),cmd:{a:'send',k:'jeep'}},{k:'tank',lab:''+uc('tank'),dis:S.ore<uc('tank'),cmd:{a:'send',k:'tank'}},{k:'heli',lab:''+uc('heli'),dis:S.ore<uc('heli'),cmd:{a:'send',k:'heli'}},{k:'plane',lab:''+uc('plane'),dis:S.ore<uc('plane'),cmd:{a:'send',k:'plane'}},{k:'ua',lab:S.ua>=UPG_MAX?'макс.':S.ua>=capOf(viewW,'ua')?'закрыто':(UPG_COSTS[S.ua]>=1000?UPG_COSTS[S.ua]/1000+'к':''+UPG_COSTS[S.ua]),dis:S.ua>=UPG_MAX||S.ua>=capOf(viewW,'ua')||S.ore<UPG_COSTS[S.ua],lock:S.ua<UPG_MAX&&S.ua>=capOf(viewW,'ua'),cmd:{a:'ua'},lv:S.ua}];}
 function barRects(){return barItems().map((it,i)=>({it,x:BAR.x+8+i*(BAR.b+BAR.gap),y:BAR.y+2,w:BAR.b,h:BAR.b}));}
 const BAR_END=BAR.x+16+6*(46+6)-6;
 const FREE_X0=BAR_END+8,FREE_END=FREE_X0+16+4*52-6;
@@ -2092,7 +2096,7 @@ function drawBar(t){const R=barRects();const fl=Math.max(0,1-(now()-barFlash)/0.
  RR(ctx,BAR.x,BAR.y-4,BAR_END-BAR.x,BAR.b+12,12,'rgba(20,28,18,0.88)',2,fl>0?'rgba(242,194,50,'+fl+')':'#0C120B');
  const S=viewW.sides[me];const qn=S.qn??(S.queue?S.queue.length:0);
  for(const {it,x,y,w,h} of R){const pr=pressK===it.k&&now()-pressT<0.15;RR(ctx,x,y+2,w,h,10,'rgba(0,0,0,0.35)');RR(ctx,x,y+(pr?2:0),w,h,10,it.dis?'#3A3F45':'#2B3440',2,'#11161C');RR(ctx,x+3,y+3+(pr?2:0),w-6,h*0.45,8,it.dis?'rgba(255,255,255,0.04)':'rgba(255,255,255,0.08)');
-  ctx.save();ctx.translate(x+w/2,y+h/2-6+(pr?2:0));if(it.dis)ctx.globalAlpha=0.45;ctx.scale(1.05,1.05);icon(it.k);ctx.restore();
+  ctx.save();ctx.translate(x+w/2,y+h/2-6+(pr?2:0));if(it.dis)ctx.globalAlpha=0.45;ctx.scale(1.05,1.05);icon(it.k);ctx.restore();if(it.lock)drawLock(x+w/2,y+h/2-6,1.15);
   ctx.font='800 10px '+FONT;const lw=ctx.measureText(it.lab).width+10;RR(ctx,x+w/2-lw/2,y+h-15,lw,13,6,'#11161C');T(it.lab,x+w/2,y+h-8.5,10,it.dis?'#9AA0A6':'#7FD4FF','center',800);
   if(it.k==='ua'&&it.lv>0){RR(ctx,x+w-17,y-5,20,13,6,'#F2C232',1.2,'#11161C');T('×'+ARM_HP[it.lv],x+w-7,y+1.5,8,'#1C2416','center',900);}}
  if(qn>0){const x=BAR.x+8+2*(BAR.b+BAR.gap)+BAR.b/2;RR(ctx,BAR.x+8,BAR.y-22,3*(BAR.b+BAR.gap)-BAR.gap,16,7,'rgba(20,28,18,0.88)');T('в очереди: '+qn,BAR.x+8+(3*(BAR.b+BAR.gap)-BAR.gap)/2,BAR.y-14,10,'#fff','center',700);}}
@@ -2365,7 +2369,7 @@ function campMap(i){const L=CAMP[i];let st=null;if(L.code){const r=mmFromCode(L.
  const m=mapFromEd({...st,name:L.n});m.name=L.n;return m;}
 let CAMP_RUN=null,CAMP_PREV=null,CAMP_SEL=null,CAMP_T0=0;
 function campStart(i){const d=CAMP_DIFF;if(CAMP_PREV==null)CAMP_PREV=MAPI;MAPS[CAMP_I]=campMap(i);setupMap(CAMP_I);bgCache=null;viewW=null;
- const keep=diff;diff=d;soloGo();diff=keep;CAMP_RUN={i,diff:d};
+ const keep=diff;diff=d;soloGo();diff=keep;CAMP_RUN={i,diff:d};W.caps=campCaps(i+1);
  /* later bases fight harder: a little more income and loot for the bot, free waves a little more often */
  const B=W.sides[1],k=1+0.025*i;B.incK*=k;B.cashK*=k;W.waveK=1-0.012*i;document.getElementById('camp').hidden=true;}
 function campWin(){if(!CAMP_RUN)return;const i=CAMP_RUN.i,S=W&&W.sides[0],s=campStars(S?S.lives:0);CAMP_RUN.won=s;const was=CAMP_P.stars[i]|0;if(was<s){CAMP_ANIM={i,was,st:s,t0:0};CAMP_P.stars[i]=s;campSave();}}
@@ -2774,9 +2778,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.08-2219</div>
+<div id="appVer">v2026.11.09-0122</div>
 <script>
-window.APP_VERSION='2026.11.08-2219';
+window.APP_VERSION='2026.11.09-0122';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
