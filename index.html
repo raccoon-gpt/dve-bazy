@@ -2353,17 +2353,10 @@ const CAMP=[
  {n:'Топкий берег',th:'swamp',seed:2020},{n:'Мёртвые деревья',th:'swamp',seed:2121},{n:'Туманная заводь',th:'swamp',seed:2222},{n:'Гнилые мостки',th:'swamp',seed:2323},{n:'Сердце трясины',th:'swamp',seed:2424},
  {n:'Пепельные поля',th:'lava',seed:1212},{n:'Огненная река',th:'lava',seed:1313},{n:'Старый завод',th:'lava',seed:1414},{n:'Кратер',th:'lava',seed:2525},{n:'Крепость у вулкана',th:'lava',seed:1515}];
 /* the route on the map (800×400): [x,y] arrays are the bases in order, (x,y) tuples are bends of the road between them */
-const CAMP_ROUTE=[[385,216,0],[430,196,1],[470,176,1],[498,148,1],[532,120,1],[578,112,1],
- [632,112,1],[670,150,1],[712,172,1],[745,122,1],[700,72,1],
- [640,52,0],[560,46,0],[470,52,0],[380,56,0],[300,70,0],
- [228,62,1],[165,90,1],[105,72,1],[80,128,1],[150,122,1],
- [180,152,0],[250,176,0],[330,204,0],[385,216,0],[398,252,0],[425,282,0],
- [455,300,1],[495,312,1],[530,282,1],[500,338,1],[420,330,1],
- [370,312,0],[330,290,0],
- [290,268,1],[232,252,1],[185,300,1],[140,335,1],[95,248,1]];
+const CAMP_ROUTE=[[128,120,0],[185,135,1],[245,150,1],[298,170,1],[335,186,1],[400,182,1],[440,160,0],[482,128,1],[548,108,1],[625,150,1],[718,100,1],[605,55,1],[560,40,0],[515,45,0],[445,42,1],[380,72,1],[300,42,1],[208,78,1],[112,98,1],[84,140,0],[98,182,0],[160,206,0],[240,224,0],[318,246,0],[360,262,0],[392,268,1],[452,292,1],[562,250,1],[602,322,1],[472,348,1],[400,352,0],[345,340,0],[300,330,1],[232,300,1],[192,250,1],[118,305,1],[62,224,1]];
 const CAMP_PT=CAMP_ROUTE.filter(p=>p[2]).map(p=>[p[0],p[1]]);
 const CAMP_RI=[];CAMP_ROUTE.forEach((p,k)=>{if(p[2])CAMP_RI.push(k);});
-const CAMP_START=[385,216],CAMP_IMG=new Image();CAMP_IMG.src='campaign_map.webp';
+const CAMP_START=[128,120],CAMP_END=[70,262],CAMP_IMG=new Image();CAMP_IMG.src='campaign_map.webp';
 let CAMP_P={stars:{}};try{const j=JSON.parse(localStorage.getItem('dvebazy-camp2')||'null');if(j&&typeof j==='object')CAMP_P={stars:j.stars||{}};}catch(e){}
 function campSave(){try{localStorage.setItem('dvebazy-camp2',JSON.stringify(CAMP_P));}catch(e){}}
 const campOpenLv=i=>i===0||(CAMP_P.stars[i-1]|0)>0;
@@ -2385,7 +2378,7 @@ function campPath(c,k0,k1){c.beginPath();for(let k=k0;k<=k1;k++){const p=CAMP_RO
 function campDraw(){const cv=document.getElementById('campCv');if(!cv||document.getElementById('camp').hidden)return;const c=cv.getContext('2d'),t=now();c.setTransform(cv.width/800,0,0,cv.height/400,0,0);
  if(CAMP_IMG.complete&&CAMP_IMG.naturalWidth)c.drawImage(CAMP_IMG,0,0,800,400);else{c.fillStyle='#2E5A2A';c.fillRect(0,0,800,400);}
  /* swamp mist drifting over the bog */
- for(let k=0;k<6;k++){const x=380+((k*61+t*6)%200),y=285+(k%3)*22+Math.sin(t*0.5+k)*4,g=c.createRadialGradient(x,y,0,x,y,46);g.addColorStop(0,'rgba(220,235,225,0.22)');g.addColorStop(1,'rgba(220,235,225,0)');c.fillStyle=g;c.fillRect(x-46,y-46,92,92);}
+ for(let k=0;k<7;k++){const x=360+((k*61+t*6)%280),y=262+(k%3)*30+Math.sin(t*0.5+k)*4,g=c.createRadialGradient(x,y,0,x,y,46);g.addColorStop(0,'rgba(220,235,225,0.22)');g.addColorStop(1,'rgba(220,235,225,0)');c.fillStyle=g;c.fillRect(x-46,y-46,92,92);}
  const done=CAMP.findIndex((_,i)=>!(CAMP_P.stars[i]|0)),last=done<0?CAMP.length:done; /* bases 0..last-1 are beaten */
  const kEnd=last>0?CAMP_RI[Math.min(last,CAMP.length-1)]:CAMP_RI[0];
  c.save();c.lineCap='round';c.lineJoin='round';
@@ -2395,7 +2388,7 @@ function campDraw(){const cv=document.getElementById('campCv');if(!cv||document.
  c.restore();
  /* our base at the start, the enemy fortress at the end */
  const hq=(im,x,y,s)=>{if(im.complete&&im.naturalWidth){E(c,x+2,y+s*0.36,s*0.5,s*0.18,'rgba(0,0,0,0.35)');c.drawImage(im,x-s/2,y-s/2,s,s);}};
- hq(HQ_IMG.b,CAMP_START[0],CAMP_START[1],34);hq(HQ_IMG.r,CAMP_PT[CAMP.length-1][0]-30,CAMP_PT[CAMP.length-1][1]+16,34);
+ hq(HQ_IMG.b,CAMP_START[0],CAMP_START[1],34);hq(HQ_IMG.r,CAMP_END[0],CAMP_END[1],34);
  const tot=Object.values(CAMP_P.stars).reduce((a,b)=>a+(b|0),0);
  RR(c,104,8,150,30,10,'rgba(15,22,13,0.85)');c.save();c.font='800 14px '+FONT;c.fillStyle='#fff';c.textBaseline='middle';c.fillText('Кампания',116,23);c.fillStyle='#F2C232';c.fillText('★ '+tot+'/'+CAMP.length*3,196,23);c.restore();
  for(const b of campBtns()){RR(c,b.x,b.y,b.w,b.h,10,'rgba(15,22,13,0.85)',2,'#0C120B');c.save();c.font='800 12px '+FONT;c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';c.fillText(b.t,b.x+b.w/2,b.y+b.h/2);c.restore();}
@@ -2720,9 +2713,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.08-1538</div>
+<div id="appVer">v2026.11.08-2101</div>
 <script>
-window.APP_VERSION='2026.11.08-1538';
+window.APP_VERSION='2026.11.08-2101';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
