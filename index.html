@@ -331,7 +331,7 @@ function edButtons(){const Q=ED,s=Q.step,b=[{k:'exit',x:8,y:6,w:76,h:36,t:'✕ �
  if(s>0)b.push({k:'back',x:634,y:6,w:76,h:36,t:'‹ Назад'});
  if(s===4)b.push({k:'undo',x:8,y:362,w:130,h:32,t:'↶ Убрать клетку'},{k:'clear',x:144,y:362,w:130,h:32,t:'Очистить дорогу'});
  if(s===5)b.push({k:'undobr',x:8,y:362,w:170,h:32,t:'↶ Убрать последнее'},{k:'clearbr',x:184,y:362,w:150,h:32,t:'Удалить все'});
- if(s===6){[['grass','Луг'],['autumn','Осень'],['swamp','Болото'],['swamp2','Болото 2'],['snow','Снег'],['sand','Пустыня'],['lava','Лава']].forEach(([k,t],i)=>b.push({k:'th:'+k,x:8+i*68,y:362,w:64,h:32,t,on:Q.theme===k}));
+ if(s===6){[['grass','Луг'],['autumn','Осень'],['swamp','Болото'],['snow','Снег'],['sand','Пустыня'],['lava','Лава']].forEach(([k,t],i)=>b.push({k:'th:'+k,x:8+i*68,y:362,w:64,h:32,t,on:Q.theme===k}));
   if(Q.pond)b.push({k:'nopond',x:488,y:362,w:120,h:32,t:'Убрать пруд'});}
  if(s===7)b.push({k:'clearpads',x:8,y:362,w:190,h:32,t:'Убрать все площадки'},{k:'fillpads',x:204,y:362,w:150,h:32,t:'Заполнить всё'});
  return b;}
@@ -1243,7 +1243,8 @@ const GPAL={
  swamp:{sw:1,ground:'#3A762A',patch:['rgba(30,80,22,0.45)','rgba(110,170,60,0.22)'],blade:['rgba(22,60,14,0.55)','rgba(130,190,70,0.45)'],
   trees:[['#1E4A1A','#2C6424','#448A32','#7AB050','rgba(10,30,10,0.5)']],bush:['#2C6424','#4E9636'],moss:'#7AB648',
   water:['#163A36','#24564C'],bank:'#2A4A1C',road:['#2E4220','#5A3E24','#7A4E2E','#85583A'],grit:['rgba(50,30,14,0.55)','rgba(200,160,110,0.45)'],track:['#4E3A22','#6A5034'],shadow:'rgba(5,20,5,0.35)'}};
-GPAL.swamp2=Object.assign({},GPAL.swamp,{tex:1});
+/* the swamp theme is drawn from the painted textures and decor (the old hand-drawn swamp stays only as the fallback while images load); 'swamp2' = old name, kept for saved maps */
+GPAL.swamp.tex=1;GPAL.swamp2=GPAL.swamp;
 let GP=GPAL.grass;
 /* «Болото 2» (test theme): painted textures and objects supplied by the player, placed by the same swamp code */
 const SW2={grass:new Image(),mud:new Image(),water:new Image(),atlas:new Image(),atlas2:new Image(),pads:new Image(),atlas3:new Image(),
@@ -1255,7 +1256,7 @@ const SW2={grass:new Image(),mud:new Image(),water:new Image(),atlas:new Image()
  /* second set (TASK-001 v1, accepted part): single lilies, flowers, duckweed, mushrooms, pebbles, low tufts; tuft_02/04 replaced by muted TASK-001 v3 recolours */
  B:{"lily_single_01":[0,0,46,34],"lily_single_02":[48,0,52,33],"lily_single_03":[102,0,46,33],"lily_single_04":[150,0,52,40],"lily_flower_01":[204,0,60,44],"lily_flower_02":[266,0,53,39],"duckweed_01":[321,0,84,58],"duckweed_02":[407,0,84,58],"duckweed_03":[0,60,84,60],"mushrooms_01":[86,60,52,40],"mushrooms_02":[140,60,52,42],"pebbles_01":[194,60,52,31],"pebbles_02":[248,60,52,37],"pebbles_03":[302,60,52,33],"tuft_02":[356,60,36,56],"tuft_04":[418,60,58,38]},
  A:{"reed1":[0,0,98,85],"reed2":[100,0,87,83],"reed3":[189,0,89,86],"lily1":[280,0,108,49],"lily2":[390,0,107,62],"lily3":[499,0,105,59],"lily4":[606,0,95,70],"log1":[703,0,149,70],"log2":[854,0,116,69],"branch":[0,88,137,67],"root1":[139,88,134,78],"root2":[275,88,191,89],"stump1":[468,88,119,79],"stump2":[589,88,104,81],"stump3":[695,88,110,80],"rock1":[807,88,94,65],"rock2":[903,88,82,51],"rock3":[0,179,75,56],"rock4":[77,179,139,85],"grass1":[218,179,94,75],"grass2":[314,179,87,76],"grass3":[403,179,91,76],"fern":[496,179,99,72],"bush1":[597,179,88,68],"bush2":[687,179,83,70],"bush3":[772,179,80,72],"bush4":[854,179,101,73]}};
-for(const k of ['grass','mud','water','atlas','atlas2','pads','atlas3']){SW2[k].onload=()=>{if(typeof MAP!=='undefined'&&MAP&&MAP.theme==='swamp2')bgCache=null;};SW2[k].src='sw2_'+k+'.webp';}
+for(const k of ['grass','mud','water','atlas','atlas2','pads','atlas3']){SW2[k].onload=()=>{if(typeof MAP!=='undefined'&&MAP&&(MAP.theme==='swamp'||MAP.theme==='swamp2'))bgCache=null;};SW2[k].src='sw2_'+k+'.webp';}
 const sw2Ready=()=>['grass','mud','water','atlas','atlas2','pads','atlas3'].every(k=>SW2[k].complete&&SW2[k].naturalWidth>0);
 function sw2Pat(b,k,sc){const p=b.createPattern(SW2[k],'repeat');try{p.setTransform(new DOMMatrix().scale(sc));}catch(_){}return p;}
 /* one object from the atlas, centred at x,y, w wide (logical px), maybe mirrored, with a soft shadow */
@@ -1900,7 +1901,7 @@ const tmOf=owner=>owner===me?TEAM.b:TEAM.r;
 /* ---------------- render ---------------- */
 /* empty tower pad (drawn live: it disappears under a tower and comes back when the tower is sold) */
 function drawPad(b,sl){const far=sl.zone==='far',th=MAP.theme,snow=th==='snow',sand=th==='sand';
- if(th==='swamp2'&&sw2Ready()){/* TASK-001 v2 stone pad picture, chosen per position; far zone gets a cool tint */const h=SLOT_HALF,k=((Math.round(sl.x)*73856093^Math.round(sl.y)*19349663)>>>0)%7,n=k<2?'pad_01':k<4?'pad_02':k<6?'pad_03':'pad_04',a=SW2.C[n],w=h*2*1.12;RR(b,sl.x-h+1,sl.y-h+3,h*2,h*2,6,'rgba(8,24,6,0.35)');b.drawImage(SW2.pads,a[0],a[1],a[2],a[3],sl.x-w/2,sl.y-w/2,w,w);if(far)RR(b,sl.x-h+1,sl.y-h+1,h*2-2,h*2-2,5,'rgba(110,150,210,0.16)');return;}
+ if((th==='swamp'||th==='swamp2')&&sw2Ready()){/* TASK-001 v2 stone pad picture, chosen per position; far zone gets a cool tint */const h=SLOT_HALF,k=((Math.round(sl.x)*73856093^Math.round(sl.y)*19349663)>>>0)%7,n=k<2?'pad_01':k<4?'pad_02':k<6?'pad_03':'pad_04',a=SW2.C[n],w=h*2*1.12;RR(b,sl.x-h+1,sl.y-h+3,h*2,h*2,6,'rgba(8,24,6,0.35)');b.drawImage(SW2.pads,a[0],a[1],a[2],a[3],sl.x-w/2,sl.y-w/2,w,w);if(far)RR(b,sl.x-h+1,sl.y-h+1,h*2-2,h*2-2,5,'rgba(110,150,210,0.16)');return;}
  if(th==='swamp'||th==='swamp2'){/* a mossy stone slab; cracks fixed per pad (from its position) */const h=SLOT_HALF,x0=sl.x-h,y0=sl.y-h;let sd=(Math.round(sl.x)*73856093^Math.round(sl.y)*19349663)>>>0;const R2=()=>{sd=(sd*1103515245+12345)>>>0;return(sd>>>8)/16777216;};
   RR(b,x0+1,y0+3,h*2,h*2,7,'rgba(8,24,6,0.4)');RR(b,x0,y0,h*2,h*2,7,far?'#6C7A70':'#76825A',1.6,far?'#3E4E5A':'#46502E');RR(b,x0+2,y0+2,h*2-4,h-3,5,far?'rgba(200,220,235,0.12)':'rgba(230,240,190,0.14)');
   b.strokeStyle='rgba(40,46,26,0.55)';b.lineWidth=1;for(let k=0;k<2;k++){let cx=x0+5+R2()*(h*2-10),cy=y0+5+R2()*(h*2-10),a=R2()*6.3;b.beginPath();b.moveTo(cx,cy);for(let m=0;m<3;m++){a+=(R2()-0.5)*1.6;cx=Math.max(x0+3,Math.min(x0+h*2-3,cx+Math.cos(a)*(4+R2()*4)));cy=Math.max(y0+3,Math.min(y0+h*2-3,cy+Math.sin(a)*(4+R2()*4)));b.lineTo(cx,cy);}b.stroke();}
@@ -2720,9 +2721,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.08-1437</div>
+<div id="appVer">v2026.11.08-1448</div>
 <script>
-window.APP_VERSION='2026.11.08-1437';
+window.APP_VERSION='2026.11.08-1448';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
