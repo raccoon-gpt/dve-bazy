@@ -1249,8 +1249,8 @@ let GP=GPAL.grass;
 const SW2={grass:new Image(),mud:new Image(),water:new Image(),atlas:new Image(),atlas2:new Image(),pads:new Image(),
  /* TASK-001 v2 (accepted): stone pads 01-04 (102px squares) and low tuft_01 */
  C:{"pad_01":[0,0,102,102],"pad_02":[104,0,102,102],"pad_03":[208,0,102,102],"pad_04":[312,0,102,102],"tuft_01":[416,0,62,50]},
- /* second set (TASK-001 v1, accepted part): single lilies, flowers, duckweed, mushrooms, pebbles, low tufts */
- B:{"lily_single_01":[0,0,46,34],"lily_single_02":[48,0,52,33],"lily_single_03":[102,0,46,33],"lily_single_04":[150,0,52,40],"lily_flower_01":[204,0,60,44],"lily_flower_02":[266,0,53,39],"duckweed_01":[321,0,84,58],"duckweed_02":[407,0,84,58],"duckweed_03":[0,60,84,60],"mushrooms_01":[86,60,52,40],"mushrooms_02":[140,60,52,42],"pebbles_01":[194,60,52,31],"pebbles_02":[248,60,52,37],"pebbles_03":[302,60,52,33],"tuft_02":[356,60,60,58],"tuft_04":[418,60,60,44]},
+ /* second set (TASK-001 v1, accepted part): single lilies, flowers, duckweed, mushrooms, pebbles, low tufts; tuft_02/04 replaced by muted TASK-001 v3 recolours */
+ B:{"lily_single_01":[0,0,46,34],"lily_single_02":[48,0,52,33],"lily_single_03":[102,0,46,33],"lily_single_04":[150,0,52,40],"lily_flower_01":[204,0,60,44],"lily_flower_02":[266,0,53,39],"duckweed_01":[321,0,84,58],"duckweed_02":[407,0,84,58],"duckweed_03":[0,60,84,60],"mushrooms_01":[86,60,52,40],"mushrooms_02":[140,60,52,42],"pebbles_01":[194,60,52,31],"pebbles_02":[248,60,52,37],"pebbles_03":[302,60,52,33],"tuft_02":[356,60,36,56],"tuft_04":[418,60,58,38]},
  A:{"reed1":[0,0,98,85],"reed2":[100,0,87,83],"reed3":[189,0,89,86],"lily1":[280,0,108,49],"lily2":[390,0,107,62],"lily3":[499,0,105,59],"lily4":[606,0,95,70],"log1":[703,0,149,70],"log2":[854,0,116,69],"branch":[0,88,137,67],"root1":[139,88,134,78],"root2":[275,88,191,89],"stump1":[468,88,119,79],"stump2":[589,88,104,81],"stump3":[695,88,110,80],"rock1":[807,88,94,65],"rock2":[903,88,82,51],"rock3":[0,179,75,56],"rock4":[77,179,139,85],"grass1":[218,179,94,75],"grass2":[314,179,87,76],"grass3":[403,179,91,76],"fern":[496,179,99,72],"bush1":[597,179,88,68],"bush2":[687,179,83,70],"bush3":[772,179,80,72],"bush4":[854,179,101,73]}};
 for(const k of ['grass','mud','water','atlas','atlas2','pads']){SW2[k].onload=()=>{if(typeof MAP!=='undefined'&&MAP&&MAP.theme==='swamp2')bgCache=null;};SW2[k].src='sw2_'+k+'.webp';}
 const sw2Ready=()=>['grass','mud','water','atlas','atlas2','pads'].every(k=>SW2[k].complete&&SW2[k].naturalWidth>0);
@@ -2703,9 +2703,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.08-1209</div>
+<div id="appVer">v2026.11.08-1321</div>
 <script>
-window.APP_VERSION='2026.11.08-1209';
+window.APP_VERSION='2026.11.08-1321';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
