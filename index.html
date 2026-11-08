@@ -2375,17 +2375,31 @@ function campResize(){const cv=document.getElementById('campCv'),r=cv.parentElem
  cv.style.width=w+'px';cv.style.height=h+'px';cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}
 /* the road between two route points, as a path of the route pieces */
 function campPath(c,k0,k1){c.beginPath();for(let k=k0;k<=k1;k++){const p=CAMP_ROUTE[k];k===k0?c.moveTo(p[0],p[1]):c.lineTo(p[0],p[1]);}}
+/* a level is on the map only once it is beaten or is the next target */
+const campVis=i=>(CAMP_P.stars[i]|0)>0||(campOpenLv(i)&&!(CAMP_P.stars[i]|0));
+/* level marker: a pole stuck in the ground with a pennant — red enemy pennant for the target, blue with our crystal once taken; the last one is bigger (placeholder until the drawn pennants arrive) */
+function campFlag(c,x,y,i,st,isNext,t){const fin=i===CAMP.length-1,k=fin?1.35:1,H=30*k,W=17*k,blue=st>0;
+ E(c,x+1,y+1,6*k,2.6*k,'rgba(0,0,0,0.4)');E(c,x,y,4.6*k,2*k,'#5A5F66',1,'#1A1D20');
+ c.save();c.lineCap='round';c.strokeStyle='#1A1D20';c.lineWidth=3.2*k;c.beginPath();c.moveTo(x,y);c.lineTo(x,y-H);c.stroke();c.strokeStyle='#B9C0C8';c.lineWidth=1.6*k;c.stroke();c.restore();
+ E(c,x,y-H,2.4*k,2.4*k,blue?'#7FD0FF':'#FFB040',1,'#1A1D20');
+ const w=isNext?Math.sin(t*4+i):0,top=y-H+2*k,fl=[[x,top],[x+W,top+2*k+w*1.5],[x+W*0.78,top+8*k+w],[x+W,top+14*k+w*1.5],[x,top+16*k]];
+ if(fin&&!blue){fl[1][0]+=2;fl[3][0]-=1;}
+ P(c,fl,blue?'#3D7CC4':(fin?'#8E1B1B':'#C9302C'),1.6,'#140A08');
+ const ex=x+W*0.42,ey=top+8*k;
+ if(blue){P(c,[[ex,ey-5*k],[ex+3.2*k,ey],[ex,ey+5*k],[ex-3.2*k,ey]],'#8FE3FF',1,'#0E3A66');}
+ else{P(c,[[ex-4*k,ey+4*k],[ex,ey-5*k],[ex+4*k,ey+4*k],[ex,ey+1.5*k]],fin?'#FF7A2A':'#FFD9C2',1,'#3A0A08');}
+ if(isNext){c.save();c.globalAlpha=0.3+0.2*Math.sin(t*5);E(c,x,y,11*k,4.5*k,'#FFE58A');c.restore();}
+ c.save();c.font='900 '+(9*k|0)+'px '+FONT;c.textAlign='center';c.textBaseline='middle';c.fillStyle='rgba(0,0,0,0.65)';c.fillText(''+(i+1),x+1,y+9.5*k);c.fillStyle='#fff';c.fillText(''+(i+1),x,y+8.5*k);c.restore();
+ if(st)for(let q=0;q<3;q++){const sx=x+W*0.5-9+q*9,sy=y-H-7;c.save();c.font='900 10px '+FONT;c.textAlign='center';c.textBaseline='middle';c.fillStyle='rgba(0,0,0,0.6)';c.fillText('★',sx+0.8,sy+0.8);c.fillStyle=q<st?'#FFD84A':'rgba(255,255,255,0.45)';c.fillText('★',sx,sy);c.restore();}}
 function campDraw(){const cv=document.getElementById('campCv');if(!cv||document.getElementById('camp').hidden)return;const c=cv.getContext('2d'),t=now();c.setTransform(cv.width/800,0,0,cv.height/400,0,0);
  if(CAMP_IMG.complete&&CAMP_IMG.naturalWidth)c.drawImage(CAMP_IMG,0,0,800,400);else{c.fillStyle='#2E5A2A';c.fillRect(0,0,800,400);}
  /* swamp mist drifting over the bog */
  for(let k=0;k<7;k++){const x=360+((k*61+t*6)%280),y=262+(k%3)*30+Math.sin(t*0.5+k)*4,g=c.createRadialGradient(x,y,0,x,y,46);g.addColorStop(0,'rgba(220,235,225,0.22)');g.addColorStop(1,'rgba(220,235,225,0)');c.fillStyle=g;c.fillRect(x-46,y-46,92,92);}
- const done=CAMP.findIndex((_,i)=>!(CAMP_P.stars[i]|0)),last=done<0?CAMP.length:done; /* bases 0..last-1 are beaten */
- const kEnd=last>0?CAMP_RI[Math.min(last,CAMP.length-1)]:CAMP_RI[0];
- c.save();c.lineCap='round';c.lineJoin='round';
- /* the whole road: faint dashes; the part already walked: a bright gold line */
- campPath(c,0,CAMP_ROUTE.length-1);c.setLineDash([5,6]);c.lineWidth=3;c.strokeStyle='rgba(255,245,215,0.55)';c.stroke();c.setLineDash([]);
- if(last>0){campPath(c,0,kEnd);c.lineWidth=5;c.strokeStyle='rgba(30,20,5,0.55)';c.stroke();c.lineWidth=3;c.strokeStyle='#FFD84A';c.stroke();}
- c.restore();
+ const done=CAMP.findIndex((_,i)=>!(CAMP_P.stars[i]|0)),last=done<0?CAMP.length:done; /* bases 0..last-1 are beaten, `last` is the next target */
+ /* only the road already walked and the way to the next target are shown — marching dashes */
+ const kEnd=CAMP_RI[Math.min(last,CAMP.length-1)];
+ c.save();c.lineCap='round';c.lineJoin='round';campPath(c,0,kEnd);c.setLineDash([6,5]);
+ c.lineWidth=4.2;c.strokeStyle='rgba(20,12,4,0.55)';c.lineDashOffset=-t*8;c.stroke();c.lineWidth=2.4;c.strokeStyle='#FFF1C8';c.stroke();c.restore();
  /* our base at the start, the enemy fortress at the end */
  const hq=(im,x,y,s)=>{if(im.complete&&im.naturalWidth){E(c,x+2,y+s*0.36,s*0.5,s*0.18,'rgba(0,0,0,0.35)');c.drawImage(im,x-s/2,y-s/2,s,s);}};
  hq(HQ_IMG.b,CAMP_START[0],CAMP_START[1],34);hq(HQ_IMG.r,CAMP_END[0],CAMP_END[1],34);
@@ -2393,14 +2407,12 @@ function campDraw(){const cv=document.getElementById('campCv');if(!cv||document.
  RR(c,104,8,150,30,10,'rgba(15,22,13,0.85)');c.save();c.font='800 14px '+FONT;c.fillStyle='#fff';c.textBaseline='middle';c.fillText('Кампания',116,23);c.fillStyle='#F2C232';c.fillText('★ '+tot+'/'+CAMP.length*3,196,23);c.restore();
  for(const b of campBtns()){RR(c,b.x,b.y,b.w,b.h,10,'rgba(15,22,13,0.85)',2,'#0C120B');c.save();c.font='800 12px '+FONT;c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';c.fillText(b.t,b.x+b.w/2,b.y+b.h/2);c.restore();}
  const next=CAMP.findIndex((_,i)=>campOpenLv(i)&&!(CAMP_P.stars[i]|0));
- CAMP_PT.forEach(([x,y],i)=>{const open=campOpenLv(i),st=CAMP_P.stars[i]|0,pu=i===next?1+0.1*Math.sin(t*5):1,R=10.5*pu;
-  if(i===next){c.save();c.globalAlpha=0.35+0.25*Math.sin(t*5);E(c,x,y,R+6,R+6,'#FFE58A');c.restore();}
-  E(c,x+1.5,y+2.5,R,R*0.8,'rgba(0,0,0,0.4)');E(c,x,y,R,R,open?(st?'#3D7CC4':'#F2C232'):'#6A6F74',2.2,'#0C120B');
-  c.save();c.font='900 10px '+FONT;c.fillStyle=open?(st?'#fff':'#3A2A00'):'#C9CDD0';c.textAlign='center';c.textBaseline='middle';
-  if(open)c.fillText(''+(i+1),x,y+0.5);else{RR(c,x-4,y-0.5,8,6.5,1.5,'#C9CDD0');c.strokeStyle='#C9CDD0';c.lineWidth=1.6;c.beginPath();c.arc(x,y-1.5,2.8,Math.PI,0);c.stroke();}c.restore();
-  if(st)for(let k=0;k<3;k++){const sx=x-9+k*9,sy=y+R+5;c.save();c.font='900 9px '+FONT;c.textAlign='center';c.textBaseline='middle';c.fillStyle='rgba(0,0,0,0.6)';c.fillText('★',sx+0.8,sy+0.8);c.fillStyle=k<st?'#FFD84A':'rgba(255,255,255,0.45)';c.fillText('★',sx,sy);c.restore();}});
+ CAMP_PT.forEach(([x,y],i)=>{if(!campVis(i))return;campFlag(c,x,y,i,CAMP_P.stars[i]|0,i===next,t);});
+ if(!Object.keys(CAMP_P.stars).length&&CAMP_SEL==null){const [x,y]=CAMP_PT[0],bx=x+22,by=y-62;c.save();
+  RR(c,bx-4,by,128,26,9,'rgba(250,244,226,0.96)',2,'#3A2A12');P(c,[[bx+14,by+25],[bx+26,by+25],[bx+8,by+36]],'rgba(250,244,226,0.96)');
+  c.font='900 13px '+FONT;c.fillStyle='#2A1E0A';c.textBaseline='middle';c.fillText('Начните здесь!',bx+7,by+13.5);c.restore();}
  /* level card */
- if(typeof CAMP_SEL==='number'){const i=CAMP_SEL,L=CAMP[i],st=CAMP_P.stars[i]|0,[x,y]=CAMP_PT[i],cx=Math.max(110,Math.min(690,x)),cy=y>200?y-90:y+28;
+ if(typeof CAMP_SEL==='number'){const i=CAMP_SEL,L=CAMP[i],st=CAMP_P.stars[i]|0,[x,y]=CAMP_PT[i],cx=Math.max(110,Math.min(690,x)),cy=y>200?y-104:y+16;
   RR(c,cx-104,cy,208,64,12,'rgba(15,22,13,0.94)',2,'#0C120B');c.save();c.textBaseline='middle';c.font='800 13px '+FONT;c.fillStyle='#fff';c.fillText((i+1)+'. '+L.n,cx-94,cy+16);
   c.font='800 12px '+FONT;c.fillStyle='#FFD84A';c.fillText('★'.repeat(st)+'☆'.repeat(3-st),cx-94,cy+42);c.restore();
   RR(c,cx+22,cy+28,72,26,9,'#F2C232',2,'#0C120B');c.save();c.font='900 12px '+FONT;c.fillStyle='#2A1E00';c.textAlign='center';c.textBaseline='middle';c.fillText('Играть',cx+58,cy+41.5);c.restore();CAMP_SEL_BOX={i,x:cx+22,y:cy+28,w:72,h:26};}
@@ -2410,7 +2422,7 @@ let CAMP_SEL_BOX=null;
 function campTap(ev){const cv=document.getElementById('campCv'),r=cv.getBoundingClientRect(),x=(ev.clientX-r.left)*800/r.width,y=(ev.clientY-r.top)*400/r.height;
  for(const b of campBtns())if(x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h){SFX.click();if(b.k==='back')campClose();return;}
  if(CAMP_SEL_BOX){const B=CAMP_SEL_BOX;if(x>=B.x&&x<=B.x+B.w&&y>=B.y&&y<=B.y+B.h){SFX.click();campStart(B.i);return;}}
- for(let i=0;i<CAMP_PT.length;i++){const [px,py]=CAMP_PT[i];if((px-x)**2+(py-y)**2<15*15){if(!campOpenLv(i)){SFX.deny();return;}SFX.click();CAMP_SEL=i;return;}}
+ for(let i=0;i<CAMP_PT.length;i++){if(!campVis(i))continue;const [px,py]=CAMP_PT[i];if(x>px-10&&x<px+22&&y>py-36&&y<py+10){SFX.click();CAMP_SEL=i;return;}}
  CAMP_SEL=null;}
 
 function restartSolo(){if(CAMP_RUN)campStart(CAMP_RUN.i);else soloGo();}
@@ -2713,9 +2725,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.08-2101</div>
+<div id="appVer">v2026.11.08-2109</div>
 <script>
-window.APP_VERSION='2026.11.08-2101';
+window.APP_VERSION='2026.11.08-2109';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
