@@ -1247,8 +1247,8 @@ GPAL.swamp2=Object.assign({},GPAL.swamp,{tex:1});
 let GP=GPAL.grass;
 /* «Болото 2» (test theme): painted textures and objects supplied by the player, placed by the same swamp code */
 const SW2={grass:new Image(),mud:new Image(),water:new Image(),atlas:new Image(),atlas2:new Image(),pads:new Image(),
- /* TASK-001 v2 (accepted): stone pads 01-04 (102px squares) and low tuft_01 */
- C:{"pad_01":[0,0,102,102],"pad_02":[104,0,102,102],"pad_03":[208,0,102,102],"pad_04":[312,0,102,102],"tuft_01":[416,0,62,50]},
+ /* TASK-001 v2 (accepted): stone pads 01-04 (102px squares) and low tuft_01; v4: tuft_07 (cattails), tuft_08 (leafy) */
+ C:{"pad_01":[0,0,102,102],"pad_02":[104,0,102,102],"pad_03":[208,0,102,102],"pad_04":[312,0,102,102],"tuft_01":[416,0,62,50],"tuft_07":[480,0,64,55],"tuft_08":[546,0,50,36]},
  /* second set (TASK-001 v1, accepted part): single lilies, flowers, duckweed, mushrooms, pebbles, low tufts; tuft_02/04 replaced by muted TASK-001 v3 recolours */
  B:{"lily_single_01":[0,0,46,34],"lily_single_02":[48,0,52,33],"lily_single_03":[102,0,46,33],"lily_single_04":[150,0,52,40],"lily_flower_01":[204,0,60,44],"lily_flower_02":[266,0,53,39],"duckweed_01":[321,0,84,58],"duckweed_02":[407,0,84,58],"duckweed_03":[0,60,84,60],"mushrooms_01":[86,60,52,40],"mushrooms_02":[140,60,52,42],"pebbles_01":[194,60,52,31],"pebbles_02":[248,60,52,37],"pebbles_03":[302,60,52,33],"tuft_02":[356,60,36,56],"tuft_04":[418,60,58,38]},
  A:{"reed1":[0,0,98,85],"reed2":[100,0,87,83],"reed3":[189,0,89,86],"lily1":[280,0,108,49],"lily2":[390,0,107,62],"lily3":[499,0,105,59],"lily4":[606,0,95,70],"log1":[703,0,149,70],"log2":[854,0,116,69],"branch":[0,88,137,67],"root1":[139,88,134,78],"root2":[275,88,191,89],"stump1":[468,88,119,79],"stump2":[589,88,104,81],"stump3":[695,88,110,80],"rock1":[807,88,94,65],"rock2":[903,88,82,51],"rock3":[0,179,75,56],"rock4":[77,179,139,85],"grass1":[218,179,94,75],"grass2":[314,179,87,76],"grass3":[403,179,91,76],"fern":[496,179,99,72],"bush1":[597,179,88,68],"bush2":[687,179,83,70],"bush3":[772,179,80,72],"bush4":[854,179,101,73]}};
@@ -1390,8 +1390,8 @@ function sw2Decor(b,x,y,sx,cx,cy,rd){const F=()=>rnd()<0.5,LS=['lily_single_01',
   else if(sx<0.65)spr(b,SW2R(['lily_flower_01','lily_flower_02']),x,y,16+rnd()*4,F());
   else if(sx<0.75)spr(b,SW2R(['lily1','lily2','lily3','lily4']),x,y,24+rnd()*8,F());
   else if(sx<0.88)spr(b,SW2R(['reed1','reed2','reed3']),x,y-6,32+rnd()*8,F());return;}
- if(inPool(x,y,8)){if(sx<0.55)spr(b,SW2R(['reed1','reed2','reed3','grass2']),x,y-6,32+rnd()*10,F());else if(sx<0.8)spr(b,SW2R(['tuft_01','tuft_02','tuft_04']),x,y-3,15+rnd()*5,F());else spr(b,SW2R(['pebbles_01','pebbles_02','pebbles_03']),x,y,13+rnd()*4,F());return;}
- if(rd<60){const k=rnd();if(k<0.3)spr(b,SW2R(['pebbles_01','pebbles_02','pebbles_03']),x,y,12+rnd()*4,F());else if(k<0.6)spr(b,SW2R(['tuft_01','tuft_02','tuft_04']),x,y,14+rnd()*5,F());else if(k<0.72)spr(b,SW2R(['grass1','grass3','fern']),x,y,18+rnd()*6,F());return;}
+ if(inPool(x,y,8)){if(sx<0.55)spr(b,SW2R(['reed1','reed2','reed3','grass2']),x,y-6,32+rnd()*10,F());else if(sx<0.8)spr(b,SW2R(['tuft_01','tuft_02','tuft_04','tuft_07','tuft_08']),x,y-3,15+rnd()*5,F());else spr(b,SW2R(['pebbles_01','pebbles_02','pebbles_03']),x,y,13+rnd()*4,F());return;}
+ if(rd<60){const k=rnd();if(k<0.3)spr(b,SW2R(['pebbles_01','pebbles_02','pebbles_03']),x,y,12+rnd()*4,F());else if(k<0.6)spr(b,SW2R(['tuft_01','tuft_02','tuft_04','tuft_07','tuft_08']),x,y,14+rnd()*5,F());else if(k<0.72)spr(b,SW2R(['grass1','grass3','fern']),x,y,18+rnd()*6,F());return;}
  if(sx<0.2)spr(b,SW2R(['reed1','reed2','reed3','grass2']),x,y-6,34+rnd()*8,F());
  else if(sx<0.27){spr(b,SW2R(['log1','log2']),x,y,46+rnd()*10,F());if(rnd()<0.5)spr(b,SW2R(['mushrooms_01','mushrooms_02']),x+(rnd()-0.5)*30,y+10,13+rnd()*3,F());}
  else if(sx<0.32)spr(b,SW2R(['branch','root1','root2']),x,y,48+rnd()*14,F());
@@ -1401,7 +1401,7 @@ function sw2Decor(b,x,y,sx,cx,cy,rd){const F=()=>rnd()<0.5,LS=['lily_single_01',
  else if(sx<0.62)spr(b,SW2R(['mushrooms_01','mushrooms_02']),x,y,13+rnd()*4,F());
  else if(sx<0.70)spr(b,SW2R(['pebbles_01','pebbles_02','pebbles_03']),x,y,14+rnd()*4,F());
  else if(sx<0.84)spr(b,SW2R(['grass1','grass3','fern']),x,y-3,22+rnd()*7,F());
- else{spr(b,SW2R(['tuft_01','tuft_02','tuft_04']),x,y,15+rnd()*5,F());if(rnd()<0.5)spr(b,SW2R(['tuft_01','tuft_02','tuft_04']),x+10,y+6,13+rnd()*4,F());}}
+ else{spr(b,SW2R(['tuft_01','tuft_02','tuft_04','tuft_07','tuft_08']),x,y,15+rnd()*5,F());if(rnd()<0.5)spr(b,SW2R(['tuft_01','tuft_02','tuft_04','tuft_07','tuft_08']),x+10,y+6,13+rnd()*4,F());}}
 function paintBg(){const bg=document.createElement('canvas');bg.width=Math.round(VW*DPR);bg.height=Math.round(VH*DPR);const b=bg.getContext('2d');b.scale(DPR,DPR);seed=11;
  if(MAP.theme==='lava')return paintLava(bg,b);const snow=MAP.theme==='snow',sand=MAP.theme==='sand',BY=BRIDGE_Y;GP=GPAL[MAP.theme]||GPAL.grass;
  if(sand){b.fillStyle='#E2C084';b.fillRect(0,0,VW,VH);
@@ -2703,9 +2703,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.08-1321</div>
+<div id="appVer">v2026.11.08-1355</div>
 <script>
-window.APP_VERSION='2026.11.08-1321';
+window.APP_VERSION='2026.11.08-1355';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
