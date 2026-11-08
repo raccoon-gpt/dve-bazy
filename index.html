@@ -675,7 +675,7 @@ function hat(d){d=Math.max(0,Math.min(HTOT,d));let i=1;while(i<hl.length-1&&hl[i
 
 /* ---------------- rules ---------------- */
 const TW={mg:{name:'Пулемёт',cost:200,range:100,cd:0.15,dmg:15,far:false},can:{name:'Пушка',cost:300,range:125,cd:1.6,dmg:60,far:false,splash:42,splashK:0.6},tes:{name:'Радар',cost:600,range:110,cd:1,dmg:100,far:false,chain:2,slow:0.3,hop:90},rkt:{name:'Ракеты',cost:500,range:200,cd:2.6,dmg:70,far:true,splash:34}};
-const FREE_SQ={inf:{cd:10,n:5},jeep:{cd:20,n:5},tank:{cd:50,n:5},heli:{cd:30,n:5}},SAFE_BOOST=3,HARV_REFUND=500,TITAN_STOP=150,TITAN_RESPAWN=20,DEPOSIT=[25000,40000],BURN_T=11,BURN_R=50,BURN_DPS=190,QUEUE_MAX=15,FREE_MAX_UA=2,MINE_CD=60,MINE_R=300,MINE_DMG=3200,RAIN_CD=30,RAIN_N=10,RAIN_DMG=2250,RAIN_R=50,RAIN_CONF=5,FRZ_TW=3,FF_DMG={inf:12,jeep:25,tank:80,titan:300,heli:20,plane:0},FF_CD={inf:0.6,jeep:0.5,tank:1.4,titan:1.4,heli:0.5,plane:1},MINE_TRIG=18,FRZ_CD=40,FRZ_T=7,SHELL_SPEED=200,SHELL_LEAD=30,SHELL_DIRECT=15,TW_MAXLV=5,LVM=[1,1.4,1.9,2.6,3.4],CAN_LVM=[1,2,200/60,2.6,6],MG_LVM=[1,2.1,3.3,2.6,5],LVR=[1,1.08,1.16,1.24,1.32],LVC=[1,0.88,0.77,0.68,0.6]; // per level: damage, range, reload time
+const FREE_SQ={inf:{cd:10,n:5},jeep:{cd:20,n:5},tank:{cd:50,n:5},heli:{cd:30,n:5}},SAFE_BOOST=3,HARV_REFUND=500,TITAN_STOP=150,TITAN_RESPAWN=20,DEPOSIT=[25000,40000],BURN_T=11,BURN_R=50,BURN_DPS=190,QUEUE_MAX=30,FREE_MAX_UA=2,MINE_CD=60,MINE_R=300,MINE_DMG=3200,RAIN_CD=30,RAIN_N=10,RAIN_DMG=2250,RAIN_R=50,RAIN_CONF=5,FRZ_TW=3,FF_DMG={inf:12,jeep:25,tank:80,titan:300,heli:20,plane:0},FF_CD={inf:0.6,jeep:0.5,tank:1.4,titan:1.4,heli:0.5,plane:1},MINE_TRIG=18,FRZ_CD=40,FRZ_T=7,SHELL_SPEED=200,SHELL_LEAD=30,SHELL_DIRECT=15,TW_MAXLV=5,LVM=[1,1.4,1.9,2.6,3.4],CAN_LVM=[1,2,200/60,2.6,6],MG_LVM=[1,2.1,3.3,2.6,5],LVR=[1,1.08,1.16,1.24,1.32],LVC=[1,0.88,0.77,0.68,0.6]; // per level: damage, range, reload time
 const UN={titan:{name:'Титан',cost:0,hp:100000,sp:30,reward:0,lives:0},inf:{name:'Пехота',cost:60,hp:209,sp:40,reward:10,lives:1},jeep:{name:'Джип',cost:105,hp:376,sp:70,reward:18,lives:1},tank:{name:'Танк',cost:270,hp:300,sp:30,reward:45,lives:3},heli:{name:'Вертолёт',cost:165,hp:150,sp:50,reward:25,lives:1,air:true},plane:{name:'Самолёт',cost:300,hp:110,sp:70,reward:22,lives:1,air:true}};
 const TES_DMG=[50,60,70,80,90],TES_SLOW=[0.3,0.36,0.42,0.48,0.55],TES_R=[1,1.15,1.3,1.45,1.6],TES_UP=[0,1350,2400,3900,6000];
 /* cost to upgrade a tower from level lv to lv+1 (the radar is much pricier: its top level is devastating) */
@@ -722,7 +722,7 @@ function doCmd(si,cmd){if(!W||W.over)return;if(W.nuke&&cmd&&cmd.a!=='pause')retu
  else if(a==='sell'){if(W.finale)return;const i=S.towers.findIndex(t=>t.id===cmd.id);if(i<0)return;const tw=S.towers[i];S.ore+=Math.round(tw.spent*SELL_K);S.towers.splice(i,1);ev({e:'sold',s:si,x:tw.x,y:tw.y});}
  else if(a==='extup'){const f=cmd.f|0;if(f!==0||S.dep[f]<=0||!S.ext[f]||S.ext[f]>=EXT_MAXLV)return;const c=extUpCost(f);if(S.ore<c)return;S.ore-=c;S.ext[f]++;ev({e:'up',s:si,x:FIELDS[f].x,y:FIELDS[f].y});}
  else if(a==='ext'){const f=cmd.f|0;if(f!==0||S.dep[f]<=0||S.ext[f]||S.ore<EXT_COST)return;S.ore-=EXT_COST;S.ext[f]=1;ev({e:'built',s:si,c:FIELDS[f].c,r:FIELDS[f].r});}
- else if(a==='send'){const u=UN[cmd.k];if(!u)return;const c=unitCost(cmd.k,S.ua);if(S.ore<c||S.queue.filter(q=>q.indexOf(':')<0).length>=QUEUE_MAX)return;S.ore-=c;S.queue.push(cmd.k);}
+ else if(a==='send'){const u=UN[cmd.k];if(!u)return;const c=unitCost(cmd.k,S.ua);if(S.ore<c||S.queue.filter(q=>q.indexOf(':')<0||q[0]==='p').length>=QUEUE_MAX)return;S.ore-=c;S.queue.push(cmd.k);}
  else if(a==='mine'){const d=+cmd.d,b=cmd.b>=1&&cmd.b<=NB&&d<dmOf(cmd.b)?cmd.b|0:0;if(!(S.mineCd<=0)||!(d>=EDGE_D+10&&d<=TOTAL-50))return;S.mineCd=MINE_CD;ev({e:'mset',s:si});const p=at(d,b);S.mines.push({id:nextId++,d,b,x:p[0],y:p[1]});ev({e:'mineset',s:si,x:p[0]|0,y:p[1]|0});}
  else if(a==='rain'){if(!(S.rainCd<=0))return;S.rainCd=RAIN_CD;ev({e:'vrain',s:si});let last=0;for(let i=0;i<RAIN_N;i++){const d=EDGE_D+20+Math.random()*(TOTAL-EDGE_D-70);const p=at(d,Math.floor(Math.random()*(NB+1)));const T=0.55+i*0.14+Math.random()*0.1;last=Math.max(last,T);S.strikes.push({x:p[0],y:p[1],t:T});ev({e:'rainfall',s:si,x:p[0]|0,y:p[1]|0,T:+T.toFixed(2)});}S.confT=last+RAIN_CONF;}
  else if(a==='freeze'){if(!(S.frzCd<=0))return;S.frzCd=FRZ_CD;S.frzT=FRZ_T;ev({e:'freeze',s:si});}
@@ -761,7 +761,7 @@ function simSide(si,dt){const S=W.sides[si],O=W.sides[1-si];
  for(let i=S.mines.length-1;i>=0;i--){const m=S.mines[i];/* triggered by where a unit actually is on the map: works on every road, branch, shortcut and shared stretch */if(!S.units.some(u=>{if(u.dead||u.o===si||isAir(u))return false;const q=uat(u,u.d);return (q[0]-m.x)**2+(q[1]-m.y)**2<MINE_TRIG*MINE_TRIG;}))continue;S.mines.splice(i,1);
   for(const u of S.units){if(u.dead||u.o===si)continue;const q=uat(u,u.d);if((q[0]-m.x)**2+(q[1]-m.y)**2<MINE_R*MINE_R)damageUnit(si,u,MINE_DMG);}ev({e:'mineboom',s:si,x:m.x|0,y:m.y|0});}
  // spawn queue onto opponent map
- S.qcd-=dt;if(S.queue.length&&S.qcd<=0){let k=S.queue.shift();const free=k[0]==='f',paid=k.indexOf(':')<0;if(k.indexOf(':')>0)k=k.slice(2);const al=free?Math.min(S.ua,FREE_MAX_UA):S.ua;const u=UN[k];S.units.push({id:nextId++,o:si,al,k,v:paid&&!S.titanOut?unitCost(k,S.ua):0,d:TOTAL,b:NB?(S.brN=(S.brN|0)+1)%(NB+1):0,hp:u.hp*ARM_HP[al],mx:u.hp*ARM_HP[al],dm:1,cd:Math.random(),ga:0,ph:Math.random()*6});S.qcd=k==='inf'?0.8:1.2;}
+ S.qcd-=dt;if(S.queue.length&&S.qcd<=0){let k=S.queue.shift();const free=k[0]==='f',pre=k[0]==='p',paid=pre||k.indexOf(':')<0;if(k.indexOf(':')>0)k=k.slice(2);const al=free?Math.min(S.ua,FREE_MAX_UA):S.ua;const u=UN[k];S.units.push({id:nextId++,o:si,al,k,v:paid&&(!S.titanOut||pre)?unitCost(k,S.ua):0,d:TOTAL,b:NB?(S.brN=(S.brN|0)+1)%(NB+1):0,hp:u.hp*ARM_HP[al],mx:u.hp*ARM_HP[al],dm:1,cd:Math.random(),ga:0,ph:Math.random()*6});S.qcd=k==='inf'?0.8:1.2;}
  // harvester on this map
  const hk=UH_K[Math.min(3,S.uh|0)];for(const h of S.hv){
   if(h.repair){if(h.d<HTOT){h.d=Math.min(HTOT,h.d+dt*36);}else{h.heal+=dt;if(h.heal>=2){if(S.ore>=REPAIR_COST){S.ore-=REPAIR_COST;h.hp=HARV_HP;}h.heal=0;h.repair=false;h.dir=-1;h.wait=0.3;if(h.load>0.5){S.ore+=(h.cargo||0)*(S.cashK||1);h.load=0;ev({e:'cash',s:si,v:h.cargo||0});}}}}
@@ -928,7 +928,9 @@ function startEnding(){const E=W.over;const L=1-E.w;E.t=0;E.cap=false;E.ruin=fal
 function endingStep(dt){const E=W.over;if(E.done)return;if(E.t===undefined)startEnding();E.t+=dt;const q=W.endQ||[];while(q.length&&q[0].t<=E.t)q.shift().f();
  for(let s=0;s<2;s++)W.sides[s].units=W.sides[s].units.filter(u=>!u.dead);if(E.t>=END_T[E.why])E.done=true;}
 function titanHp(S){return Math.round(TITAN_BASE+(S.tb||0));}
-function spawnTitan(si){const S=W.sides[si];if(S.titanOut)return;S.titanOut=true;ev({e:'tout',s:si});if(W.freeBot&&si===1){S.ore+=FINALE_BONUS;ev({e:'cash',s:si,v:FINALE_BONUS});}const u=UN.titan,thp=titanHp(S);S.units.push({id:nextId++,o:si,al:0,k:'titan',d:TOTAL,b:NB?(S.brN=(S.brN|0)+1)%(NB+1):0,hp:thp,mx:thp,dm:1,cd:1,ga:0,ph:0});ev({e:'titan',s:si});}
+function spawnTitan(si){const S=W.sides[si];if(S.titanOut)return;S.titanOut=true;
+ /* a player's paid units still waiting in the queue were bought before the Titan: mark them 'p:' so they keep their worth and feed it (not the bot's) */
+ if(humanSide(si))S.queue=S.queue.map(k=>k.indexOf(':')<0?'p:'+k:k);ev({e:'tout',s:si});if(W.freeBot&&si===1){S.ore+=FINALE_BONUS;ev({e:'cash',s:si,v:FINALE_BONUS});}const u=UN.titan,thp=titanHp(S);S.units.push({id:nextId++,o:si,al:0,k:'titan',d:TOTAL,b:NB?(S.brN=(S.brN|0)+1)%(NB+1):0,hp:thp,mx:thp,dm:1,cd:1,ga:0,ph:0});ev({e:'titan',s:si});}
 /* vs the bot: once one Titan rolls out, the other side's follows within 10 s even if its fields still have crystals */
 function titanRace(dt){if(!W.freeBot)return;for(let s=0;s<2;s++){const A=W.sides[s],B=W.sides[1-s];if(A.titanOut&&!B.titanOut){W.finale=true;B.raceT=(B.raceT??15)-dt;if(B.raceT<=0)spawnTitan(1-s);}}}
 function simStep(dt){if(!W)return;if(W.nuke){nukeStep(dt);return;}if(W.over){endingStep(dt);return;}W.t+=dt;if(W.freeBot)freeWave(dt);simSide(0,dt);simSide(1,dt);titanRace(dt);
@@ -2721,9 +2723,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.08-1448</div>
+<div id="appVer">v2026.11.08-1457</div>
 <script>
-window.APP_VERSION='2026.11.08-1448';
+window.APP_VERSION='2026.11.08-1457';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
