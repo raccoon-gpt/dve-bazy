@@ -2213,7 +2213,7 @@ function render(t){ctx.setTransform(DPR,0,0,DPR,0,0);ctx.clearRect(0,0,VW,VH);if
  // cinematic: the interface slides away while a nuclear strike is on screen
  {const tgt=viewW.nuke?0:1,n=now();hudA+=(tgt-hudA)*Math.min(1,(n-(hudT||n))*4);hudT=n;}
  if(hudA<0.02)return;ctx.save();ctx.globalAlpha=hudA;
- drawHud(t);if(mode!=='menu'){drawBar(t);drawFree(t);drawAbil(t);drawCtrl();drawMsgs();}else MSGS.length=0;if(menu&&view===me&&Math.abs(viewT-view)<0.05&&!viewW.pause)drawMenu();ctx.restore();}
+ drawHud(t);if(mode!=='menu'){drawBar(t);drawFree(t);drawAbil(t);drawCtrl();if(viewW&&viewW.over)MSGS.length=0;else drawMsgs();}else MSGS.length=0;if(menu&&view===me&&Math.abs(viewT-view)<0.05&&!viewW.pause)drawMenu();ctx.restore();}
 let hudA=1,hudT=0,NK_BACK=0;
 /* own field is never mirrored now, so taps map straight onto it */const toScr=(x)=>x;
 
@@ -2813,9 +2813,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.09-1552</div>
+<div id="appVer">v2026.11.09-1608</div>
 <script>
-window.APP_VERSION='2026.11.09-1552';
+window.APP_VERSION='2026.11.09-1608';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
