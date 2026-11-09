@@ -2501,7 +2501,7 @@ const HG=[
  {k:'tit',n:'Титан',base:'',s:[
   ['+10% скор.','Титан едет на 10% быстрее.'],['Мины −20%','Мины врага наносят Титану на 20% меньше урона.'],['Огонь −20%','Ракетный дождь и выжиг врага наносят Титану на 20% меньше урона.'],['Лёд −2 с','Заморозка врага держит Титана на 2 с меньше.'],['Сокрушитель','Титан выезжает вслед за вражеским на 10% быстрее, а его залпы разрушают башню с 4 попаданий.']]}];
 /* icon atlases (TASK-004): 5 steps × 128 px, row 0 colour, row 1 grey (not bought yet); columns without art fall back to text */
-const HG_IMG={};[['free','hg_icons_free.webp'],['sup','hg_icons_sup.webp']].forEach(([k,src])=>{const im=new Image();im.src=src;HG_IMG[k]=im;});
+const HG_IMG={};[['free','hg_icons_free.webp'],['sup','hg_icons_sup.webp'],['harv','hg_icons_harv.webp']].forEach(([k,src])=>{const im=new Image();im.src=src;HG_IMG[k]=im;});
 const hgIco=(c,k,q,grey,x,y,s)=>{const im=HG_IMG[k];if(!im||!im.complete||!im.naturalWidth)return false;c.drawImage(im,q*128,grey?128:0,128,128,x,y,s,s);return true;};
 let HANG=null;/* {sel:[col,step],fl:{key:t}} while the hangar is open */
 const hgLv=k=>Math.max(0,Math.min(5,CAMP_P.up[k]|0));
@@ -2912,9 +2912,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.09-1925</div>
+<div id="appVer">v2026.11.09-1932</div>
 <script>
-window.APP_VERSION='2026.11.09-1925';
+window.APP_VERSION='2026.11.09-1932';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
