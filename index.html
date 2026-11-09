@@ -2500,6 +2500,9 @@ const HG=[
   ['Крит','У всех башен 30% шанс нанести двойной урон.'],['Снежки','Чтобы заморозить башню, нужно 4 снежка вместо 3, а заморозка на 1 с короче.'],['Продажа','Продажа башни возвращает 100% потраченного.'],['Ракеты','Ракетные башни бьют и по наземным врагам, если те заморожены или замедлены радаром.'],['Осколки','Урон пушки по площади +50%.']]},
  {k:'tit',n:'Титан',base:'',s:[
   ['+10% скор.','Титан едет на 10% быстрее.'],['Мины −20%','Мины врага наносят Титану на 20% меньше урона.'],['Огонь −20%','Ракетный дождь и выжиг врага наносят Титану на 20% меньше урона.'],['Лёд −2 с','Заморозка врага держит Титана на 2 с меньше.'],['Сокрушитель','Титан выезжает вслед за вражеским на 10% быстрее, а его залпы разрушают башню с 4 попаданий.']]}];
+/* icon atlases (TASK-004): 5 steps × 128 px, row 0 colour, row 1 grey (not bought yet); columns without art fall back to text */
+const HG_IMG={};[['free','hg_icons_free.webp']].forEach(([k,src])=>{const im=new Image();im.src=src;HG_IMG[k]=im;});
+const hgIco=(c,k,q,grey,x,y,s)=>{const im=HG_IMG[k];if(!im||!im.complete||!im.naturalWidth)return false;c.drawImage(im,q*128,grey?128:0,128,128,x,y,s,s);return true;};
 let HANG=null;/* {sel:[col,step],fl:{key:t}} while the hangar is open */
 const hgLv=k=>Math.max(0,Math.min(5,CAMP_P.up[k]|0));
 const hgSpent=()=>HG.reduce((a,c)=>{let s=0;for(let q=0;q<hgLv(c.k);q++)s+=HG_COST[q];return a+s;},0);
@@ -2536,17 +2539,21 @@ function hgDraw(c,t){const I=HGL,F=FONT;
    RR(c,R0.x+3,R0.y+3,R0.w-6,R0.h*0.4,7,own?'rgba(190,255,150,0.10)':'rgba(255,255,255,0.06)');
    if(fk>0){c.save();c.globalAlpha=fk;RR(c,R0.x,R0.y,R0.w,R0.h,9,'#FFF3B0');c.restore();}
    for(const [rx,ry] of [[R0.x+5,R0.y+5],[R0.x+R0.w-5,R0.y+5],[R0.x+5,R0.y+R0.h-5],[R0.x+R0.w-5,R0.y+R0.h-5]])E(c,rx,ry,1.5,1.5,'rgba(0,0,0,0.45)');
-   c.save();c.textAlign='center';c.textBaseline='middle';c.font='900 11px '+F;c.fillStyle=own?'#E6FFD6':next?'#FFFFFF':'#6C7781';c.fillText(C.s[q][0],R0.x+R0.w/2,R0.y+R0.h/2-6);
+   const hasI=HG_IMG[C.k]&&HG_IMG[C.k].complete&&HG_IMG[C.k].naturalWidth;
+   c.save();c.textAlign='center';c.textBaseline='middle';
+   if(hasI){RR(c,R0.x+5,R0.y+4,R0.h-8,R0.h-8,7,'rgba(0,0,0,0.35)');hgIco(c,C.k,q,!own&&!next,R0.x+3,R0.y+2,R0.h-4);const cx=R0.x+R0.h+(R0.w-R0.h)/2;
+    if(own){c.font='900 16px '+F;c.fillStyle='#9BE36A';c.fillText('✓',cx,R0.y+R0.h/2);}else{c.font='900 12px '+F;c.fillStyle=next?(can?'#F2C232':'#C9A24A'):'#56606A';c.fillText('★'+cost,cx,R0.y+R0.h/2);}}
+   else{c.font='900 11px '+F;c.fillStyle=own?'#E6FFD6':next?'#FFFFFF':'#6C7781';c.fillText(C.s[q][0],R0.x+R0.w/2,R0.y+R0.h/2-6);
    if(own){c.font='900 12px '+F;c.fillStyle='#9BE36A';c.fillText('✓',R0.x+R0.w/2,R0.y+R0.h/2+11);}
-   else{c.font='900 11px '+F;c.fillStyle=next?(can?'#F2C232':'#C9A24A'):'#56606A';c.fillText('★ '+cost,R0.x+R0.w/2,R0.y+R0.h/2+11);}
+   else{c.font='900 11px '+F;c.fillStyle=next?(can?'#F2C232':'#C9A24A'):'#56606A';c.fillText('★ '+cost,R0.x+R0.w/2,R0.y+R0.h/2+11);}}
    c.restore();
-   if(!own&&!next){c.save();c.globalAlpha=0.7;c.translate(R0.x+R0.w-12,R0.y+12);c.fillStyle='#56606A';c.fillRect(-4,-1,8,6);c.strokeStyle='#56606A';c.lineWidth=1.5;c.beginPath();c.arc(0,-1,2.6,Math.PI,0);c.stroke();c.restore();}
-   c.save();c.font='800 8px '+F;c.fillStyle='rgba(255,255,255,0.35)';c.textBaseline='middle';c.fillText(''+(q+1),R0.x+6,R0.y+R0.h-8);c.restore();}}
+   if(!own&&!next&&!hasI){c.save();c.globalAlpha=0.7;c.translate(R0.x+R0.w-12,R0.y+12);c.fillStyle='#56606A';c.fillRect(-4,-1,8,6);c.strokeStyle='#56606A';c.lineWidth=1.5;c.beginPath();c.arc(0,-1,2.6,Math.PI,0);c.stroke();c.restore();}
+   c.save();c.font='800 8px '+F;c.fillStyle='rgba(255,255,255,0.35)';c.textBaseline='middle';c.fillText(''+(q+1),R0.x+R0.w-10,R0.y+R0.h-8);c.restore();}}
  /* info card */
  RR(c,I.ix,I.top+2,I.iw,342,12,'rgba(0,0,0,0.3)');RR(c,I.ix,I.top,I.iw,342,12,'#2A3138',2,'#0E1215');
  const [ci,q]=HANG.sel,C=HG[ci],lv=hgLv(C.k),own=q<lv,next=q===lv,cost=HG_COST[q];
  c.save();c.textBaseline='middle';c.textAlign='left';c.font='800 11px '+F;c.fillStyle='#E8B526';c.fillText(C.n.toUpperCase()+' · ШАГ '+(q+1)+' ИЗ 5',I.ix+14,I.top+20);
- c.font='900 18px '+F;c.fillStyle='#fff';c.fillText(C.s[q][0],I.ix+14,I.top+46);
+ c.font='900 18px '+F;c.fillStyle='#fff';c.fillText(C.s[q][0],I.ix+14,I.top+46);if(HG_IMG[C.k]){RR(c,I.ix+I.iw-74,I.top+10,62,62,10,'rgba(0,0,0,0.35)',1.5,'#0E1215');hgIco(c,C.k,q,false,I.ix+I.iw-74,I.top+10,62);}
  c.font='600 13px '+F;c.fillStyle='#D6DDE3';let y=hgWrap(c,C.s[q][1],I.ix+14,I.top+76,I.iw-28,18);
  if(C.base){c.font='600 11px '+F;c.fillStyle='#8E99A4';hgWrap(c,C.base,I.ix+14,Math.max(y+10,I.top+160),I.iw-28,15);}
  c.restore();
@@ -2905,9 +2912,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.09-1810</div>
+<div id="appVer">v2026.11.09-1901</div>
 <script>
-window.APP_VERSION='2026.11.09-1810';
+window.APP_VERSION='2026.11.09-1901';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
