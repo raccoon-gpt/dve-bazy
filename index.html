@@ -106,6 +106,22 @@ input{font-family:var(--display);font-size:24px;letter-spacing:6px;text-align:ce
   <div class="row" style="width:100%"><button class="primary" id="fsTipOk">Понятно</button></div>
  </div>
 </div>
+<div id="gate" hidden><div class="gH gL"><div class="gLogo"></div></div><div class="gH gR"><div class="gLogo"></div></div></div>
+<style>
+#gate{position:fixed;inset:0;z-index:99999;overflow:hidden;pointer-events:auto;--lh:min(74vh,29.5vw)}
+#gate[hidden]{display:none}
+#gate .gH{position:absolute;top:0;bottom:0;width:50.2%;overflow:hidden;background-size:cover;background-repeat:no-repeat;will-change:transform}
+#gate .gL{left:0;background-image:url(gate_l.webp);background-position:right center}
+#gate .gR{right:0;background-image:url(gate_r.webp);background-position:left center}
+#gate .gLogo{position:absolute;top:50%;height:var(--lh);width:calc(var(--lh)*1.19);background:url(gate_logo.webp) center/contain no-repeat;transform:translateY(-50%);filter:drop-shadow(0 6px 10px rgba(0,0,0,.55))}
+#gate .gL .gLogo{right:0;margin-right:calc(var(--lh)*-0.595 + 0.2vw)}
+#gate .gR .gLogo{left:0;margin-left:calc(var(--lh)*-0.595 + 0.2vw)}
+#gate.open .gL{transform:translateX(-102%)}#gate.open .gR{transform:translateX(102%)}
+#gate.closing .gH{transition:transform .5s cubic-bezier(.55,0,.95,.55)}
+#gate.opening .gH{transition:transform .62s cubic-bezier(.25,.6,.3,1)}
+#gate.shake{animation:gateShake .28s linear}
+@keyframes gateShake{0%{transform:translate(0,0)}20%{transform:translate(-5px,3px)}40%{transform:translate(4px,-3px)}60%{transform:translate(-3px,2px)}80%{transform:translate(2px,-1px)}100%{transform:translate(0,0)}}
+</style>
 <div class="ov" id="camp" hidden style="padding:0;background:#0F150C"><canvas id="campCv" style="display:block;touch-action:none"></canvas></div>
 <div class="ov" id="over" hidden>
  <div class="card" style="align-items:center;text-align:center">
@@ -2171,7 +2187,7 @@ function pauseBtns(){const b=[{k:'mus',x:VW/2-118,y:VH/2-50,w:114,h:40},{k:'sfx'
  if(mode==='solo')b.push({k:'again',x:VW/2-118,y:VH/2,w:114,h:40},{k:'menu',x:VW/2+4,y:VH/2,w:114,h:40});else b.push({k:'menu',x:VW/2-118,y:VH/2,w:236,h:40});return b;}
 /* «Заново» and «В меню» from the pause menu wait 3 s and can be cancelled */
 let PZ_PEND=null;const PZ_WAIT=3;
-function checkPzPend(){if(!PZ_PEND)return;if(!viewW||!viewW.pause||viewW.over){PZ_PEND=null;return;}if(now()<PZ_PEND.at)return;const k=PZ_PEND.k;PZ_PEND=null;if(k==='menu'){const c=CAMP_RUN;toLobby();if(c){CAMP_RUN=null;campOpen();}}else if(mode==='solo')restartSolo();}
+function checkPzPend(){if(!PZ_PEND)return;if(!viewW||!viewW.pause||viewW.over){PZ_PEND=null;return;}if(now()<PZ_PEND.at)return;const k=PZ_PEND.k;PZ_PEND=null;if(k==='menu'){const c=CAMP_RUN;if(c)gateRun(()=>{toLobby();CAMP_RUN=null;campOpen();});else toLobby();}else if(mode==='solo')restartSolo();}
 function drawCtrl(){const pz=!!viewW.pause,fast=(viewW.speed||1)===2;
  if(pz){ctx.fillStyle='rgba(10,16,8,0.45)';ctx.fillRect(0,0,VW,VH);RR(ctx,VW/2-130,VH/2-100,260,186,14,'rgba(20,28,18,0.94)',2,'#0C120B');T('Пауза',VW/2,VH/2-74,24,'#fff','center',800);
   for(const b of pauseBtns()){if(b.k==='mus'||b.k==='sfx'){const on=b.k==='mus'?AU.music:AU.on;RR(ctx,b.x,b.y,b.w,b.h,10,on?'#2F6FB8':'#3A4048',2,'#0C120B');T((b.k==='mus'?'Музыка: ':'Звуки: ')+(on?'вкл':'выкл'),b.x+b.w/2,b.y+b.h/2,12,'#fff','center',800);continue;}
@@ -2406,7 +2422,7 @@ function campPathTo(c,kA,kB,f){c.beginPath();const R=CAMP_ROUTE;c.moveTo(R[0][0]
   for(let k=kA;k<kB&&left>0;k++){const d=Math.hypot(R[k+1][0]-R[k][0],R[k+1][1]-R[k][1]),u=Math.min(1,left/d);c.lineTo(R[k][0]+(R[k+1][0]-R[k][0])*u,R[k][1]+(R[k+1][1]-R[k][1])*u);left-=d;}}}
 /* after a win: the red pennant turns blue, stars light up one by one, the road runs on and a new red pennant drops in */
 const CA_FLIP=0.5,CA_STAR=1.15,CA_ROAD=2.45,CA_DROP=3.45,CA_END=4.1;
-function campAnimState(t){const A=CAMP_ANIM;if(!A)return null;if(!A.t0)A.t0=t;const e=t-A.t0,fresh=!A.was,nxt=A.i+1<CAMP.length&&fresh?A.i+1:-1;
+function campAnimState(t){const A=CAMP_ANIM;if(!A)return null;if(GATE.busy&&!A.t0){const a=CAMP_PT[A.i];camFocus(a[0]+20,a[1]-20);return {i:A.i,nxt:A.i+1<CAMP.length&&!A.was?A.i+1:-1,e:0,fresh:!A.was,flipSx:1,red:!A.was,pop:[0,0,0],road:0,drop:-1,done:false};}if(!A.t0)A.t0=t;const e=t-A.t0,fresh=!A.was,nxt=A.i+1<CAMP.length&&fresh?A.i+1:-1;
  const ease=u=>u<0?0:u>1?1:u*u*(3-2*u),back=u=>u<=0?0:u>=1?1:1+2.2*Math.pow(u-1,3)+1.2*Math.pow(u-1,2);
  const S={i:A.i,nxt,e,fresh};
  S.flipSx=fresh?(e<CA_FLIP?1:e<CA_FLIP+0.18?1-(e-CA_FLIP)/0.18:e<CA_FLIP+0.36?(e-CA_FLIP-0.18)/0.18:1):1;S.red=fresh&&e<CA_FLIP+0.18;
@@ -2478,6 +2494,25 @@ function campUp(ev){if(!CAMP_PTRS.has(ev.pointerId))return;const xy=campXY(ev);C
  if(CAMP_PTRS.size===0){CAMP_DRAG=null;if(D&&!D.pinch){if(D.moved<=6)campTapAt(xy[0],xy[1]);else if(now()-D.t<0.08){CV.vx=D.vx||0;CV.vy=D.vy||0;}}}
  else if(CAMP_PTRS.size===1){const p=[...CAMP_PTRS.values()][0];CAMP_DRAG={x:p[0],y:p[1],sx:p[0],sy:p[1],moved:99,t:now()};}}
 
+
+/* ================= gates: before a battle, the editor or the campaign map two steel doors slide shut with the logo, slam, and slide open on the new screen ================= */
+const GATE={busy:false,inside:false,ready:0};
+['gate_l.webp','gate_r.webp','gate_logo.webp'].forEach(src=>{const im=new Image();im.onload=()=>GATE.ready++;im.src=src;});
+function gateSnd(k){try{if(!AU.ctx||!AU.on||AU.ctx.state!=='running')return;const t=AU.ctx.currentTime,o=bus(1);
+ if(k==='close'){nz(o,t,0.5,'bandpass',380,950,3,0.32,0.08);nz(o,t,0.5,'lowpass',260,140,0.7,0.5,0.1);tn(o,t,0.5,'sawtooth',48,62,0.07,0.1);}
+ else if(k==='slam'){tn(o,t,0.55,'sine',72,32,1.3,0.003);nz(o,t,0.4,'lowpass',1400,90,0.8,1.0,0.002);tn(o,t,0.32,'triangle',410,0,0.22);tn(o,t,0.26,'triangle',633,0,0.15);tn(o,t+0.01,0.16,'triangle',1170,0,0.1);nz(o,t+0.02,0.12,'bandpass',2600,0,6,0.25);}
+ else if(k==='open'){nz(o,t,0.32,'highpass',3200,0,0.7,0.22,0.02);tn(o,t,0.12,'triangle',300,0,0.15);nz(o,t+0.08,0.62,'bandpass',950,380,3,0.3,0.1);nz(o,t+0.08,0.62,'lowpass',240,120,0.7,0.45,0.1);}}catch(e){}}
+function gateRun(fn,opts){const g=document.getElementById('gate');if(GATE.busy&&!GATE.inside){setTimeout(()=>gateRun(fn,opts),60);return;}if(GATE.ready<3||!g){GATE.inside=true;try{fn&&fn();}finally{GATE.inside=false;}return;}
+ GATE.busy=true;g.hidden=false;g.className='open';void g.offsetWidth;g.className='closing';gateSnd('close');
+ setTimeout(()=>{g.className='shake';gateSnd('slam');GATE.inside=true;try{fn&&fn();}catch(e){console.error(e);}finally{GATE.inside=false;}
+  setTimeout(()=>{g.className='opening open';gateSnd('open');setTimeout(()=>{g.hidden=true;g.className='';GATE.busy=false;},680);},480);},500);}
+/* first screen: the gates are shut while the game loads, then open */
+function gateIntro(){const g=document.getElementById('gate');if(!g)return;GATE.busy=true;g.hidden=false;g.className='';
+ const go=()=>{g.className='opening open';gateSnd('open');setTimeout(()=>{g.hidden=true;g.className='';GATE.busy=false;},680);};
+ const t0=Date.now(),wait=()=>{if(GATE.ready>=3||Date.now()-t0>4000)setTimeout(go,GATE.ready>=3?650:0);else setTimeout(wait,80);};wait();}
+const gated=f=>function(...a){if(GATE.inside)return f.apply(this,a);gateRun(()=>f.apply(this,a));};
+soloGo=gated(soloGo);campStart=gated(campStart);campOpen=gated(campOpen);edOpen=gated(edOpen);beginGame=gated(beginGame);
+try{gateIntro();}catch(e){}
 function restartSolo(){if(CAMP_RUN)campStart(CAMP_RUN.i);else soloGo();}
 document.getElementById('bCamp').onclick=()=>{SFX.click();campOpen();};
 {const cv=document.getElementById('campCv');cv.addEventListener('pointerdown',campDown);cv.addEventListener('pointermove',campMove);cv.addEventListener('pointerup',campUp);cv.addEventListener('pointercancel',campUp);cv.addEventListener('wheel',ev=>{ev.preventDefault();const [x,y]=campXY(ev),wx=CV.x+x/CV.z,wy=CV.y+y/CV.z;CV.z*=ev.deltaY<0?1.1:1/1.1;camClamp();CV.x=wx-x/CV.z;CV.y=wy-y/CV.z;camClamp();},{passive:false});}window.addEventListener('resize',()=>{if(!document.getElementById('camp').hidden)campResize();});
@@ -2531,7 +2566,7 @@ document.getElementById('edBackEd').onclick=()=>{SFX.click();document.getElement
 document.getElementById('edKeep').onclick=()=>{SFX.click();edSaveMap();edClose(CUSTOM_I);};
 document.getElementById('edPlay').onclick=()=>{SFX.click();edSaveMap();edClose(CUSTOM_I);document.getElementById('bSolo').onclick();};
 edLobbyBtn();
-document.getElementById('bAgain').onclick=()=>{SFX.click();const c=CAMP_RUN;toLobby();if(c){CAMP_RUN=null;campOpen();}};
+document.getElementById('bAgain').onclick=()=>{SFX.click();const c=CAMP_RUN;if(c)gateRun(()=>{toLobby();CAMP_RUN=null;campOpen();});else toLobby();};
 /* play again against the bot on the same map and difficulty */
 document.getElementById('bRestart').onclick=()=>{SFX.click();if(mode==='solo'){restartSolo();return;}
  if(mode==='host'){AGAIN[0]=true;}else if(mode==='guest'){myAgain=true;sendCmd({a:'again'});}againUi();};
@@ -2778,9 +2813,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.09-0126</div>
+<div id="appVer">v2026.11.09-1543</div>
 <script>
-window.APP_VERSION='2026.11.09-0126';
+window.APP_VERSION='2026.11.09-1543';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
