@@ -2373,7 +2373,7 @@ const CAMP=[
  {n:'Топкий берег',th:'swamp',seed:2020},{n:'Мёртвые деревья',th:'swamp',seed:2121},{n:'Туманная заводь',th:'swamp',seed:2222},{n:'Гнилые мостки',th:'swamp',seed:2323},{n:'Сердце трясины',th:'swamp',seed:2424},
  {n:'Пепельные поля',th:'lava',seed:1212},{n:'Огненная река',th:'lava',seed:1313},{n:'Старый завод',th:'lava',seed:1414},{n:'Кратер',th:'lava',seed:2525},{n:'Крепость у вулкана',th:'lava',seed:1515}];
 /* the route on the map (800×400): [x,y] arrays are the bases in order, (x,y) tuples are bends of the road between them */
-const CAMP_ROUTE=[[128,120,0],[185,135,1],[245,150,1],[335,186,1],[363,240,1],[400,182,1],[440,160,0],[482,128,1],[548,108,1],[625,150,1],[718,100,1],[605,55,1],[560,40,0],[515,45,0],[445,42,1],[380,72,1],[300,42,1],[208,78,1],[112,98,1],[84,140,0],[98,182,0],[160,206,0],[240,224,0],[318,246,0],[360,262,0],[392,268,1],[452,292,1],[562,250,1],[602,322,1],[472,348,1],[400,352,0],[345,340,0],[300,330,1],[232,300,1],[192,250,1],[118,305,1],[62,224,1]];
+const CAMP_ROUTE=[[128,120,0],[185,135,1],[245,150,1],[335,186,1],[363,240,1],[400,182,1],[440,160,0],[482,128,1],[548,108,1],[625,150,1],[718,100,1],[610,84,1],[548,60,0],[500,62,0],[445,84,1],[380,110,1],[300,88,1],[215,88,1],[112,98,1],[84,140,0],[98,182,0],[160,206,0],[240,224,0],[318,246,0],[360,262,0],[392,268,1],[452,292,1],[562,250,1],[602,322,1],[472,348,1],[400,352,0],[345,340,0],[300,330,1],[232,300,1],[192,250,1],[118,305,1],[62,224,1]];
 const CAMP_PT=CAMP_ROUTE.filter(p=>p[2]).map(p=>[p[0],p[1]]);
 const CAMP_RI=[];CAMP_ROUTE.forEach((p,k)=>{if(p[2])CAMP_RI.push(k);});
 const CAMP_START=[128,120],CAMP_END=[70,262],CAMP_IMG=new Image();CAMP_IMG.src='campaign_map.webp';
@@ -2461,7 +2461,7 @@ function campDraw(){const cv=document.getElementById('campCv');if(!cv||document.
   RR(c,bx2-4,by2,128,26,9,'rgba(250,244,226,0.96)',2,'#3A2A12');P(c,[[bx2+8,by2+25],[bx2+20,by2+25],[bx2+2,by2+38]],'rgba(250,244,226,0.96)');
   c.font='900 13px '+FONT;c.fillStyle='#2A1E0A';c.textBaseline='middle';c.fillText('Начните здесь!',bx2+7,by2+13.5);c.restore();}
  const tot=Object.values(CAMP_P.stars).reduce((a,b)=>a+(b|0),0);
- RR(c,104,8,150,30,10,'rgba(15,22,13,0.85)');c.save();c.font='800 14px '+FONT;c.fillStyle='#fff';c.textBaseline='middle';c.fillText('Кампания',116,23);c.fillStyle='#F2C232';c.fillText('★ '+tot+'/'+CAMP.length*3,196,23);c.restore();
+ c.save();c.font='800 14px '+FONT;const w1=c.measureText('Кампания').width,w2=c.measureText('★ '+tot+'/'+CAMP.length*3).width;RR(c,104,8,w1+w2+36,30,10,'rgba(15,22,13,0.85)');c.fillStyle='#fff';c.textBaseline='middle';c.fillText('Кампания',116,23);c.fillStyle='#F2C232';c.fillText('★ '+tot+'/'+CAMP.length*3,128+w1,23);c.restore();
  for(const b of campBtns()){RR(c,b.x,b.y,b.w,b.h,10,'rgba(15,22,13,0.85)',2,'#0C120B');c.save();c.font='800 12px '+FONT;c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';c.fillText(b.t,b.x+b.w/2,b.y+b.h/2);c.restore();}
  if(typeof CAMP_SEL==='number'){const i=CAMP_SEL,L=CAMP[i],st=CAMP_P.stars[i]|0,[x,y]=toS(CAMP_PT[i][0],CAMP_PT[i][1]),cx=Math.max(110,Math.min(690,x+40)),cy=Math.max(46,Math.min(326,y>210?y-150:y+16));
   RR(c,cx-104,cy,208,64,12,'rgba(15,22,13,0.94)',2,'#0C120B');c.save();c.textBaseline='middle';c.font='800 13px '+FONT;c.fillStyle='#fff';c.fillText((i+1)+'. '+L.n,cx-94,cy+16);
@@ -2813,9 +2813,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.09-1608</div>
+<div id="appVer">v2026.11.09-1636</div>
 <script>
-window.APP_VERSION='2026.11.09-1608';
+window.APP_VERSION='2026.11.09-1636';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
