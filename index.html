@@ -2408,7 +2408,7 @@ function campStart(i){const d=CAMP_DIFF;if(CAMP_PREV==null)CAMP_PREV=MAPI;MAPS[C
  const B=W.sides[1],k=1+0.025*i;B.incK*=k;B.cashK*=k;W.waveK=1-0.012*i;document.getElementById('camp').hidden=true;}
 function campWin(){if(!CAMP_RUN)return;const i=CAMP_RUN.i,S=W&&W.sides[0],s=campStars(S?S.lives:0);CAMP_RUN.won=s;const was=CAMP_P.stars[i]|0;if(was<s){CAMP_ANIM={i,was,st:s,t0:0};CAMP_P.stars[i]=s;campSave();}}
 let CAMP_ANIM=null;
-function campOpen(){const o=document.getElementById('camp');o.hidden=false;HANG=null;document.getElementById('lobby').hidden=true;CAMP_SEL=null;CAMP_T0=now();campResize();CV.z=CAMZ;if(CAMP_ANIM){CAMP_ANIM.t0=0;CAMP_ANIM.snd=null;const f=CAMP_PT[CAMP_ANIM.i];camFocus(f[0]+20,f[1]-20);return;}const n=campNext(),f=CAMP_PT[n<0?CAMP.length-1:n];camFocus(f[0]+20,f[1]-20);}
+function campOpen(){const o=document.getElementById('camp');o.hidden=false;HANG=null;CAMP_CONF=null;document.getElementById('lobby').hidden=true;CAMP_SEL=null;CAMP_T0=now();campResize();CV.z=CAMZ;if(CAMP_ANIM){CAMP_ANIM.t0=0;CAMP_ANIM.snd=null;const f=CAMP_PT[CAMP_ANIM.i];camFocus(f[0]+20,f[1]-20);return;}const n=campNext(),f=CAMP_PT[n<0?CAMP.length-1:n];camFocus(f[0]+20,f[1]-20);}
 function campClose(){document.getElementById('camp').hidden=true;if(CAMP_PREV!=null){setupMap(CAMP_PREV);CAMP_PREV=null;bgCache=null;try{markMap();lobbyPrev();}catch(e){}}document.getElementById('lobby').hidden=false;}
 function campResize(){const cv=document.getElementById('campCv'),r=cv.parentElement.getBoundingClientRect(),dpr=Math.min(2,window.devicePixelRatio||1);let w=r.width,h=w/2;if(h>r.height){h=r.height;w=h*2;}
  cv.style.width=w+'px';cv.style.height=h+'px';cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}
@@ -2486,9 +2486,9 @@ function campDraw(){const cv=document.getElementById('campCv');if(!cv||document.
   c.font='800 12px '+FONT;c.fillStyle='#FFD84A';c.fillText('★'.repeat(st)+'☆'.repeat(3-st),cx-94,cy+42);c.restore();
   RR(c,cx+22,cy+28,72,26,9,'#F2C232',2,'#0C120B');c.save();c.font='900 12px '+FONT;c.fillStyle='#2A1E00';c.textAlign='center';c.textBaseline='middle';c.fillText('Играть',cx+58,cy+41.5);c.restore();CAMP_SEL_BOX={i,x:cx+22,y:cy+28,w:72,h:26};}
  else CAMP_SEL_BOX=null;
- if(HANG)hgDraw(c,t);}
+ if(HANG)hgDraw(c,t);else if(CAMP_CONF)campConfDraw(c);}
 /* ================= hangar: 5 columns × 5 upgrades for the campaign player, bought with stars (bottom step first) ================= */
-const HG_COST=[1,2,3,4,5],HG_TEST_STARS=100;/* HG_TEST_STARS: temporary gift for testing, remove later */
+const HG_COST=[1,2,3,4,5];
 const HG=[
  {k:'free',n:'Отряды',base:'В кампании бесплатные отряды: по 2 юнита, перезарядка на 10 с дольше.',s:[
   ['3 юнита','Бесплатный отряд: 3 юнита вместо 2.'],['−5 с','Перезарядка бесплатных отрядов на 5 с быстрее.'],['4 юнита','В бесплатном отряде 4 юнита.'],['−5 с','Ещё на 5 с быстрее — обычная перезарядка.'],['5 юнитов','В бесплатном отряде 5 юнитов.']]},
@@ -2507,7 +2507,7 @@ let HANG=null;/* {sel:[col,step],fl:{key:t}} while the hangar is open */
 const hgLv=k=>Math.max(0,Math.min(5,CAMP_P.up[k]|0));
 const hgSpent=()=>HG.reduce((a,c)=>{let s=0;for(let q=0;q<hgLv(c.k);q++)s+=HG_COST[q];return a+s;},0);
 const hgEarned=()=>Object.values(CAMP_P.stars).reduce((a,b)=>a+(b|0),0);
-const hgFree=()=>hgEarned()+HG_TEST_STARS-hgSpent();
+const hgFree=()=>hgEarned()-hgSpent();
 function hgOpen(){const c0=HG.findIndex(c=>hgLv(c.k)<5);HANG={sel:[Math.max(0,c0),c0<0?4:hgLv(HG[c0].k)],fl:{},t0:now()};CAMP_SEL=null;}
 const HGL={cx:12,cw:100,cg:4,top:50,ch:50,cgap:6,ix:540,iw:252};
 const hgCell=(ci,q)=>({x:HGL.cx+ci*(HGL.cw+HGL.cg)+6,y:HGL.top+40+(4-q)*(HGL.ch+HGL.cgap),w:HGL.cw-12,h:HGL.ch});
@@ -2566,23 +2566,35 @@ function hgTap(x,y){const B=hgBtns(),In=r=>x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.
  if(In(B.buy)){const [ci,q]=HANG.sel,C=HG[ci];if(q===hgLv(C.k)&&hgFree()>=HG_COST[q]){CAMP_P.up[C.k]=q+1;campSave();HANG.fl[ci+':'+q]=now();SFX.upgrade();if(q<4)HANG.sel=[ci,q+1];}else SFX.deny();return;}
  if(In(B.reset)){if(hgSpent()>0){CAMP_P.up={};campSave();SFX.sell();HANG.sel=[HANG.sel[0],0];}else SFX.deny();return;}
  for(let ci=0;ci<HG.length;ci++)for(let q=0;q<5;q++){const R0=hgCell(ci,q);if(x>=R0.x-2&&x<=R0.x+R0.w+2&&y>=R0.y-3&&y<=R0.y+R0.h+3){SFX.click();HANG.sel=[ci,q];return;}}}
-function campBtns(){return[{k:'back',x:8,y:8,w:92,h:30,t:'‹ Назад'},{k:'hang',x:8,y:362,w:112,h:30,t:'⚙ Ангар'}];}
+function campBtns(){return[{k:'back',x:8,y:8,w:92,h:30,t:'‹ Назад'},{k:'hang',x:8,y:362,w:112,h:30,t:'⚙ Ангар'},{k:'reset',x:672,y:8,w:120,h:30,t:'↺ Начать заново'}];}
+/* restart the campaign: a confirmation with a warning, then all stars, beaten levels and hangar upgrades are wiped */
+let CAMP_CONF=null;const CCB={no:{x:262,y:248,w:126,h:34},yes:{x:404,y:248,w:134,h:34}};
+function campConfDraw(c){const F=FONT;c.fillStyle='rgba(0,0,0,0.62)';c.fillRect(0,0,800,400);
+ RR(c,230,104,340,194,14,'rgba(0,0,0,0.4)');RR(c,230,100,340,194,14,'#2A3138',2,'#0E1215');
+ c.save();c.beginPath();c.roundRect(230,100,340,10,[14,14,0,0]);c.clip();for(let x=220;x<580;x+=20){c.beginPath();c.moveTo(x,110);c.lineTo(x+10,110);c.lineTo(x+16,100);c.lineTo(x+6,100);c.closePath();c.fillStyle='#E8B526';c.fill();}c.restore();
+ c.save();c.textAlign='center';c.textBaseline='middle';c.font='900 17px '+F;c.fillStyle='#FFD25A';c.fillText('⚠ Начать кампанию заново?',400,134);
+ c.font='600 12.5px '+F;c.fillStyle='#D6DDE3';c.fillText('Все звёзды и пройденные уровни сотрутся,',400,164);c.fillText('купленные улучшения ангара тоже сбросятся.',400,182);
+ c.font='800 12.5px '+F;c.fillStyle='#F0907A';c.fillText('Отменить это будет нельзя.',400,208);c.restore();
+ const b=(r,f,t,col)=>{RR(c,r.x,r.y+2,r.w,r.h,10,'rgba(0,0,0,0.4)');RR(c,r.x,r.y,r.w,r.h,10,f,2,'#0C120B');c.save();c.font='900 13px '+F;c.fillStyle=col;c.textAlign='center';c.textBaseline='middle';c.fillText(t,r.x+r.w/2,r.y+r.h/2+1);c.restore();};
+ b(CCB.no,'#3A4550','Отмена','#fff');b(CCB.yes,'#B8322B','Начать заново','#fff');}
+function campReset(){CAMP_P={stars:{},up:{}};campSave();CAMP_ANIM=null;CAMP_SEL=null;HANG=null;CV.z=CAMZ;const f=CAMP_PT[0];camFocus(f[0]+20,f[1]-20);}
 let CAMP_SEL_BOX=null,CAMP_DRAG=null;const CAMP_PTRS=new Map();
 const campXY=ev=>{const r=document.getElementById('campCv').getBoundingClientRect();return[(ev.clientX-r.left)*800/r.width,(ev.clientY-r.top)*400/r.height];};
 function campTapAt(x,y){
  if(HANG){hgTap(x,y);return;}
- for(const b of campBtns())if(x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h){SFX.click();if(b.k==='back')campClose();else hgOpen();return;}
+ if(CAMP_CONF){const In=r=>x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h;if(In(CCB.yes)){SFX.sell();CAMP_CONF=null;campReset();}else if(In(CCB.no)||!(x>=230&&x<=570&&y>=100&&y<=294)){SFX.click();CAMP_CONF=null;}return;}
+ for(const b of campBtns())if(x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h){SFX.click();if(b.k==='back')campClose();else if(b.k==='reset')CAMP_CONF=1;else hgOpen();return;}
  if(CAMP_SEL_BOX){const B=CAMP_SEL_BOX;if(x>=B.x&&x<=B.x+B.w&&y>=B.y&&y<=B.y+B.h){SFX.click();campStart(B.i);return;}}
  const wx=CV.x+x/CV.z,wy=CV.y+y/CV.z;let best=-1,bd=1e9;
  for(let i=0;i<CAMP_PT.length;i++){if(!campVis(i))continue;const [px,py]=CAMP_PT[i],fin=i===CAMP.length-1,H=fin?52:38;
   if(wx>px-12&&wx<px+H*0.75&&wy>py-H&&wy<py+12){const d=Math.abs(wy-(py-H/2));if(d<bd){bd=d;best=i;}}}
  if(best>=0){SFX.click();CAMP_SEL=best;return;}
  CAMP_SEL=null;}
-function campDown(ev){if(CAMP_ANIM&&!HANG){CAMP_ANIM=null;const n=campNext(),f=CAMP_PT[n<0?CAMP.length-1:n];camFocus(f[0]+20,f[1]-20);return;}const cv=document.getElementById('campCv');try{cv.setPointerCapture(ev.pointerId);}catch(e){}CAMP_PTRS.set(ev.pointerId,campXY(ev));CV.vx=CV.vy=0;
+function campDown(ev){if(CAMP_ANIM&&!HANG&&!CAMP_CONF){CAMP_ANIM=null;const n=campNext(),f=CAMP_PT[n<0?CAMP.length-1:n];camFocus(f[0]+20,f[1]-20);return;}const cv=document.getElementById('campCv');try{cv.setPointerCapture(ev.pointerId);}catch(e){}CAMP_PTRS.set(ev.pointerId,campXY(ev));CV.vx=CV.vy=0;
  const P2=[...CAMP_PTRS.values()];
  if(P2.length===1)CAMP_DRAG={x:P2[0][0],y:P2[0][1],sx:P2[0][0],sy:P2[0][1],moved:0,t:now()};
  else if(P2.length===2){const [a,b]=P2;CAMP_DRAG={pinch:1,d0:Math.hypot(a[0]-b[0],a[1]-b[1])||1,z0:CV.z,mx:(a[0]+b[0])/2,my:(a[1]+b[1])/2,wx:CV.x+(a[0]+b[0])/2/CV.z,wy:CV.y+(a[1]+b[1])/2/CV.z,moved:99};}}
-function campMove(ev){if(!CAMP_PTRS.has(ev.pointerId)||!CAMP_DRAG)return;if(HANG){const p=campXY(ev);CAMP_DRAG.moved=Math.max(CAMP_DRAG.moved,Math.hypot(p[0]-CAMP_DRAG.sx,p[1]-CAMP_DRAG.sy));return;}CAMP_PTRS.set(ev.pointerId,campXY(ev));const P2=[...CAMP_PTRS.values()];
+function campMove(ev){if(!CAMP_PTRS.has(ev.pointerId)||!CAMP_DRAG)return;if(HANG||CAMP_CONF){const p=campXY(ev);CAMP_DRAG.moved=Math.max(CAMP_DRAG.moved,Math.hypot(p[0]-CAMP_DRAG.sx,p[1]-CAMP_DRAG.sy));return;}CAMP_PTRS.set(ev.pointerId,campXY(ev));const P2=[...CAMP_PTRS.values()];
  if(CAMP_DRAG.pinch&&P2.length>=2){const [a,b]=P2,d=Math.hypot(a[0]-b[0],a[1]-b[1]);CV.z=CAMP_DRAG.z0*d/CAMP_DRAG.d0;camClamp();
   const mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2;CV.x=CAMP_DRAG.wx-mx/CV.z;CV.y=CAMP_DRAG.wy-my/CV.z;camClamp();return;}
  if(P2.length===1&&!CAMP_DRAG.pinch){const [x,y]=P2[0],dx=x-CAMP_DRAG.x,dy=y-CAMP_DRAG.y,tt=now(),dt=Math.max(0.008,tt-CAMP_DRAG.t);
@@ -2912,9 +2924,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.09-2001</div>
+<div id="appVer">v2026.11.09-2023</div>
 <script>
-window.APP_VERSION='2026.11.09-2001';
+window.APP_VERSION='2026.11.09-2023';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
