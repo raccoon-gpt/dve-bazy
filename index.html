@@ -2505,11 +2505,11 @@ function gateSnd(k){try{if(!AU.ctx||!AU.on||AU.ctx.state!=='running')return;cons
 function gateRun(fn,opts){const g=document.getElementById('gate');if(GATE.busy&&!GATE.inside){setTimeout(()=>gateRun(fn,opts),60);return;}if(GATE.ready<3||!g){GATE.inside=true;try{fn&&fn();}finally{GATE.inside=false;}return;}
  GATE.busy=true;g.hidden=false;g.className='open';void g.offsetWidth;g.className='closing';gateSnd('close');
  setTimeout(()=>{g.className='shake';gateSnd('slam');GATE.inside=true;try{fn&&fn();}catch(e){console.error(e);}finally{GATE.inside=false;}
-  setTimeout(()=>{g.className='opening open';gateSnd('open');setTimeout(()=>{g.hidden=true;g.className='';GATE.busy=false;},680);},1000);},500);}
+  setTimeout(()=>{g.className='opening open';gateSnd('open');setTimeout(()=>{g.hidden=true;g.className='';GATE.busy=false;},680);},1500);},500);}
 /* first screen: the gates are shut while the game loads, then open */
 function gateIntro(){const g=document.getElementById('gate');if(!g)return;GATE.busy=true;g.hidden=false;g.className='';
  const go=()=>{g.className='opening open';gateSnd('open');setTimeout(()=>{g.hidden=true;g.className='';GATE.busy=false;},680);};
- const t0=Date.now(),wait=()=>{if(GATE.ready>=3||Date.now()-t0>4000)setTimeout(go,GATE.ready>=3?1000:0);else setTimeout(wait,80);};wait();}
+ const t0=Date.now(),wait=()=>{if(GATE.ready>=3||Date.now()-t0>4000)setTimeout(go,GATE.ready>=3?1500:0);else setTimeout(wait,80);};wait();}
 const gated=f=>function(...a){if(GATE.inside)return f.apply(this,a);gateRun(()=>f.apply(this,a));};
 soloGo=gated(soloGo);campStart=gated(campStart);campOpen=gated(campOpen);edOpen=gated(edOpen);beginGame=gated(beginGame);
 try{gateIntro();}catch(e){}
@@ -2813,9 +2813,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.09-1549</div>
+<div id="appVer">v2026.11.09-1552</div>
 <script>
-window.APP_VERSION='2026.11.09-1549';
+window.APP_VERSION='2026.11.09-1552';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
