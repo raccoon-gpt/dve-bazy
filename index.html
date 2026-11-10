@@ -784,7 +784,7 @@ const TITAN_BASE=10000,TB_LOST=2,TB_BREACH=4;
 /* units a player paid for before their own Titan came out keep feeding it: while it is out, their worth goes straight into its health
    (the bot's units don't; units bought once the Titan is out carry no worth at all, see the spawn) */
 const humanSide=si=>!(typeof mode!=='undefined'&&mode==='solo'&&si===1);
-function titanBank(o,v){const S=W.sides[o];if(!S||!(v>0))return;S.tb=(S.tb||0)+v;
+function titanBank(o,v){const S=W.sides[o];if(!S||!(v>0))return;/* campaign: the bot's Titan grows half as fast (×1 lost, ×2 breach) */if(W.hu&&o===1)v*=0.5;S.tb=(S.tb||0)+v;
  if(S.titanOut&&humanSide(o))for(const T of W.sides)for(const u of T.units)if(u.k==='titan'&&u.o===o&&!u.dead){u.hp+=v;u.mx+=v;}}
 function damageUnit(si,u,dmg){u.hp-=dmg;if(u.hp<=0&&!u.dead){u.dead=true;if(u.v)titanBank(u.o,u.v*TB_LOST);if(u.k==='titan'&&!W.over){W.over={w:1-u.o,why:'titan',ts:si,tx:uat(u,u.d)[0]|0,ty:uat(u,u.d)[1]|0,ta:+(headingRoad(u.d,u.b)+(u.o===si?Math.PI:0)).toFixed(2),tg:+(u.ga||0).toFixed(2)};ev({e:'boom',s:si,x:uat(u,u.d)[0]|0,y:uat(u,u.d)[1]|0,b:2});}const S=W.sides[si];const rw=UN[u.k].reward*ARMOR_RW[u.al||0];const gain=Math.round(rw*(S.cashK||1));S.ore+=gain;const p=uat(u,u.d);if(isAir(u))p[1]-=HELI_ALT*0.85;ev({e:'boom',s:si,x:p[0]|0,y:p[1]|0,b:u.k==='inf'?0:1});if(gain>0)ev({e:'kr',s:si,x:p[0]|0,y:p[1]|0,v:gain});}}
 function simSide(si,dt){const S=W.sides[si],O=W.sides[1-si];
@@ -2387,7 +2387,7 @@ let mapTimer=0;
 function beginGame(m){mapTimer=0;richGoneAt=null;endSeen=false;for(const k of ['desert','forest','winter'])if(SONGS[k].a){SONGS[k].a.pause();SONGS[k].a.currentTime=0;}ensureLost();SONGS.titan.started=false;mode=m;placing=false;AU.mode='battle';W=newWorld();netEvents=[];botGoal[0]=botGoal[1]=null;for(let i=0;i<2;i++){botPress[i]=0;botSeen[i]={};botThreat[i]={inf:1,jeep:1,tank:1,heli:0.3,plane:0.3};}me=0;view=0;viewT=0;menu=null;for(let s=0;s<2;s++){FX[s].length=0;SMOKE[s].length=0;TRACKS[s].length=0;ROCK[s].length=0;}viewW=W;document.getElementById('lobby').hidden=true;document.getElementById('over').hidden=true;}
 function showOver(won){const o=document.getElementById('over');if(!o.hidden)return;if(won&&mode==='solo')campWin();document.getElementById('bAgain').textContent=CAMP_RUN?'К карте':'В меню';document.getElementById('bRestart').hidden=false;againUi();AU.mode='menu';if(!endSeen)try{won?SFX.win():SFX.lose();}catch(_){}document.getElementById('overTitle').textContent=won?'Победа':'Поражение';const why=(viewW&&viewW.over&&viewW.over.why)||(W&&W.over&&W.over.why);document.getElementById('overText').textContent=why==='tbase'?(won?'Ваш Титан стёр базу соперника с лица земли.':'Титан соперника разрушил вашу базу.'):why==='titan'?(won?'Титан соперника уничтожен — это был его последний шанс.':'Ваш Титан уничтожен — это был последний шанс.'):(won?'База соперника захвачена.':'Ваша база захвачена. Попробуйте другую оборону или атакуйте харвестер соперника.');if(won&&CAMP_RUN&&CAMP_RUN.won)document.getElementById('overText').textContent+=' Звёзды: '+'★'.repeat(CAMP_RUN.won)+'☆'.repeat(3-CAMP_RUN.won)+' (здоровье базы '+(W.sides[0].lives|0)+').';o.hidden=false;}
 /* ================= campaign: 25 bases on one painted world map — meadows, desert, snow, swamp, volcano — always at the hardest level ================= */
-const CAMP_I=11,CAMP_DIFF='hard';
+const CAMP_I=11,CAMP_DIFF='normal';
 /* stars from the base health left on a win: 18–20 → 3, 10–17 → 2, less → 1 */
 const campStars=l=>l>=18?3:l>=10?2:1;
 /* levels: random editor maps (fixed seeds) in the region's theme; a level with `code` uses a hand-made map */
@@ -2412,7 +2412,7 @@ let CAMP_RUN=null,CAMP_PREV=null,CAMP_SEL=null,CAMP_T0=0;
 function campStart(i){const d=CAMP_DIFF;if(CAMP_PREV==null)CAMP_PREV=MAPI;MAPS[CAMP_I]=campMap(i);setupMap(CAMP_I);bgCache=null;viewW=null;
  const keep=diff;diff=d;soloGo();diff=keep;CAMP_RUN={i,diff:d};W.caps=campCaps(i+1);W.hu={...CAMP_P.up};for(const k in FREE_SQ)W.sides[0].fcd[k]=huFreeCd(0,k);
  /* later bases fight harder: a little more income and loot for the bot, free waves a little more often */
- const B=W.sides[1],k=1+0.025*i;B.incK*=k;B.cashK*=k;W.waveK=1-0.012*i;document.getElementById('camp').hidden=true;}
+ const B=W.sides[1],k=1+0.01*i;B.incK*=k;B.cashK*=k;W.waveK=1-0.012*i;document.getElementById('camp').hidden=true;}
 function campWin(){if(!CAMP_RUN)return;const i=CAMP_RUN.i,S=W&&W.sides[0],s=campStars(S?S.lives:0);CAMP_RUN.won=s;const was=CAMP_P.stars[i]|0;if(was<s){CAMP_ANIM={i,was,st:s,t0:0};CAMP_P.stars[i]=s;campSave();}}
 let CAMP_ANIM=null;
 function campOpen(){const o=document.getElementById('camp');o.hidden=false;HANG=null;CAMP_CONF=null;document.getElementById('lobby').hidden=true;CAMP_SEL=null;CAMP_T0=now();campResize();CV.z=CAMZ;if(CAMP_ANIM){CAMP_ANIM.t0=0;CAMP_ANIM.snd=null;const f=CAMP_PT[CAMP_ANIM.i];camFocus(f[0]+20,f[1]-20);return;}const n=campNext(),f=CAMP_PT[n<0?CAMP.length-1:n];camFocus(f[0]+20,f[1]-20);}
@@ -2936,9 +2936,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.10-1133</div>
+<div id="appVer">v2026.11.10-1310</div>
 <script>
-window.APP_VERSION='2026.11.10-1133';
+window.APP_VERSION='2026.11.10-1310';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
