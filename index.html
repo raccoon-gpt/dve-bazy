@@ -106,10 +106,16 @@ input{font-family:var(--display);font-size:24px;letter-spacing:6px;text-align:ce
   <div class="row" style="width:100%"><button class="primary" id="fsTipOk">Понятно</button></div>
  </div>
 </div>
+<div id="splash"><div class="sLogo"></div></div>
 <div id="gate" hidden><div class="gH gL"><div class="gLogo"></div></div><div class="gH gR"><div class="gLogo"></div></div></div>
 <style>
 #gate{position:fixed;inset:0;z-index:99999;overflow:hidden;pointer-events:auto;--lh:min(74vh,29.5vw)}
 #gate[hidden]{display:none}
+#splash{position:fixed;inset:0;z-index:100000;background:#000;transition:opacity .6s ease}
+#splash .sLogo{position:absolute;left:50%;top:50%;width:min(56vw,92vh);height:min(47vw,77vh);transform:translate(-50%,-50%);background:url(gate_logo.webp) center/contain no-repeat;opacity:0;transition:opacity .6s ease}
+#splash.show .sLogo{opacity:1}
+#splash.out{opacity:0;pointer-events:none}
+#splash[hidden]{display:none}
 #gate .gH{position:absolute;top:0;bottom:0;width:50.2%;overflow:hidden;background-size:cover;background-repeat:no-repeat;will-change:transform}
 #gate .gL{left:0;background-image:url(gate_l.webp);background-position:right center}
 #gate .gR{right:0;background-image:url(gate_r.webp);background-position:left center}
@@ -2620,9 +2626,14 @@ function gateRun(fn,opts){const g=document.getElementById('gate');if(GATE.busy&&
  setTimeout(()=>{g.className='shake';gateSnd('slam');GATE.inside=true;try{fn&&fn();}catch(e){console.error(e);}finally{GATE.inside=false;}
   setTimeout(()=>{g.className='opening open';gateSnd('open');setTimeout(()=>{g.hidden=true;g.className='';GATE.busy=false;},680);},1500);},500);}
 /* first screen: the gates are shut while the game loads, then open */
-function gateIntro(){const g=document.getElementById('gate');if(!g)return;GATE.busy=true;g.hidden=false;g.className='';
+/* game launch only: the logo fades in on black, stays 2 s and fades out onto the shut gates; the lobby music starts there,
+   the gates stay shut 3.5 s and open. Gates elsewhere (battle, editor, map) keep their normal timing */
+function gateIntro(){const g=document.getElementById('gate'),sp=document.getElementById('splash');if(!g){if(sp)sp.hidden=true;return;}GATE.busy=true;g.hidden=false;g.className='';
  const go=()=>{g.className='opening open';gateSnd('open');setTimeout(()=>{g.hidden=true;g.className='';GATE.busy=false;},680);};
- const t0=Date.now(),wait=()=>{if(GATE.ready>=3||Date.now()-t0>4000)setTimeout(go,GATE.ready>=3?1500:0);else setTimeout(wait,80);};wait();}
+ const gates=()=>{auGest=true;try{menuMusicTick(0.02);}catch(e){}const t0=Date.now(),wait=()=>{if(GATE.ready>=3||Date.now()-t0>4000)setTimeout(go,GATE.ready>=3?3500:0);else setTimeout(wait,80);};wait();};
+ if(!sp){gates();return;}
+ const logo=new Image(),t1=Date.now(),start=()=>{sp.className='show';setTimeout(()=>{sp.className='show out';gates();setTimeout(()=>{sp.hidden=true;},650);},600+2000);};
+ let st=false;const once=()=>{if(!st){st=true;start();}};logo.onload=once;logo.onerror=once;logo.src='gate_logo.webp';setTimeout(once,2500);}
 const gated=f=>function(...a){if(GATE.inside)return f.apply(this,a);gateRun(()=>f.apply(this,a));};
 soloGo=gated(soloGo);campStart=gated(campStart);campOpen=gated(campOpen);edOpen=gated(edOpen);beginGame=gated(beginGame);
 try{gateIntro();}catch(e){}
@@ -2926,9 +2937,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.10-1017</div>
+<div id="appVer">v2026.11.10-1037</div>
 <script>
-window.APP_VERSION='2026.11.10-1017';
+window.APP_VERSION='2026.11.10-1037';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
