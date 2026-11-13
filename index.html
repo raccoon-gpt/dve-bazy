@@ -829,7 +829,7 @@ const TITAN_BASE=10000,TB_LOST=2,TB_BREACH=4;
 const humanSide=si=>!(typeof mode!=='undefined'&&mode==='solo'&&si===1);
 function titanBank(o,v){const S=W.sides[o];if(!S||!(v>0))return;/* campaign: the bot's Titan grows half as fast (×1 lost, ×2 breach) */if(W.hu&&o===1)v*=0.5;S.tb=(S.tb||0)+v;
  if(S.titanOut&&humanSide(o))for(const T of W.sides)for(const u of T.units)if(u.k==='titan'&&u.o===o&&!u.dead){u.hp+=v;u.mx+=v;}}
-function damageUnit(si,u,dmg){u.hp-=dmg;if(u.hp<=0&&!u.dead){u.dead=true;if(u.v)titanBank(u.o,u.v*TB_LOST);if(u.k==='titan'&&!W.over){W.over={w:1-u.o,why:'titan',ts:si,tx:uat(u,u.d)[0]|0,ty:uat(u,u.d)[1]|0,ta:+(headingRoad(u.d,u.b)+(u.o===si?Math.PI:0)).toFixed(2),tg:+(u.ga||0).toFixed(2)};ev({e:'boom',s:si,x:uat(u,u.d)[0]|0,y:uat(u,u.d)[1]|0,b:2});}const S=W.sides[si];const rw=UN[u.k].reward*ARMOR_RW[u.al||0];const gain=Math.round(rw*(S.cashK||1));S.ore+=gain;const p=uat(u,u.d);if(isAir(u))p[1]-=HELI_ALT*0.85;ev({e:'boom',s:si,x:p[0]|0,y:p[1]|0,b:u.k==='inf'?0:1});if(gain>0)ev({e:'kr',s:si,x:p[0]|0,y:p[1]|0,v:gain});}}
+function damageUnit(si,u,dmg){u.hp-=dmg;if(u.hp<=0&&!u.dead){u.dead=true;if(u.v)titanBank(u.o,u.v*TB_LOST);if(u.k==='titan'&&!W.over){W.over={w:1-u.o,why:'titan',ts:si,tx:uat(u,u.d)[0]|0,ty:uat(u,u.d)[1]|0,ta:+(headingRoad(u.d,u.b)+(u.o===si?Math.PI:0)).toFixed(2),tg:+(u.ga||0).toFixed(2)};ev({e:'boom',s:si,x:uat(u,u.d)[0]|0,y:uat(u,u.d)[1]|0,b:2});}const S=W.sides[si];const rw=UN[u.k].reward*ARMOR_RW[u.al||0];const gain=Math.round(rw*(S.cashK||1));S.ore+=gain;const p=uat(u,u.d);if(isAir(u))p[1]-=HELI_ALT*0.85;ev({e:'boom',s:si,x:p[0]|0,y:p[1]|0,b:u.k==='inf'?0:1});if(gain>0)ev({e:'kr',s:si,x:p[0]|0,y:p[1]|0,v:gain});if(W.hu&&u.o===0&&u.pc>0){const rf=Math.round(u.pc*REFUND_K);W.sides[0].ore+=rf;ev({e:'rf',s:si,x:p[0]|0,y:p[1]|0,v:rf});}}}
 function simSide(si,dt){const S=W.sides[si],O=W.sides[1-si];
  for(const k in S.fcd)S.fcd[k]=Math.max(0,S.fcd[k]-dt);
  {const amt=Math.min(crystalInc(S)*dt,S.dep[0]);S.dep[0]-=amt;S.ore+=amt;}
@@ -845,7 +845,7 @@ function simSide(si,dt){const S=W.sides[si],O=W.sides[1-si];
  for(let i=S.mines.length-1;i>=0;i--){const m=S.mines[i];/* triggered by where a unit actually is on the map: works on every road, branch, shortcut and shared stretch */if(!S.units.some(u=>{if(u.dead||u.o===si||isAir(u))return false;const q=uat(u,u.d);return (q[0]-m.x)**2+(q[1]-m.y)**2<MINE_TRIG*MINE_TRIG;}))continue;S.mines.splice(i,1);
   for(const u of S.units){if(u.dead||u.o===si)continue;const q=uat(u,u.d);if((q[0]-m.x)**2+(q[1]-m.y)**2<MINE_R*MINE_R)damageUnit(si,u,MINE_DMG*(u.k==='titan'&&HU(u.o,'tit')>=2?0.8:1));}ev({e:'mineboom',s:si,x:m.x|0,y:m.y|0});}
  // spawn queue onto opponent map
- S.qcd-=dt;if(S.queue.length&&S.qcd<=0){let k=S.queue.shift();const free=k[0]==='f',pre=k[0]==='p',paid=pre||k.indexOf(':')<0;if(k.indexOf(':')>0)k=k.slice(2);const al=free?Math.min(S.ua,FREE_MAX_UA):S.ua;const u=UN[k];S.units.push({id:nextId++,o:si,al,k,v:paid&&(!S.titanOut||pre)?unitCost(k,S.ua):0,d:TOTAL,b:NB?(S.brN=(S.brN|0)+1)%(NB+1):0,hp:u.hp*ARM_HP[al],mx:u.hp*ARM_HP[al],dm:1,cd:Math.random(),ga:0,ph:Math.random()*6});S.qcd=k==='inf'?0.8:1.2;}
+ S.qcd-=dt;if(S.queue.length&&S.qcd<=0){let k=S.queue.shift();const free=k[0]==='f',pre=k[0]==='p',paid=pre||k.indexOf(':')<0;if(k.indexOf(':')>0)k=k.slice(2);const al=free?Math.min(S.ua,FREE_MAX_UA):S.ua;const u=UN[k];S.units.push({id:nextId++,o:si,al,k,v:paid&&(!S.titanOut||pre)?unitCost(k,S.ua):0,pc:paid?unitCost(k,S.ua):0,d:TOTAL,b:NB?(S.brN=(S.brN|0)+1)%(NB+1):0,hp:u.hp*ARM_HP[al],mx:u.hp*ARM_HP[al],dm:1,cd:Math.random(),ga:0,ph:Math.random()*6});S.qcd=k==='inf'?0.8:1.2;}
  // harvester on this map
  const hk=UH_K[Math.min(3,S.uh|0)]*(HU(si,'harv')>=2?1.2:1),hcK=huCargo(si);for(const h of S.hv){
   /* a tap stops a harvester for 5 s, then it drives on by itself */
@@ -857,7 +857,7 @@ function simSide(si,dt){const S=W.sides[si],O=W.sides[1-si];
  if(!S.hv.length&&S.dep[1]>0){S.freeT=Math.max(0,S.freeT-dt);if(S.freeT<=0){const h=newHarv();h.d=HTOT;h.dir=-1;h.load=0;h.wait=0.5;S.hv.push(h);S.freeT=huFreeHarvT(si);ev({e:'built',s:si,x:HWAY[HWAY.length-1][0]|0,y:HWAY[HWAY.length-1][1]|0});}}else S.freeT=huFreeHarvT(si);
  // units on this territory: own ones leave the base (d goes down to the border), enemy ones come in (d goes up to the base)
  for(const u of S.units){if(u.dead)continue;const def=UN[u.k];const out=u.o===si;u.ph+=dt*def.sp*0.42;
-  if(out){u.d-=dt*def.sp*(u.k==='plane'?PLANE_K:bk(u))*(u.k==='titan'&&HU(u.o,'tit')>=1?1.1:1);if(u.d<=EDGE_D){u.dead=true;u.moved=true;O.units.push({id:u.id,o:u.o,al:u.al,k:u.k,v:u.v,d:EDGE_D,b:u.b|0,sbc:u.sbc,sbn:u.sbn,hp:u.hp,mx:u.mx,dm:u.dm,cd:u.cd,ga:Math.PI-(u.ga||0),ph:u.ph});continue;}
+  if(out){u.d-=dt*def.sp*(u.k==='plane'?PLANE_K:bk(u))*(u.k==='titan'&&HU(u.o,'tit')>=1?1.1:1);if(u.d<=EDGE_D){u.dead=true;u.moved=true;O.units.push({id:u.id,o:u.o,al:u.al,k:u.k,v:u.v,pc:u.pc,d:EDGE_D,b:u.b|0,sbc:u.sbc,sbn:u.sbn,hp:u.hp,mx:u.mx,dm:u.dm,cd:u.cd,ga:Math.PI-(u.ga||0),ph:u.ph});continue;}
    if(u.k==='inf'){const p=uat(u,u.d);if(VW-p[0]<SB_R)snowThrow(1-si,O,u,p,dt,true);}
    const base=headingRoad(u.d,u.b)+Math.PI;let df=base-u.ga;while(df>Math.PI)df-=6.283;while(df<-Math.PI)df+=6.283;u.ga+=df*Math.min(1,dt*6);continue;}
   if(S.frzT>(u.k==='titan'&&HU(u.o,'tit')>=4?2:0)){u.fz=1;continue;}u.fz=0;
@@ -924,7 +924,7 @@ const FREE_WAVE_EVERY=30;
 function freeWave(dt){const S=W.sides[1];W.fwT=(W.fwT??18)-dt;if(W.fwT>0)return;const D=DIFF[W.diff||'normal'];W.fwT=D.wave*(W.waveK||1)*(0.8+Math.random()*0.4);
  const t=W.t,n=Math.max(1,Math.round(Math.min(6,2+Math.floor(t/90))*D.waveN));for(let i=0;i<n&&S.queue.length<QUEUE_MAX+10;i++){const r=Math.random();S.queue.push('f:'+(t<120?'inf':t<300?(r<0.6?'inf':'jeep'):(r<0.4?'inf':r<0.7?'jeep':r<0.88?'tank':'heli')));}}
 /* ---------- test nuclear strike: everything freezes, the missile leaves our base, the camera jumps to the enemy, the bomb lands in the middle ---------- */
-const FINALE_BONUS=10000,NUKE_COST=1500,NUKE_CD=60,NUKE_COUNT=10,NUKE_R=90,NUKE_DEP=5000,NUKE_BLOCK=15;
+const REFUND_K=0.8,FINALE_BONUS=10000,NUKE_COST=1500,NUKE_CD=60,NUKE_COUNT=10,NUKE_R=90,NUKE_DEP=5000,NUKE_BLOCK=15;
 const NK={launch:3.4,fall:1.25,clip:119/30,fade:1.8,x:VW/2,y:252};NK.boom=NK.launch+NK.fall;NK.end=NK.boom+NK.clip+NK.fade;
 function nukeStep(dt){const N=W.nuke,t0=N.t;N.t+=dt;const t=N.t;
  if(t0<NK.launch&&t>=NK.launch)ev({e:'nkf',s:N.tg});
@@ -1063,8 +1063,10 @@ function cumCost(k,L){let c=TW[k].cost;for(let l=1;l<L;l=nextLv(l))c+=upCost(k,l
 function botExec(si,cmd){const S=W.sides[si];
  /* hard cap: while nobody attacks the bot, new towers stop at a small baseline whatever path asked for them */
  if(cmd.a==='build'&&botPress[si]<400&&!W.sides[1-si].titanOut&&W.t-(S.breachT??-99)>40&&S.towers.length>=Math.min(7,3+Math.floor(W.t/150)))return;if(cmd.a==='replace'&&W.finale)return;if(cmd.a!=='replace'){doCmd(si,cmd);return;}const tw=S.towers.find(t=>t.id===cmd.id);if(!tw)return;const s=tw.s;doCmd(si,{a:'sell',id:tw.id});doCmd(si,{a:'build',s,k:cmd.k});const nt=S.towers.find(t=>t.s===s);if(nt)for(let l=1;l<cmd.lv;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});}
-function bestDefence(si,o){o=o||{};const S=W.sides[si];let best=null;const consider=(score,cost,cmd)=>{if(o.maxCost&&cost>o.maxCost)return;if(W.finale&&cmd.a==='replace')return;/* towers can't be sold in the finale */if(o.buildOnly&&cmd.a!=='build')return;const s=score/cost;if(!best||s>best.s)best={s,cost,cmd};};
+function bestDefence(si,o){o=o||{};const S=W.sides[si];let best=null;const consider=(score,cost,cmd)=>{if(o.maxCost&&cost>o.maxCost)return;if(W.finale&&cmd.a==='replace')return;/* towers can't be sold in the finale */if(o.buildOnly&&cmd.a!=='build')return;if(cmd.a==='build'&&cmd.k!=='rkt'&&padFloor>0&&freeAll-1<padFloor)return;const s=score/cost;if(!best||s>best.s)best={s,cost,cmd};};
  const freeNear=NEAR_SLOTS.filter(i=>slotFree(S,i)),freeFar=FAR_SLOTS.filter(i=>slotFree(S,i));
+ /* campaign bot: always keeps 3–5 empty pads for rocket towers (built only when aircraft actually come) */
+ const freeAll=freeNear.length+freeFar.length,padFloor=W.hu&&si===1&&capOf(W,'rkt')>0?Math.max(3,Math.min(5,Math.round(SLOTS.length*0.25))):0;
  for(const i of freeNear.slice().sort((a,b)=>SLOTS[a].x-SLOTS[b].x).slice(0,10))for(const k of ['mg','can','tes','rkt'])if(capOf(W,k)>0)consider(towerValue(si,k,1,SLOTS[i].x,SLOTS[i].y),TW[k].cost,{a:'build',s:i,k});
  for(const i of freeFar)consider(towerValue(si,'rkt',1,SLOTS[i].x,SLOTS[i].y),TW.rkt.cost,{a:'build',s:i,k:'rkt'});
  for(const tw of S.towers)if(tw.lv<Math.min(TW_MAXLV,capOf(W,tw.k))){const c=upCost(tw.k,tw.lv);consider(towerValue(si,tw.k,nextLv(tw.lv),tw.x,tw.y)-towerValue(si,tw.k,tw.lv,tw.x,tw.y),c,{a:'up',id:tw.id});}
@@ -1081,10 +1083,22 @@ function botThink(dt,si){if(!W||W.over||W.nuke)return;botT[si]-=dt;if(botT[si]>0
    if(aa*25<airHp){const sv=botThreat[si];botThreat[si]={inf:0.05,jeep:0.05,tank:0.05,heli:Math.max(1,sv.heli),plane:Math.max(1,sv.plane)};let b=null;try{b=bestDefence(si);}finally{botThreat[si]=sv;}
     const isAA=b&&(b.cmd.a==='build'&&b.cmd.k==='rkt'||b.cmd.a==='replace'&&b.cmd.k==='rkt'||b.cmd.a==='up'&&(S.towers.find(t=>t.id===b.cmd.id)||{}).k==='rkt');
     if(isAA&&S.ore>=b.cost){botExec(si,b.cmd);return;}}}}
+ const hold=botHold(si);if(hold>0){S.ore-=hold;try{botRest(si,S,t,hold);}finally{S.ore+=hold;}}else botRest(si,S,t,0);}
+/* campaign bot's anti-air savings: money for ~3 rocket towers and their upgrades that ordinary spending won't touch.
+   Only the air emergency above (and a severe ground shortage) may use it. The 10k finale bonus arrives once either side's
+   mines run dry, so when that is close the bot stops saving — the bonus will pay for rockets if they are needed then. */
+const ECO=new WeakMap();
+function botHold(si){if(!W.hu||si!==1||W.finale||capOf(W,'rkt')<1)return 0;const S=W.sides[si],t=W.t;
+ let e=ECO.get(W);if(!e){e=[];ECO.set(W,e);}e.push([t,S.dep[0]+S.dep[1],W.sides[0].dep[0]+W.sides[0].dep[1]]);while(e.length>2&&t-e[1][0]>25)e.shift();
+ let eta=1e9;if(t-e[0][0]>8){for(const j of [1,2]){const left=e[e.length-1][j],rate=(e[0][j]-left)/(t-e[0][0]);if(rate>0.5)eta=Math.min(eta,left/rate);}}
+ const soon=Math.max(0,Math.min(1,(eta-40)/50)),ramp=Math.max(0,Math.min(1,(t-90)/240));if(soon*ramp<=0)return 0;
+ const L=Math.min(2,TW_MAXLV,capOf(W,'rkt'));let want=3*cumCost('rkt',L)+(Math.min(TW_MAXLV,capOf(W,'rkt'))>=3?2*upCost('rkt',2):0);
+ for(const tw of S.towers)if(tw.k==='rkt')want-=tw.spent;return Math.max(0,Math.round(want*soon*ramp));}
+function botRest(si,S,t,hold){
  const buildTower=()=>{const best=bestDefence(si);if(!best||S.ore<best.cost)return false;botExec(si,best.cmd);return true;};
  // basics first: a couple of towers and the safe extractor
  {const foes=[...S.units,...W.sides[1-si].units].filter(u=>u.o!==si);if(foes.length){let cap=0;for(const tw of S.towers)cap+=towerValue(si,tw.k,tw.lv,tw.x,tw.y)*(S.twK||1);
-  const hpAvg=foes.reduce((a,u)=>a+u.hp,0)/foes.length;if(cap<hpAvg*1.4){const o0=S.ore;for(let n=0;n<4;n++){const b=bestDefence(si);if(!b||S.ore<b.cost)break;botExec(si,b.cmd);}if(S.ore<o0){botGoal[si]='tower';return;}/* nothing left to build or upgrade: fall through and spend on armour and attacks */}}}
+  const hpAvg=foes.reduce((a,u)=>a+u.hp,0)/foes.length;if(cap<hpAvg*1.4){const lend=cap<hpAvg*0.7?hold:0;S.ore+=lend;const o0=S.ore;try{for(let n=0;n<4;n++){const b=bestDefence(si);if(!b||S.ore<b.cost)break;botExec(si,b.cmd);}}finally{S.ore-=lend;}if(S.ore+lend<o0){botGoal[si]='tower';return;}/* nothing left to build or upgrade: fall through and spend on armour and attacks */}}}
  // finale: no more income, nothing to save for — armour first, then keep the queue full (mostly jets, the rest whatever breaks through best)
  if(W.finale&&!W.over){if(S.ua<Math.min(UPG_MAX,capOf(W,'ua'))&&S.ore>=uaCost(S)){doCmd(si,{a:'ua'});return;}
   const paid=S.queue.filter(q=>q.indexOf(':')<0).length;let room=QUEUE_MAX-paid;if(room<=0)return;
@@ -1172,7 +1186,7 @@ function addFx(e){const s=e.s;if(s!==0&&s!==1)return;const fx=FX[s];try{auEvent(
  else if(e.e==='rainfall'){fx.push({k:'fall',x:e.x,y:e.y,life:e.T,max:e.T,ox:(Math.random()-0.5)*120});}
  else if(e.e==='ff'){const p=muzzlePos(s,e.u);if(!p)return;fx.push({k:'etr',x1:p[0],y1:p[1],x2:e.x+(Math.random()-0.5)*8,y2:e.y+(Math.random()-0.5)*8,life:0.07,max:0.07,big:e.k});fx.push({k:'hit',x:e.x,y:e.y,life:0.2,max:0.2});}
  else if(e.e==='freeze'){fx.push({k:'frost',life:FRZ_T,max:FRZ_T});for(let i=0;i<40;i++)fx.push({k:'flake',x:Math.random()*VW,y:Math.random()*VH,vy:12+Math.random()*20,life:1.5+Math.random()*1.5,max:3});}
- else if(e.e==='kr'){fx.push({k:'kr',x:e.x,y:e.y,v:e.v,life:1.1,max:1.1});}else if(e.e==='crit'){fx.push({k:'crit',x:e.x,y:e.y,life:0.8,max:0.8});}
+ else if(e.e==='kr'){fx.push({k:'kr',x:e.x,y:e.y,v:e.v,life:1.1,max:1.1});}else if(e.e==='rf'){fx.push({k:'rf',x:e.x,y:e.y,v:e.v,life:1.2,max:1.2});}else if(e.e==='crit'){fx.push({k:'crit',x:e.x,y:e.y,life:0.8,max:0.8});}
  else if(e.e==='built'){fx.push({k:'ring',x:e.x??cx_(e.c),y:e.y??cy_(e.r),life:0.5,max:0.5});}
  else if(e.e==='sold'){fx.push({k:'ring',x:e.x,y:e.y,life:0.5,max:0.5});}
  else if(e.e==='cash'){fx.push({k:'cash',v:e.v,life:1.4,max:1.4});}
@@ -2147,6 +2161,7 @@ function drawMap(si,t){const S=viewW.sides[si];const owner=si,tmMine=tmOf(owner)
   else if(f.k==='mz'){const k=1-f.life/f.max;ctx.save();ctx.translate(f.x,f.y);ctx.rotate(f.a);ctx.globalAlpha=1-k;for(const sd of [-1,1])E(ctx,4,sd*(8+k*14)*f.m,(6+k*8)*f.m,(4+k*5)*f.m,'rgba(230,225,215,0.8)');ctx.restore();}
   else if(f.k==='boom')drawBlast(f);
   else if(f.k==='crit'){const k=1-f.life/f.max;ctx.globalAlpha=Math.min(1,2-2*k);T('×2',f.x,f.y-16-k*16,11,'#FFB03A','center',900);ctx.globalAlpha=1;}
+  else if(f.k==='rf'&&si!==me){const k=1-f.life/f.max;ctx.globalAlpha=Math.min(1,2-2*k);crystal(ctx,f.x-8,f.y-14-k*22,10,4);T('+'+f.v,f.x-1,f.y-18-k*22,12,'#9FF0A8','left',900);ctx.globalAlpha=1;}
   else if(f.k==='kr'&&si===me){const k=1-f.life/f.max;ctx.globalAlpha=Math.min(1,2-2*k);crystal(ctx,f.x-8,f.y-14-k*22,10,4);T('+'+f.v,f.x-1,f.y-18-k*22,12,'#BFE9FF','left',900);ctx.globalAlpha=1;}
   else if(f.k==='hit')drawSpark(f);
   else if(f.k==='fw'){drawFirework(f);}
@@ -3045,9 +3060,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.13-2323</div>
+<div id="appVer">v2026.11.14-0053</div>
 <script>
-window.APP_VERSION='2026.11.13-2323';
+window.APP_VERSION='2026.11.14-0053';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
