@@ -1491,10 +1491,12 @@ function sw2Scatter(b,ROADPT){const GG=k=>SW2R(SW2.G[k]),F=()=>rnd()<0.5;
 /* meadow road: a trodden dirt road whose edge wanders a little and is fringed with grass blades leaning onto it
    (each blade a thin curved tapered stroke of its own length, lean and bend), a lighter grass strip outside, darker dirt along the rim */
 /* distance to the road with the inside of every bend filled in by a round fillet (outside of bends untouched) */
+const OUTSQ=0.45;
 function roadDistRound(x,y,k){let m=1e9;const sg=(ax,ay,bx,by)=>{const dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((x-ax)*dx+(y-ay)*dy)/l));return Math.hypot(x-ax-dx*t,y-ay-dy*t);};
  for(const r of ROADS){let prev=null;for(let i=0;i<r.length-1;i++){const d=sg(r[i][0],r[i][1],r[i+1][0],r[i+1][1]);if(d<m)m=d;
   if(prev!==null){const V=r[i],a0=V[0]-r[i-1][0],a1=V[1]-r[i-1][1],c0=r[i+1][0]-V[0],c1=r[i+1][1]-V[1],la=Math.hypot(a0,a1)||1,lc=Math.hypot(c0,c1)||1;
-   const bx=c0/lc-a0/la,by=c1/lc-a1/la,bl=Math.hypot(bx,by)||1,side=((x-V[0])*bx+(y-V[1])*by)/bl;if(side>0){const f=Math.min(1,side/8),h=Math.max(k-Math.abs(prev-d),0)/k,sm=Math.min(prev,d)-h*h*k/4*f*f*(3-2*f);if(sm<m)m=sm;}}prev=d;}}return m;}
+   const bx=c0/lc-a0/la,by=c1/lc-a1/la,bl=Math.hypot(bx,by)||1,side=((x-V[0])*bx+(y-V[1])*by)/bl;if(side>0){const f=Math.min(1,side/8),h=Math.max(k-Math.abs(prev-d),0)/k,sm=Math.min(prev,d)-h*h*k/4*f*f*(3-2*f);if(sm<m)m=sm;}else{/* outer side: part-way from a round corner towards a square one */const px=x-V[0],py=y-V[1],ta=(px*a0+py*a1)/la,tc=(px*c0+py*c1)/lc;
+    if(ta>0&&tc<0){const ea=Math.abs((px*a1-py*a0)/la),ec=Math.abs((px*c1-py*c0)/lc),eu=Math.hypot(px,py),q=eu+(Math.max(ea,ec)-eu)*OUTSQ;if(q<m)m=q;}}}prev=d;}}return m;}
 function meadowRoad(b){const R0=19.5,D=DPR,Wd=Math.round(VW*D),Hd=Math.round(VH*D);
  let sd=91;const rr=()=>{sd=(sd*16807)%2147483647;return(sd-1)/2147483646;};
  const H=(i,j,k)=>{let h=(i*374761393+j*668265263+k*2147483647)|0;h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967295;};
@@ -3009,9 +3011,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.13-1938</div>
+<div id="appVer">v2026.11.13-1944</div>
 <script>
-window.APP_VERSION='2026.11.13-1938';
+window.APP_VERSION='2026.11.13-1944';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
