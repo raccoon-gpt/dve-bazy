@@ -712,8 +712,12 @@ function findXBridges(){const out=[],tp=TRACK_PL;
   const L=Math.hypot(r0,r1);if(t*L<26||(1-t)*L<26)continue;
   if(out.some(q=>Math.hypot(q.x-x,q.y-y)<40))continue;out.push({x,y,a:Math.atan2(r1,r0)});}}return out;}
 function underXBridge(x,y,m=0){for(const q of XBR){const dx=x-q.x,dy=y-q.y,c=Math.cos(q.a),s_=Math.sin(q.a),al=dx*c+dy*s_,ac=-dx*s_+dy*c;if(Math.abs(al)<30+m&&Math.abs(ac)<25+m)return q;}return null;}
+/* painted bridges: wooden one over the river to the other field, steel one over the harvester track; drawn along the road (x) */
+const BRIMG={wood:new Image(),steel:new Image()};for(const k in BRIMG){BRIMG[k].onload=()=>{bgCache=null;};BRIMG[k].src='bridge_'+k+'.webp';}
+function brImg(b,k,x,y,a){const im=BRIMG[k];if(!im.complete||!im.naturalWidth)return false;b.save();b.translate(x,y);b.rotate(a+Math.PI/2);const H=66,W=H*im.width/im.height;b.drawImage(im,-W/2,-H/2,W,H);b.restore();return true;}
 function drawXBridge(b,q,snow){b.save();b.translate(q.x,q.y);b.rotate(q.a);
  for(const s of [-1,1]){const g=b.createLinearGradient(0,s*20,0,s*32);g.addColorStop(0,'rgba(0,0,0,0.38)');g.addColorStop(1,'rgba(0,0,0,0)');b.fillStyle=g;b.fillRect(-15,s>0?20:-32,30,12);}
+ if(brImg(b,'steel',0,0,0)){b.restore();return;}
  RR(b,-30,-21,60,42,3,snow?'#6E5236':'#7A5230',2,OL);for(let i=-26;i<30;i+=7)L(b,[[i,-19],[i,19]],'rgba(60,35,15,0.6)',1.2);
  if(snow)for(let i=-24;i<26;i+=9)E(b,i+(i%2?2:-2),-8+(i%3)*6,3,1.6,'rgba(250,253,255,0.85)');
  for(const s of [-1,1]){RR(b,-33,s*21-4,66,8,2,'#3E3F40',1.6,OL);for(let i=-31;i<30;i+=10)P(b,[[i,s*21-4],[i+5,s*21-4],[i+2,s*21+4],[i-3,s*21+4]],'#F2C232');RR(b,-33,s*21-4,66,8,2,null,1.6,OL);}b.restore();}
@@ -1411,7 +1415,7 @@ function paintLava(bg,b){
  for(const road of ROADS)for(let i=0;i<road.length-1;i++){const a=road[i],q=road[i+1],n=Math.hypot(q[0]-a[0],q[1]-a[1])/4;for(let k=0;k<n;k++){const x=a[0]+(q[0]-a[0])*k/n,y=a[1]+(q[1]-a[1])*k/n;b.fillStyle=rnd()<0.6?'rgba(40,32,28,0.5)':'rgba(190,180,170,0.45)';b.fillRect(x+(rnd()-0.5)*26,y+(rnd()-0.5)*26,1.8,1.8);}}
  // stone bridge over the lava
  for(const q of XBR)drawXBridge(b,q,false);
- for(const BY of [BRIDGE_Y,...BRS.map(q=>q.by)]){b.save();b.translate(VW,BY);RR(b,-30,-21,60,42,3,'#5A524C',2,OL);for(let i=-26;i<30;i+=9)L(b,[[i,-19],[i,19]],'rgba(30,26,24,0.6)',1.4);
+ for(const BY of [BRIDGE_Y,...BRS.map(q=>q.by)]){if(brImg(b,'wood',VW,BY,0))continue;b.save();b.translate(VW,BY);RR(b,-30,-21,60,42,3,'#5A524C',2,OL);for(let i=-26;i<30;i+=9)L(b,[[i,-19],[i,19]],'rgba(30,26,24,0.6)',1.4);
  for(const s of [-1,1]){RR(b,-33,s*21-4,66,8,2,'#2A2624',1.6,OL);for(let i=-31;i<30;i+=10)P(b,[[i,s*21-4],[i+5,s*21-4],[i+2,s*21+4],[i-3,s*21+4]],'#FF7A2A');RR(b,-33,s*21-4,66,8,2,null,1.6,OL);}b.restore();}
  for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++){const k=c+','+r;const x=c*CS,y=r*CS,cx=x+CS/2,cy=y+CS/2;if(kind[k]!=='grass')continue;
   if(SLOTS.some(sl=>Math.abs(sl.x-cx)<SLOT_HALF+16&&Math.abs(sl.y-cy)<SLOT_HALF+16))continue;
@@ -1618,7 +1622,7 @@ function paintBg(){const bg=document.createElement('canvas');bg.width=Math.round
  if(snow){// packed snow along the road edges
   for(const road of ROADS)for(let i=0;i<road.length-1;i++){const a=road[i],q=road[i+1],L=Math.hypot(q[0]-a[0],q[1]-a[1]),ux=(q[0]-a[0])/L,uy=(q[1]-a[1])/L;for(let t=rnd()*20;t<L;t+=14+rnd()*22){for(const sd of [-1,1]){if(rnd()<0.5)continue;const o=15+rnd()*3,x=a[0]+ux*t-uy*o*sd,y=a[1]+uy*t+ux*o*sd,rr=2+rnd()*4;E(b,x,y,rr+rnd()*2,rr*0.6,'rgba(245,250,255,0.75)');}}}}
  for(const q of XBR)drawXBridge(b,q,snow);
- for(const BY of [BRIDGE_Y,...BRS.map(q=>q.by)]){b.save();b.translate(VW,BY);RR(b,-30,-21,60,42,3,snow?'#6E5236':'#7A5230',2,OL);for(let i=-26;i<30;i+=7)L(b,[[i,-19],[i,19]],'rgba(60,35,15,0.6)',1.2);
+ for(const BY of [BRIDGE_Y,...BRS.map(q=>q.by)]){if(brImg(b,'wood',VW,BY,0))continue;b.save();b.translate(VW,BY);RR(b,-30,-21,60,42,3,snow?'#6E5236':'#7A5230',2,OL);for(let i=-26;i<30;i+=7)L(b,[[i,-19],[i,19]],'rgba(60,35,15,0.6)',1.2);
  if(snow)for(let i=-24;i<26;i+=9)E(b,i+(i%2?2:-2),-8+(i%3)*6,3,1.6,'rgba(250,253,255,0.85)');
  for(const s of [-1,1]){RR(b,-33,s*21-4,66,8,2,'#3E3F40',1.6,OL);for(let i=-31;i<30;i+=10)P(b,[[i,s*21-4],[i+5,s*21-4],[i+2,s*21+4],[i-3,s*21+4]],'#F2C232');RR(b,-33,s*21-4,66,8,2,null,1.6,OL);}b.restore();}
  /* (no placeholder plate under the cave: it got baked into the cached ground when the cave picture was still loading) */
@@ -3026,9 +3030,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.13-2044</div>
+<div id="appVer">v2026.11.13-2147</div>
 <script>
-window.APP_VERSION='2026.11.13-2044';
+window.APP_VERSION='2026.11.13-2147';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
