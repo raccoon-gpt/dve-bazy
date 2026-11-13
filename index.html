@@ -2006,7 +2006,7 @@ const tmOf=owner=>owner===me?TEAM.b:TEAM.r;
 
 /* ---------------- render ---------------- */
 /* empty tower pad (drawn live: it disappears under a tower and comes back when the tower is sold) */
-function drawPad(b,sl){const far=sl.zone==='far',th=MAP.theme,snow=th==='snow',sand=th==='sand';
+function drawPad(b,sl){/* all pads look the same, near or far */const far=false,th=MAP.theme,snow=th==='snow',sand=th==='sand';
  if((th==='swamp'||th==='swamp2')&&sw2Ready()){/* TASK-001 v2 stone pad picture, chosen per position; far zone gets a cool tint */const h=SLOT_HALF,k=((Math.round(sl.x)*73856093^Math.round(sl.y)*19349663)>>>0)%7,n=k<2?'pad_01':k<4?'pad_02':k<6?'pad_03':'pad_04',a=SW2.C[n],w=h*2*1.12;RR(b,sl.x-h+1,sl.y-h+3,h*2,h*2,6,'rgba(8,24,6,0.35)');b.drawImage(SW2.pads,a[0],a[1],a[2],a[3],sl.x-w/2,sl.y-w/2,w,w);if(far)RR(b,sl.x-h+1,sl.y-h+1,h*2-2,h*2-2,5,'rgba(110,150,210,0.16)');return;}
  if(th==='swamp'||th==='swamp2'){/* a mossy stone slab; cracks fixed per pad (from its position) */const h=SLOT_HALF,x0=sl.x-h,y0=sl.y-h;let sd=(Math.round(sl.x)*73856093^Math.round(sl.y)*19349663)>>>0;const R2=()=>{sd=(sd*1103515245+12345)>>>0;return(sd>>>8)/16777216;};
   RR(b,x0+1,y0+3,h*2,h*2,7,'rgba(8,24,6,0.4)');RR(b,x0,y0,h*2,h*2,7,far?'#6C7A70':'#76825A',1.6,far?'#3E4E5A':'#46502E');RR(b,x0+2,y0+2,h*2-4,h-3,5,far?'rgba(200,220,235,0.12)':'rgba(230,240,190,0.14)');
@@ -2999,9 +2999,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.13-1722</div>
+<div id="appVer">v2026.11.13-1726</div>
 <script>
-window.APP_VERSION='2026.11.13-1722';
+window.APP_VERSION='2026.11.13-1726';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
