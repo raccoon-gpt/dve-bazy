@@ -1308,7 +1308,12 @@ function drawRuts(b,tp){const W=26,S=RUT.s,C=RUT.c,k=W/192,n=tp.length;if(n<2)re
  const pat=b.createPattern(S,'repeat');
  for(let i=0;i<n-1;i++){const [ux,uy,l]=dir(i);if(l<0.5)continue;const h=W/2,e0=i>0?(sq(i)?-h:h):0,e1=i<n-2?(sq(i+1)?-h:h):0;
   b.save();b.transform(ux,uy,-uy,ux,tp[i][0],tp[i][1]);pat.setTransform(new DOMMatrix().translate(0,-h).scale(k));b.fillStyle=pat;b.fillRect(-e0,-h,l+e0+e1,W);b.restore();}
- for(let i=1;i<n-1;i++){if(!sq(i))continue;const a=dir(i-1),c=dir(i);b.save();b.transform(a[0],a[1],c[0],c[1],tp[i][0],tp[i][1]);b.drawImage(C,-96*k,-96*k,192*k,192*k);b.restore();}}
+ /* corners: when the run between two turns is shorter than the track is wide, each corner is cut at the middle of that run so neither covers the other */
+ for(let i=1;i<n-1;i++){if(!sq(i))continue;const a=dir(i-1),c=dir(i);b.save();
+  const cut=(j,sgn)=>{const [ux,uy,l]=dir(j);if(l>=W)return;const mx=(tp[j][0]+tp[j+1][0])/2,my=(tp[j][1]+tp[j+1][1])/2,px=-uy*99,py=ux*99,bx=ux*sgn*99,by=uy*sgn*99;
+   b.beginPath();b.moveTo(mx+px,my+py);b.lineTo(mx-px,my-py);b.lineTo(mx-px+bx,my-py+by);b.lineTo(mx+px+bx,my+py+by);b.closePath();b.clip();};
+  if(i>1&&sq(i-1))cut(i-1,1);if(i<n-2&&sq(i+1))cut(i,-1);
+  b.transform(a[0],a[1],c[0],c[1],tp[i][0],tp[i][1]);b.drawImage(C,-96*k,-96*k,192*k,192*k);b.restore();}}
 /* «Болото 2» (test theme): painted textures and objects supplied by the player, placed by the same swamp code */
 const SW2={grass:new Image(),mud:new Image(),water:new Image(),atlas:new Image(),atlas2:new Image(),pads:new Image(),atlas3:new Image(),
  /* GPT decor sheets (step work, cut from magenta): rocks, plants, water plants */
@@ -2956,9 +2961,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.13-1234</div>
+<div id="appVer">v2026.11.13-1249</div>
 <script>
-window.APP_VERSION='2026.11.13-1234';
+window.APP_VERSION='2026.11.13-1249';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
