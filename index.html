@@ -165,9 +165,9 @@ const cx_=c=>c*CS+CS/2, cy_=r=>r*CS+CS/2;
 const PAD_STEP=10,PAD_ROAD=50,PAD_GAP=60,PAD_FAR=100,PAD_RIVER=700;
 const MAPS=[
  {name:'Луга',theme:'grass',song:'forest',bridge:6,way:[[20.6,6],[14,6],[14,2],[9,2],[9,6],[4,6],[4,2],[1.4,2]],
-  fields:[null,{c:11,r:4}],hway:[[12,5.6],[12.5,6],[12.5,7.7],[3.5,7.7],[3.5,4.7],[2,4.7]],track:[[12.5,5.9],[12.5,7.7],[3.5,7.7],[3.5,4.7],[2,4.7]],pads:[[430,262]],cut:[[742,216],[724,164]]},
+  fields:[null,{c:11,r:4}],hway:[[12,5.6],[12,6],[12,7.7],[3.5,7.7],[3.5,4.7],[2,4.7]],track:[[12,5.9],[12,7.7],[3.5,7.7],[3.5,4.7],[2,4.7]],pads:[[430,262]],cut:[[742,216],[724,164]]},
  {name:'Зимний перевал',theme:'snow',song:'winter',bridge:4,way:[[20.6,4],[15,4],[15,2],[10,2],[10,7],[5,7],[5,2],[1.4,2]],
-  fields:[null,{c:12,r:4}],hway:[[12.7,5.2],[12.5,6],[12.5,6.4],[3.2,6.4],[3.2,4.7],[2,4.7]],track:[[12.5,5.9],[12.5,6.4],[3.2,6.4],[3.2,4.7],[2,4.7]],pads:[],cut:[[742,136],[742,224]]},
+  fields:[null,{c:12,r:4}],hway:[[13,5.2],[13,6],[13,6.4],[3.2,6.4],[3.2,4.7],[2,4.7]],track:[[13,5.9],[13,6.4],[3.2,6.4],[3.2,4.7],[2,4.7]],pads:[],cut:[[742,136],[742,224]]},
  /* canyon: pixel coordinates; the road rings around the factory in the middle, the refinery stands apart in the bottom-left corner */
  {name:'Каньон',theme:'sand',song:'desert',px:true,split:true,fac:[300,120],ref:[0,128],
   way:[[844,90],[250,90],[190,150],[190,250],[240,300],[450,300],[500,250],[500,220],[376,220]],
@@ -2999,9 +2999,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.13-1703</div>
+<div id="appVer">v2026.11.13-1722</div>
 <script>
-window.APP_VERSION='2026.11.13-1703';
+window.APP_VERSION='2026.11.13-1722';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
