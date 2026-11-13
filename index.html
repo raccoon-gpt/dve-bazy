@@ -814,7 +814,7 @@ function doCmd(si,cmd){if(!W||W.over)return;if(W.nuke&&cmd&&cmd.a!=='pause')retu
  else if(a==='rup'){const l=S.rl|0;if(l>=RUP_MAX||S.ore<RUP_COST[l])return;S.ore-=RUP_COST[l];S.rl=l+1;S.uh=S.rl;S.uc=S.rl;ev({e:'up',s:si});if(S.rl>=RUP_MAX)ev({e:'vbig',s:si});
   if(S.hv.length<HARV_MAXN&&S.dep[1]>0){const h=newHarv();h.d=HTOT;h.dir=-1;h.load=0;h.wait=0.5;S.hv.push(h);}}
  else if(a==='harv'){if((S.rl|0)<RUP_MAX||S.hv.length>=HARV_MAXN||S.ore<huHarvCost(si))return;S.ore-=huHarvCost(si);const h=newHarv();h.d=HTOT;h.dir=-1;h.load=0;h.wait=0.5;S.hv.push(h);}
- else if(a==='fsend'){const k=cmd.k,f=FREE_SQ[k];if(!f||S.fcd[k]>0)return;S.fcd[k]=huFreeCd(si,k);for(let i=0,nF=huFreeN(si,k);i<nF;i++)S.queue.push('g:'+k);ev({e:'fsq',s:si});}
+ else if(a==='fsend'){const k=cmd.k,f=FREE_SQ[k];if(!f||S.fcd[k]>0||campNoFree())return;S.fcd[k]=huFreeCd(si,k);for(let i=0,nF=huFreeN(si,k);i<nF;i++)S.queue.push('g:'+k);ev({e:'fsq',s:si});}
  else if(a==='uc'){if(S.uc>=UC_MAX||S.ore<UC_COST)return;S.ore-=UC_COST;S.uc++;ev({e:'up',s:si});}
  else if(a==='uh'){if(S.uh>=UH_MAX||S.ore<UH_COST)return;S.ore-=UH_COST;S.uh++;}
  else if(a==='hstop'){const h=S.hv.find(v=>v.id===cmd.id);if(h){h.stopped=true;h.stopT=5;}}
@@ -829,7 +829,7 @@ const TITAN_BASE=10000,TB_LOST=2,TB_BREACH=4;
 const humanSide=si=>!(typeof mode!=='undefined'&&mode==='solo'&&si===1);
 function titanBank(o,v){const S=W.sides[o];if(!S||!(v>0))return;/* campaign: the bot's Titan grows half as fast (×1 lost, ×2 breach) */if(W.hu&&o===1)v*=0.5;S.tb=(S.tb||0)+v;
  if(S.titanOut&&humanSide(o))for(const T of W.sides)for(const u of T.units)if(u.k==='titan'&&u.o===o&&!u.dead){u.hp+=v;u.mx+=v;}}
-function damageUnit(si,u,dmg){u.hp-=dmg;if(u.hp<=0&&!u.dead){u.dead=true;if(u.v)titanBank(u.o,u.v*TB_LOST);if(u.k==='titan'&&!W.over){W.over={w:1-u.o,why:'titan',ts:si,tx:uat(u,u.d)[0]|0,ty:uat(u,u.d)[1]|0,ta:+(headingRoad(u.d,u.b)+(u.o===si?Math.PI:0)).toFixed(2),tg:+(u.ga||0).toFixed(2)};ev({e:'boom',s:si,x:uat(u,u.d)[0]|0,y:uat(u,u.d)[1]|0,b:2});}const S=W.sides[si];const rw=UN[u.k].reward*ARMOR_RW[u.al||0];const gain=Math.round(rw*(S.cashK||1));S.ore+=gain;const p=uat(u,u.d);if(isAir(u))p[1]-=HELI_ALT*0.85;ev({e:'boom',s:si,x:p[0]|0,y:p[1]|0,b:u.k==='inf'?0:1});if(gain>0)ev({e:'kr',s:si,x:p[0]|0,y:p[1]|0,v:gain});if(W.hu&&u.o===0&&u.pc>0){const rf=Math.round(u.pc*REFUND_K);W.sides[0].ore+=rf;ev({e:'rf',s:si,x:p[0]|0,y:p[1]|0,v:rf});}}}
+function damageUnit(si,u,dmg){u.hp-=dmg;if(u.hp<=0&&!u.dead){u.dead=true;if(u.v)titanBank(u.o,u.v*TB_LOST);if(u.k==='titan'&&!W.over){W.over={w:1-u.o,why:'titan',ts:si,tx:uat(u,u.d)[0]|0,ty:uat(u,u.d)[1]|0,ta:+(headingRoad(u.d,u.b)+(u.o===si?Math.PI:0)).toFixed(2),tg:+(u.ga||0).toFixed(2)};ev({e:'boom',s:si,x:uat(u,u.d)[0]|0,y:uat(u,u.d)[1]|0,b:2});}const S=W.sides[si];const rw=UN[u.k].reward*ARMOR_RW[u.al||0];const gain=Math.round(rw*(S.cashK||1));S.ore+=gain;const p=uat(u,u.d);if(isAir(u))p[1]-=HELI_ALT*0.85;ev({e:'boom',s:si,x:p[0]|0,y:p[1]|0,b:u.k==='inf'?0:1});if(gain>0)ev({e:'kr',s:si,x:p[0]|0,y:p[1]|0,v:gain});if(W.hu&&u.pc>0){const rf=Math.round(u.pc*REFUND_K);W.sides[u.o].ore+=rf;ev({e:'rf',s:si,x:p[0]|0,y:p[1]|0,v:rf});}}}
 function simSide(si,dt){const S=W.sides[si],O=W.sides[1-si];
  for(const k in S.fcd)S.fcd[k]=Math.max(0,S.fcd[k]-dt);
  {const amt=Math.min(crystalInc(S)*dt,S.dep[0]);S.dep[0]-=amt;S.ore+=amt;}
@@ -924,7 +924,8 @@ const FREE_WAVE_EVERY=30;
 function freeWave(dt){const S=W.sides[1];W.fwT=(W.fwT??18)-dt;if(W.fwT>0)return;const D=DIFF[W.diff||'normal'];W.fwT=D.wave*(W.waveK||1)*(0.8+Math.random()*0.4);
  const t=W.t,n=Math.max(1,Math.round(Math.min(6,2+Math.floor(t/90))*D.waveN));for(let i=0;i<n&&S.queue.length<QUEUE_MAX+10;i++){const r=Math.random();S.queue.push('f:'+(t<120?'inf':t<300?(r<0.6?'inf':'jeep'):(r<0.4?'inf':r<0.7?'jeep':r<0.88?'tank':'heli')));}}
 /* ---------- test nuclear strike: everything freezes, the missile leaves our base, the camera jumps to the enemy, the bomb lands in the middle ---------- */
-const REFUND_K=0.8,FINALE_BONUS=10000,NUKE_COST=1500,NUKE_CD=60,NUKE_COUNT=10,NUKE_R=90,NUKE_DEP=5000,NUKE_BLOCK=15;
+/* campaign test mode: 120% refund for lost paid units (both sides); no free squads for the player, no free waves for the bot */
+const REFUND_K=1.2,CAMP_NOFREE=true,campNoFree=()=>CAMP_NOFREE&&!!(W&&W.hu),FINALE_BONUS=10000,NUKE_COST=1500,NUKE_CD=60,NUKE_COUNT=10,NUKE_R=90,NUKE_DEP=5000,NUKE_BLOCK=15;
 const NK={launch:3.4,fall:1.25,clip:119/30,fade:1.8,x:VW/2,y:252};NK.boom=NK.launch+NK.fall;NK.end=NK.boom+NK.clip+NK.fade;
 function nukeStep(dt){const N=W.nuke,t0=N.t;N.t+=dt;const t=N.t;
  if(t0<NK.launch&&t>=NK.launch)ev({e:'nkf',s:N.tg});
@@ -1018,7 +1019,7 @@ function spawnTitan(si){const S=W.sides[si];if(S.titanOut)return;S.titanOut=true
  if(humanSide(si))S.queue=S.queue.map(k=>k.indexOf(':')<0?'p:'+k:k);ev({e:'tout',s:si});if(W.freeBot&&si===1){S.ore+=FINALE_BONUS;ev({e:'cash',s:si,v:FINALE_BONUS});}const u=UN.titan,thp=titanHp(S);S.units.push({id:nextId++,o:si,al:0,k:'titan',d:TOTAL,b:NB?(S.brN=(S.brN|0)+1)%(NB+1):0,hp:thp,mx:thp,dm:1,cd:1,ga:0,ph:0});ev({e:'titan',s:si});}
 /* vs the bot: once one Titan rolls out, the other side's follows within 10 s even if its fields still have crystals */
 function titanRace(dt){if(!W.freeBot)return;for(let s=0;s<2;s++){const A=W.sides[s],B=W.sides[1-s];if(A.titanOut&&!B.titanOut){W.finale=true;B.raceT=(B.raceT??(HU(1-s,'tit')>=5?13.5:15))-dt;if(B.raceT<=0)spawnTitan(1-s);}}}
-function simStep(dt){if(!W)return;if(W.nuke){nukeStep(dt);return;}if(W.over){endingStep(dt);return;}W.t+=dt;if(W.freeBot)freeWave(dt);simSide(0,dt);simSide(1,dt);titanRace(dt);
+function simStep(dt){if(!W)return;if(W.nuke){nukeStep(dt);return;}if(W.over){endingStep(dt);return;}W.t+=dt;if(W.freeBot&&!campNoFree())freeWave(dt);simSide(0,dt);simSide(1,dt);titanRace(dt);
  if(W.sides[0].lives<=0||W.sides[1].lives<=0){const L=W.sides[0].lives<=0?0:1;W.over={w:1-L,why:W.sides[L].lastHit==='titan'?'tbase':'base'};}}
 
 /* ---------------- bot ---------------- */
@@ -1060,10 +1061,11 @@ const TWVS={tes:{inf:1.2,jeep:1.3,tank:1.1,heli:0,plane:0},mg:{inf:1,jeep:1,tank
 function towerValue(si,k,lv,x,y){const th=botThreat[si],tot=th.inf+th.jeep+th.tank+th.heli+th.plane,d=TW[k];const R=d.range*lvR(k,lv-1);let n=0;for(const p of ROAD_SAMPLES)if((p[0]-x)**2+(p[1]-y)**2<R*R)n++;const L=n*10;
  const dpsOf=u=>k==='tes'?TES_DMG[lv-1]*1.4:d.dmg*((k==='can'&&u==='tank')?CAN_LVM:(k==='mg'&&u==='inf')?MG_LVM:LVM)[lv-1]/(d.cd*LVC[lv-1]);let v=0;for(const u of ['inf','jeep','tank','heli','plane'])v+=th[u]/tot*dpsOf(u)*ARMOR[k][u]*TWVS[k][u]*L/UN[u].sp;return v;}
 function cumCost(k,L){let c=TW[k].cost;for(let l=1;l<L;l=nextLv(l))c+=upCost(k,l);return c;}
+function botSwapOk(si){if(!W.hu||si!==1)return false;const S=W.sides[si];if(S.swapN==null){if(!S.units.some(u=>u.k==='titan'&&u.o!==si&&!u.dead))return false;S.swapN=3;}return S.swapN>0;}
 function botExec(si,cmd){const S=W.sides[si];
  /* hard cap: while nobody attacks the bot, new towers stop at a small baseline whatever path asked for them */
- if(cmd.a==='build'&&botPress[si]<400&&!W.sides[1-si].titanOut&&W.t-(S.breachT??-99)>40&&S.towers.length>=Math.min(7,3+Math.floor(W.t/150)))return;if(cmd.a==='replace'&&W.finale)return;if(cmd.a!=='replace'){doCmd(si,cmd);return;}const tw=S.towers.find(t=>t.id===cmd.id);if(!tw)return;const s=tw.s;doCmd(si,{a:'sell',id:tw.id});doCmd(si,{a:'build',s,k:cmd.k});const nt=S.towers.find(t=>t.s===s);if(nt)for(let l=1;l<cmd.lv;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});}
-function bestDefence(si,o){o=o||{};const S=W.sides[si];let best=null;const consider=(score,cost,cmd)=>{if(o.maxCost&&cost>o.maxCost)return;if(W.finale&&cmd.a==='replace')return;/* towers can't be sold in the finale */if(o.buildOnly&&cmd.a!=='build')return;if(cmd.a==='build'&&cmd.k!=='rkt'&&padFloor>0&&freeAll-1<padFloor)return;const s=score/cost;if(!best||s>best.s)best={s,cost,cmd};};
+ if(cmd.a==='build'&&botPress[si]<400&&!W.sides[1-si].titanOut&&W.t-(S.breachT??-99)>40&&S.towers.length>=Math.min(7,3+Math.floor(W.t/150)))return;if(cmd.a==='replace'&&W.finale&&!botSwapOk(si))return;if(cmd.a!=='replace'){doCmd(si,cmd);return;}const tw=S.towers.find(t=>t.id===cmd.id);if(!tw)return;const s=tw.s;if(W.finale){S.swapN--;const i=S.towers.indexOf(tw);S.ore+=tw.spent;S.towers.splice(i,1);ev({e:'sold',s:si,x:tw.x,y:tw.y});}else doCmd(si,{a:'sell',id:tw.id});doCmd(si,{a:'build',s,k:cmd.k});const nt=S.towers.find(t=>t.s===s);if(nt)for(let l=1;l<cmd.lv;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});}
+function bestDefence(si,o){o=o||{};const S=W.sides[si];let best=null;const consider=(score,cost,cmd)=>{if(o.maxCost&&cost>o.maxCost)return;if(W.finale&&cmd.a==='replace'&&!botSwapOk(si))return;/* towers can't be sold in the finale (campaign bot: 3 swaps once the Titan is on its land) */if(o.buildOnly&&cmd.a!=='build')return;if(cmd.a==='build'&&cmd.k!=='rkt'&&padFloor>0&&freeAll-1<padFloor)return;const s=score/cost;if(!best||s>best.s)best={s,cost,cmd};};
  const freeNear=NEAR_SLOTS.filter(i=>slotFree(S,i)),freeFar=FAR_SLOTS.filter(i=>slotFree(S,i));
  /* campaign bot: always keeps 3–5 empty pads for rocket towers (built only when aircraft actually come) */
  const freeAll=freeNear.length+freeFar.length,padFloor=W.hu&&si===1&&capOf(W,'rkt')>0?Math.max(3,Math.min(5,Math.round(SLOTS.length*0.25))):0;
@@ -1071,9 +1073,9 @@ function bestDefence(si,o){o=o||{};const S=W.sides[si];let best=null;const consi
  for(const i of freeFar)consider(towerValue(si,'rkt',1,SLOTS[i].x,SLOTS[i].y),TW.rkt.cost,{a:'build',s:i,k:'rkt'});
  for(const tw of S.towers)if(tw.lv<Math.min(TW_MAXLV,capOf(W,tw.k))){const c=upCost(tw.k,tw.lv);consider(towerValue(si,tw.k,nextLv(tw.lv),tw.x,tw.y)-towerValue(si,tw.k,tw.lv,tw.x,tw.y),c,{a:'up',id:tw.id});}
  /* rebuild: selling refunds 100%, so swap a tower that no longer fits the threat for the best other kind the same money (plus a bit) can buy */
- const budget=S.ore*0.6;for(const tw of S.towers){const old=towerValue(si,tw.k,tw.lv,tw.x,tw.y);const far=SLOTS[tw.s].zone==='far';
-  for(const k2 of far?['rkt']:['mg','can','tes','rkt']){if(k2===tw.k||capOf(W,k2)<1)continue;let L=0;for(let l=1;l<=Math.min(TW_MAXLV,capOf(W,k2));l=nextLv(l)){if(cumCost(k2,l)<=tw.spent*SELL_K+budget)L=l;}if(!L)continue;
-   const gain=towerValue(si,k2,L,tw.x,tw.y)-old;if(gain<=old*0.3||gain<=0)continue;consider(gain,Math.max(40,cumCost(k2,L)-tw.spent*SELL_K),{a:'replace',id:tw.id,k:k2,lv:L});}}
+ const swap=W.finale&&botSwapOk(si),sk=swap?1:SELL_K,budget=S.ore*(swap?1:0.6);for(const tw of S.towers){const old=towerValue(si,tw.k,tw.lv,tw.x,tw.y);const far=SLOTS[tw.s].zone==='far';
+  for(const k2 of far?['rkt']:['mg','can','tes','rkt']){if(k2===tw.k||capOf(W,k2)<1)continue;let L=0;for(let l=1;l<=Math.min(TW_MAXLV,capOf(W,k2));l=nextLv(l)){if(cumCost(k2,l)<=tw.spent*sk+budget)L=l;}if(!L)continue;
+   const gain=towerValue(si,k2,L,tw.x,tw.y)-old;if(gain<=old*(swap?0.1:0.3)||gain<=0)continue;consider(gain,Math.max(40,cumCost(k2,L)-tw.spent*sk),{a:'replace',id:tw.id,k:k2,lv:L});}}
  return best;}
 function botThink(dt,si){if(!W||W.over||W.nuke)return;botT[si]-=dt;if(botT[si]>0)return;botT[si]=1.2+Math.random()*0.8;const S=W.sides[si];const t=W.t;updThreat(si);
  botSuper(si);
@@ -2246,8 +2248,8 @@ function barItems(){const S=viewW.sides[me];const uc=k=>unitCost(k,S.ua);return[
 function barRects(){return barItems().map((it,i)=>({it,x:BAR.x+8+i*(BAR.b+BAR.gap),y:BAR.y+2,w:BAR.b,h:BAR.b}));}
 const BAR_END=BAR.x+16+6*(46+6)-6;
 const FREE_X0=BAR_END+8,FREE_END=FREE_X0+16+4*52-6;
-function freeRects(){return['inf','jeep','tank','heli'].map((k,i)=>({k,x:FREE_X0+8+i*52,y:BAR.y+2,w:46,h:46}));}
-function drawFree(t){const S=viewW.sides[me];const fc=S.fcd||{inf:0,jeep:0,tank:0,heli:0};RR(ctx,FREE_X0,BAR.y-4,FREE_END-FREE_X0,BAR.b+12,12,'rgba(20,28,18,0.88)',2,'#2E5A22');
+function freeRects(){if(campNoFree())return[];return['inf','jeep','tank','heli'].map((k,i)=>({k,x:FREE_X0+8+i*52,y:BAR.y+2,w:46,h:46}));}
+function drawFree(t){if(campNoFree())return;const S=viewW.sides[me];const fc=S.fcd||{inf:0,jeep:0,tank:0,heli:0};RR(ctx,FREE_X0,BAR.y-4,FREE_END-FREE_X0,BAR.b+12,12,'rgba(20,28,18,0.88)',2,'#2E5A22');
  {const cx=FREE_X0+(FREE_END-FREE_X0)/2;RR(ctx,cx-34,BAR.y-17,68,14,7,'rgba(20,28,18,0.88)');T('бесплатно',cx,BAR.y-10,9,'#9FE08A','center',800);}
  for(const b of freeRects()){const cd=fc[b.k]||0,max=huFreeCd(me,b.k),ready=cd<=0,cx=b.x+b.w/2,cy=b.y+b.h/2;
   if(ready){RR(ctx,b.x-2,b.y-2,b.w+4,b.h+4,12,'rgba(124,208,74,'+(0.35+0.25*Math.sin(t*4))+')');}
@@ -3060,9 +3062,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-0053</div>
+<div id="appVer">v2026.11.14-0123</div>
 <script>
-window.APP_VERSION='2026.11.14-0053';
+window.APP_VERSION='2026.11.14-0123';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
