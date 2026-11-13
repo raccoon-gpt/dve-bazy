@@ -714,7 +714,7 @@ function findXBridges(){const out=[],tp=TRACK_PL;
 function underXBridge(x,y,m=0){for(const q of XBR){const dx=x-q.x,dy=y-q.y,c=Math.cos(q.a),s_=Math.sin(q.a),al=dx*c+dy*s_,ac=-dx*s_+dy*c;if(Math.abs(al)<30+m&&Math.abs(ac)<25+m)return q;}return null;}
 /* painted bridges: wooden one over the river to the other field, steel one over the harvester track; drawn along the road (x) */
 const BRIMG={wood:new Image(),steel:new Image()};for(const k in BRIMG){BRIMG[k].onload=()=>{bgCache=null;};BRIMG[k].src='bridge_'+k+'.webp';}
-function brImg(b,k,x,y,a){const im=BRIMG[k];if(!im.complete||!im.naturalWidth)return false;b.save();b.translate(x,y);b.rotate(a+Math.PI/2);const H=66,W=H*im.width/im.height;b.drawImage(im,-W/2,-H/2,W,H);b.restore();return true;}
+function brImg(b,k,x,y,a){const im=BRIMG[k];if(!im.complete||!im.naturalWidth)return false;b.save();b.translate(x,y);b.rotate(a+Math.PI/2);const H=66,W=k==='steel'?44:H*im.width/im.height;b.drawImage(im,-W/2,-H/2,W,H);b.restore();return true;}
 function drawXBridge(b,q,snow){b.save();b.translate(q.x,q.y);b.rotate(q.a);
  for(const s of [-1,1]){const g=b.createLinearGradient(0,s*20,0,s*32);g.addColorStop(0,'rgba(0,0,0,0.38)');g.addColorStop(1,'rgba(0,0,0,0)');b.fillStyle=g;b.fillRect(-15,s>0?20:-32,30,12);}
  if(brImg(b,'steel',0,0,0)){b.restore();return;}
@@ -3030,9 +3030,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.13-2147</div>
+<div id="appVer">v2026.11.13-2150</div>
 <script>
-window.APP_VERSION='2026.11.13-2147';
+window.APP_VERSION='2026.11.13-2150';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
