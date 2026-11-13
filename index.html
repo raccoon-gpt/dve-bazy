@@ -317,7 +317,7 @@ function edTrack0(){const Q=ED;const [fc,fr]=Q.f1,[rc,rr]=Q.ref;const all=edAllR
   if(end&&(!best||endG<best.g)){const cells=[];for(let k=end;k;k=prev.get(k)){const [c,r]=k.split(',').map(Number);cells.push([c,r]);}best={g:endG,cells:cells.reverse()};}}
  return best&&best.cells;}
 /* the middle of the dock's gate in the refinery picture (editor maps), for harvesters coming from above or below */
-const DOCK_X=88;
+const DOCK_X=86.4;
 function edCollapse(pts){return pts.filter((p,i)=>i===0||i===pts.length-1||p[2]||!((pts[i-1][0]===p[0]&&p[0]===pts[i+1][0])||(pts[i-1][1]===p[1]&&p[1]===pts[i+1][1]))).map(p=>[p[0],p[1]]);}
 function edBuild(){const Q=ED,jn=new Set(Q.br.flatMap(b=>b.to!=null?[b.j,b.to]:[b.j]));
  const main=Q.road.map(([c,r],i)=>[edCc(c),edCc(r),jn.has(i)]).slice(1);const L=Q.road[Q.road.length-1];
@@ -465,7 +465,7 @@ function drawEditor(t){const Q=ED;if(!E)return;const s=Q.step;
    if(s===5){Q.road.forEach((q,i)=>{if(i>=2&&i<Q.road.length-1)E(ctx,edCc(q[0]),edCc(q[1]),4,4,'rgba(255,255,255,0.7)');});
     for(const b of Q.br){const q=b.cells[b.cells.length-1];if(q&&q[0]!==18&&b.to==null)E(ctx,edCc(q[0]),edCc(q[1]),9,9,'rgba(255,220,80,0.8)',2,OL);}}
    if(s===4){const L=Q.road[Q.road.length-1];T(edRoadDone()?'дорога готова':'',edCc(L[0]),edCc(L[1])-26,10,'#fff','center',800);}}
-  if(s>=3&&Q.f1&&Q.ref){const cells=edTrack();if(cells){ctx.save();ctx.setLineDash([3,5]);ctx.strokeStyle='rgba(90,60,30,0.9)';ctx.lineWidth=3;ctx.beginPath();cells.forEach(([c,r],i)=>i?ctx.lineTo(edCc(c),edCc(r)):ctx.moveTo(edCc(c),edCc(r)));{const lc=cells[cells.length-1];ctx.lineTo(Q.ref[0]*CS+(lc&&lc[0]===Q.ref[0]+2?DOCK_X:100),Q.ref[1]*CS+40);}ctx.stroke();ctx.restore();}}}
+  if(s>=3&&Q.f1&&Q.ref){const cells=edTrack();if(cells){ctx.save();ctx.setLineDash([3,5]);ctx.strokeStyle='rgba(90,60,30,0.9)';ctx.lineWidth=3;ctx.beginPath();/* the preview follows the real track: an entry from above or below runs straight down the middle of the dock gate */const lc=cells[cells.length-1],vx=lc&&lc[0]===Q.ref[0]+2;let k0=cells.length;if(vx)while(k0>0&&cells[k0-1][0]===lc[0])k0--;const px=(c,i)=>vx&&i>=k0?Q.ref[0]*CS+DOCK_X:edCc(c);cells.forEach(([c,r],i)=>i?ctx.lineTo(px(c,i),edCc(r)):ctx.moveTo(px(c,i),edCc(r)));ctx.lineTo(Q.ref[0]*CS+(vx?DOCK_X:100),Q.ref[1]*CS+40);ctx.stroke();ctx.restore();}}}
  // panels
  RR(ctx,-4,-4,VW+8,52,0,'rgba(15,22,13,0.88)');T('Шаг '+(s<2?s+1:s)+' из '+(ED_STEPS.length-1)+' · '+ED_STEPS[s],VW/2,17,14,'#fff','center',800);
  const msg=ED_MSG&&now()<ED_MSG.until?ED_MSG.t:ED_HINT[s];T(msg,VW/2,36,10.5,ED_MSG&&now()<ED_MSG.until?'#FFB4A6':'#CFE0C8','center',600);
@@ -2941,9 +2941,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.13-1139</div>
+<div id="appVer">v2026.11.13-1155</div>
 <script>
-window.APP_VERSION='2026.11.13-1139';
+window.APP_VERSION='2026.11.13-1155';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
