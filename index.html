@@ -1491,20 +1491,21 @@ function sw2Scatter(b,ROADPT){const GG=k=>SW2R(SW2.G[k]),F=()=>rnd()<0.5;
 /* meadow road: a trodden dirt road whose edge wanders a little and is fringed with grass blades leaning onto it
    (each blade a thin curved tapered stroke of its own length, lean and bend), a lighter grass strip outside, darker dirt along the rim */
 /* distance to the road with the inside of every bend filled in by a round fillet (outside of bends untouched) */
-const OUTSQ=0.45;
-function roadDistRound(x,y,k){let m=1e9;const sg=(ax,ay,bx,by)=>{const dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((x-ax)*dx+(y-ay)*dy)/l));return Math.hypot(x-ax-dx*t,y-ay-dy*t);};
- for(const r of ROADS){let prev=null;for(let i=0;i<r.length-1;i++){const d=sg(r[i][0],r[i][1],r[i+1][0],r[i+1][1]);if(d<m)m=d;
-  if(prev!==null){const V=r[i],a0=V[0]-r[i-1][0],a1=V[1]-r[i-1][1],c0=r[i+1][0]-V[0],c1=r[i+1][1]-V[1],la=Math.hypot(a0,a1)||1,lc=Math.hypot(c0,c1)||1;
-   const bx=c0/lc-a0/la,by=c1/lc-a1/la,bl=Math.hypot(bx,by)||1,side=((x-V[0])*bx+(y-V[1])*by)/bl;if(side>0){const f=Math.min(1,side/8),h=Math.max(k-Math.abs(prev-d),0)/k,sm=Math.min(prev,d)-h*h*k/4*f*f*(3-2*f);if(sm<m)m=sm;}else{/* outer side: part-way from a round corner towards a square one */const px=x-V[0],py=y-V[1],ta=(px*a0+py*a1)/la,tc=(px*c0+py*c1)/lc;
-    if(ta>0&&tc<0){const ea=Math.abs((px*a1-py*a0)/la),ec=Math.abs((px*c1-py*c0)/lc),eu=Math.hypot(px,py),q=eu+(Math.max(ea,ec)-eu)*OUTSQ;if(q<m)m=q;}}}prev=d;}}return m;}
+/* distance to the road, with the inside of every right-angle bend cut by an exact round fillet of radius k
+   (only the small square in the inner corner changes; the straight edges stay parallel; outside of bends stays round) */
+function roadDistRound(x,y,k,R0){let m=1e9;const sg=(ax,ay,bx,by)=>{const dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((x-ax)*dx+(y-ay)*dy)/l));return Math.hypot(x-ax-dx*t,y-ay-dy*t);};
+ for(const r of ROADS){for(let i=0;i<r.length-1;i++){const d=sg(r[i][0],r[i][1],r[i+1][0],r[i+1][1]);if(d<m)m=d;
+  if(i>0){const V=r[i],a0=V[0]-r[i-1][0],a1=V[1]-r[i-1][1],c0=r[i+1][0]-V[0],c1=r[i+1][1]-V[1],la=Math.hypot(a0,a1)||1,lc=Math.hypot(c0,c1)||1,ux=a0/la,uy=a1/la,vx=c0/lc,vy=c1/lc,cr=ux*vy-uy*vx;
+   if(Math.abs(cr)<0.5)continue;const sgn=cr>0?1:-1,px=x-V[0],py=y-V[1],s1=(px*-uy+py*ux)*sgn-R0,s2=(px*-vy+py*vx)*sgn-R0;
+   if(s1<k&&s2<k&&s1>-R0&&s2>-R0&&(s1>0||s2>0||s1+s2>-k)){const q=R0+k-Math.hypot(k-s1,k-s2);if(q<m)m=q;}}}}return m;}
 function meadowRoad(b){const R0=19.5,D=DPR,Wd=Math.round(VW*D),Hd=Math.round(VH*D);
  let sd=91;const rr=()=>{sd=(sd*16807)%2147483647;return(sd-1)/2147483646;};
  const H=(i,j,k)=>{let h=(i*374761393+j*668265263+k*2147483647)|0;h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967295;};
  const vn=(x,y,sc,k)=>{x/=sc;y/=sc;const i=Math.floor(x),j=Math.floor(y),fx=x-i,fy=y-j,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy);const a=H(i,j,k),c=H(i+1,j,k),e=H(i,j+1,k),f=H(i+1,j+1,k);return(a+(c-a)*u+(e-a)*v+(a-c-e+f)*u*v)*2-1;};
- const edge=(x,y)=>R0+vn(x,y,48,1)*1.0+vn(x,y,14,2)*0.3;
+ const edge=(x,y)=>R0+vn(x,y,48,1)*0.5+vn(x,y,14,2)*0.35;
  const off=document.createElement('canvas');off.width=Wd;off.height=Hd;const oc=off.getContext('2d'),img=oc.createImageData(Wd,Hd),px=img.data;
  const L=[221,163,98],M=[208,146,84],K=[176,114,60],G=[156,208,98];const pts=[];
- const RD=(x,y)=>roadDistRound(x,y,12);
+ const RD=(x,y)=>roadDistRound(x,y,14,R0);
  for(let by=0;by<VH;by+=8)for(let bx=0;bx<VW;bx+=8){if(roadDist(bx+4,by+4)>R0+16)continue;
   for(let dy=0;dy<8*D;dy++)for(let dx=0;dx<8*D;dx++){const X=Math.round(bx*D)+dx,Y=Math.round(by*D)+dy;if(X>=Wd||Y>=Hd)continue;const x=(X+0.5)/D,y=(Y+0.5)/D,d=RD(x,y),E=edge(x,y),o=(Y*Wd+X)*4;
    if(d<E+0.5){const a=Math.min(1,E-d+0.5),t=Math.max(0,Math.min(1,(d-(E-10))/10)),t2=t*t,m=vn(x,y,6,3)*0.05+vn(x,y,20,4)*0.05+(H(X,Y,5)-0.5)*0.05;
@@ -3011,9 +3012,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.13-1944</div>
+<div id="appVer">v2026.11.13-1956</div>
 <script>
-window.APP_VERSION='2026.11.13-1944';
+window.APP_VERSION='2026.11.13-1956';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
