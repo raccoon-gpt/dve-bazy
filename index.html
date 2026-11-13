@@ -739,9 +739,9 @@ function drawXBridge(b,q,snow){b.save();b.translate(q.x,q.y);b.rotate(q.a);
 function hat(d){d=Math.max(0,Math.min(HTOT,d));let i=1;while(i<hl.length-1&&hl[i]<d)i++;const k=(d-hl[i-1])/(hl[i]-hl[i-1]||1);return [HWAY[i-1][0]+(HWAY[i][0]-HWAY[i-1][0])*k,HWAY[i-1][1]+(HWAY[i][1]-HWAY[i-1][1])*k];}
 
 /* ---------------- rules ---------------- */
-const TW={mg:{name:'Пулемёт',cost:200,range:100,cd:0.15,dmg:15,far:false},can:{name:'Пушка',cost:300,range:125,cd:1.6,dmg:60,far:false,splash:42,splashK:0.6},tes:{name:'Радар',cost:600,range:110,cd:1,dmg:100,far:false,chain:2,slow:0.3,hop:90},rkt:{name:'Ракеты',cost:500,range:200,cd:2.6,dmg:100,far:true,splash:42}};
+const TW={mg:{name:'Пулемёт',cost:200,range:100,cd:0.15,dmg:15,far:false},can:{name:'Пушка',cost:300,range:125,cd:1.6,dmg:60,far:false,splash:42,splashK:0.6},tes:{name:'Радар',cost:600,range:110,cd:1,dmg:100,far:false,chain:2,slow:0.3,hop:90},rkt:{name:'Ракеты',cost:500,range:200,cd:2.6,dmg:70,far:true,splash:34}};
 const FREE_SQ={inf:{cd:10,n:5},jeep:{cd:20,n:5},tank:{cd:50,n:5},heli:{cd:30,n:5}},SAFE_BOOST=3,HARV_REFUND=500,TITAN_STOP=150,TITAN_RESPAWN=20,DEPOSIT=[25000,40000],BURN_T=11,BURN_R=50,BURN_DPS=190,QUEUE_MAX=30,FREE_MAX_UA=2,MINE_CD=60,MINE_R=300,MINE_DMG=3200,RAIN_CD=30,RAIN_N=10,RAIN_DMG=2250,RAIN_R=50,RAIN_CONF=5,FRZ_TW=3,FF_DMG={inf:12,jeep:25,tank:80,titan:300,heli:20,plane:0},FF_CD={inf:0.6,jeep:0.5,tank:1.4,titan:1.4,heli:0.5,plane:1},MINE_TRIG=18,FRZ_CD=40,FRZ_T=7,SHELL_SPEED=200,SHELL_LEAD=30,SHELL_DIRECT=15,TW_MAXLV=5,LVM=[1,1.4,1.9,2.6,3.4],CAN_LVM=[1,2,200/60,2.6,6],MG_LVM=[1,2.1,3.3,2.6,5],LVR=[1,1.08,1.16,1.24,1.32],LVC=[1,0.88,0.77,0.68,0.6]; // per level: damage, range, reload time
-const UN={titan:{name:'Титан',cost:0,hp:100000,sp:30,reward:0,lives:0},inf:{name:'Пехота',cost:60,hp:209,sp:40,reward:10,lives:1},jeep:{name:'Джип',cost:105,hp:376,sp:70,reward:18,lives:1},tank:{name:'Танк',cost:270,hp:300,sp:30,reward:45,lives:3},heli:{name:'Вертолёт',cost:165,hp:150,sp:50,reward:25,lives:1,air:true},plane:{name:'Самолёт',cost:300,hp:110,sp:70,reward:22,lives:1,air:true}};
+const UN={titan:{name:'Титан',cost:0,hp:100000,sp:30,reward:0,lives:0},inf:{name:'Пехота',cost:60,hp:209,sp:40,reward:10,lives:1},jeep:{name:'Джип',cost:105,hp:376,sp:70,reward:18,lives:1},tank:{name:'Танк',cost:270,hp:300,sp:30,reward:45,lives:3},heli:{name:'Вертолёт',cost:165,hp:100,sp:50,reward:25,lives:1,air:true},plane:{name:'Самолёт',cost:300,hp:72,sp:70,reward:22,lives:1,air:true}};
 const TES_DMG=[50,60,70,80,90],TES_SLOW=[0.3,0.36,0.42,0.48,0.55],TES_R=[1,1.15,1.3,1.45,1.6],TES_UP=[0,1350,2400,3900,6000];
 /* cost to upgrade a tower from level lv to lv+1 (the radar is much pricier: its top level is devastating) */
 /* level 4 was dropped: towers go 1 → 2 → 3 → 5 (shown as level 4), the 3→top step costs the two old steps together */
@@ -3045,9 +3045,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.13-2310</div>
+<div id="appVer">v2026.11.13-2323</div>
 <script>
-window.APP_VERSION='2026.11.13-2310';
+window.APP_VERSION='2026.11.13-2323';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
