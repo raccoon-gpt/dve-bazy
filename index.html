@@ -191,6 +191,10 @@ const RND_MAP_I=6;
 function segPts(pl){const o=[];for(let i=0;i<pl.length-1;i++)o.push([pl[i],pl[i+1]]);return o;}
 function segSegDist(a,b,c,d){return Math.min(segDist(a[0],a[1],c,d),segDist(b[0],b[1],c,d),segDist(c[0],c[1],a,b),segDist(d[0],d[1],a,b));}
 /* where the harvester track ends inside the rich field: well under the cave picture, keeping the last run straight */
+/* a track that leaves the cave downwards runs up its middle, not along one of its two columns (the turn below moves with it) */
+function mineAlign(tr,fc,fr){const x0=fc*CS,y0=fr*CS;const a=tr[0],b=tr[1];
+ if(a[1]!==y0+100||!(a[0]===x0+20||a[0]===x0+60))return;
+ if(b[0]===a[0]){tr[0]=[x0+40,a[1]];tr[1]=[x0+40,b[1]];}else if(b[1]===a[1])tr[0]=[x0+40,a[1]];/* a run that turns away at once: start it under the middle, so the track leaves the cave straight down */}
 function fieldEntry(fc,fr,p){const x0=fc*CS,y0=fr*CS,deep=(v,o)=>Math.max(o+24,Math.min(o+56,v));
  /* coming to the cave mouth (left of its bottom row, or below its left column): the last bit turns straight into the mouth */
  if((p[0]===x0-20&&p[1]===y0+60)||(p[0]===x0+20&&p[1]===y0+100))return[x0+32,y0+60];
@@ -330,7 +334,7 @@ function edBuild(){const Q=ED,jn=new Set(Q.br.flatMap(b=>b.to!=null?[b.j,b.to]:[
  const cells=edTrack()||[];const [fc,fr]=Q.f1,[rc,rr]=Q.ref;
  const lastC=cells.length?cells[cells.length-1]:[rc+3,rr],fromV=lastC[0]===rc+2;
  let tr=cells.length?edCollapse(cells.map(([c,r])=>[edCc(c),edCc(r),0])):[[0,0]];{const n=tr.length,L=tr[n-1],N=fromV?[rc*CS+DOCK_X,edCc(lastC[1])]:[rc*CS+140,rr*CS+40];if(n>1){const a=tr[n-2]=tr[n-2].slice();/* keep the last run straight: it moves with the dock */if(a[1]===L[1])a[1]=N[1];else if(a[0]===L[0])a[0]=N[0];}tr[n-1]=N;}tr.push([rc*CS+(fromV?DOCK_X:100),rr*CS+40]);
- const fx=fc*CS+CS,fy=fr*CS+CS,first=fieldEntry(fc,fr,tr[0]);
+ if(tr.length>=4)mineAlign(tr,fc,fr);else if(tr.length>=3){const x0=fc*CS,y0=fr*CS,a=tr[0],b=tr[1];if(a[1]===y0+100&&(a[0]===x0+20||a[0]===x0+60)&&b[1]===a[1])tr[0]=[x0+40,a[1]];}const fx=fc*CS+CS,fy=fr*CS+CS,first=fieldEntry(fc,fr,tr[0]);
  const th=Q.theme;const m={name:Q.name||'Своя карта',theme:th,song:themeSong(th),px:true,split:true,custom:true,
   hq:[edCc(Q.fac[0]),edCc(Q.fac[1])],fac:[edCc(Q.fac[0])-36,edCc(Q.fac[1])-100],ref:[rc*CS,rr*CS-112],way,fields:[null,{c:fc,r:fr}],
   hway:[[fx+(first[0]-fx)*0.5,fy+(first[1]-fy)*0.5],...tr],track:[first,...tr],pads:[]};
@@ -465,7 +469,7 @@ function drawEditor(t){const Q=ED;if(!E)return;const s=Q.step;
    if(s===5){Q.road.forEach((q,i)=>{if(i>=2&&i<Q.road.length-1)E(ctx,edCc(q[0]),edCc(q[1]),4,4,'rgba(255,255,255,0.7)');});
     for(const b of Q.br){const q=b.cells[b.cells.length-1];if(q&&q[0]!==18&&b.to==null)E(ctx,edCc(q[0]),edCc(q[1]),9,9,'rgba(255,220,80,0.8)',2,OL);}}
    if(s===4){const L=Q.road[Q.road.length-1];T(edRoadDone()?'дорога готова':'',edCc(L[0]),edCc(L[1])-26,10,'#fff','center',800);}}
-  if(s>=3&&Q.f1&&Q.ref){const cells=edTrack();if(cells){ctx.save();ctx.setLineDash([3,5]);ctx.strokeStyle='rgba(90,60,30,0.9)';ctx.lineWidth=3;ctx.beginPath();/* the preview follows the real track: an entry from above or below runs straight down the middle of the dock gate */const lc=cells[cells.length-1],vx=lc&&lc[0]===Q.ref[0]+2;let k0=cells.length;if(vx)while(k0>0&&cells[k0-1][0]===lc[0])k0--;const px=(c,i)=>vx&&i>=k0?Q.ref[0]*CS+DOCK_X:edCc(c);cells.forEach(([c,r],i)=>i?ctx.lineTo(px(c,i),edCc(r)):ctx.moveTo(px(c,i),edCc(r)));ctx.lineTo(Q.ref[0]*CS+(vx?DOCK_X:100),Q.ref[1]*CS+40);ctx.stroke();ctx.restore();}}}
+  if(s>=3&&Q.f1&&Q.ref){const cells=edTrack();if(cells){ctx.save();ctx.setLineDash([3,5]);ctx.strokeStyle='rgba(90,60,30,0.9)';ctx.lineWidth=3;ctx.beginPath();/* the preview follows the real track: an entry from above or below runs straight down the middle of the dock gate */const lc=cells[cells.length-1],vx=lc&&lc[0]===Q.ref[0]+2;let k0=cells.length;if(vx)while(k0>0&&cells[k0-1][0]===lc[0])k0--;const [f1c,f1r]=Q.f1,c0=cells[0];let m0=-1;if(c0&&c0[1]===f1r+2&&(c0[0]===f1c||c0[0]===f1c+1)&&cells.length>2){m0=0;while(m0+1<cells.length&&cells[m0+1][0]===c0[0])m0++;}const px=(c,i)=>vx&&i>=k0?Q.ref[0]*CS+DOCK_X:i<=m0&&m0<k0?f1c*CS+CS:edCc(c);let h0=cells.length;if(!vx)while(h0>0&&cells[h0-1][1]===lc[1])h0--;const py=(r,i)=>!vx&&i>=h0?Q.ref[1]*CS+40:edCc(r);cells.forEach(([c,r],i)=>i?ctx.lineTo(px(c,i),py(r,i)):ctx.moveTo(px(c,i),py(r,i)));ctx.lineTo(Q.ref[0]*CS+(vx?DOCK_X:100),Q.ref[1]*CS+40);ctx.stroke();ctx.restore();}}}
  // panels
  RR(ctx,-4,-4,VW+8,52,0,'rgba(15,22,13,0.88)');T('Шаг '+(s<2?s+1:s)+' из '+(ED_STEPS.length-1)+' · '+ED_STEPS[s],VW/2,17,14,'#fff','center',800);
  const msg=ED_MSG&&now()<ED_MSG.until?ED_MSG.t:ED_HINT[s];T(msg,VW/2,36,10.5,ED_MSG&&now()<ED_MSG.until?'#FFB4A6':'#CFE0C8','center',600);
@@ -1294,6 +1298,17 @@ const GPAL={
 /* the swamp theme is drawn from the painted textures and decor (the old hand-drawn swamp stays only as the fallback while images load); 'swamp2' = old name, kept for saved maps */
 GPAL.swamp.tex=1;GPAL.swamp2=GPAL.swamp;
 let GP=GPAL.grass;
+/* harvester track (meadow, TASK-005): a steel path — the 512×192 straight repeated along each run, the 192×192 corner (arms left and down,
+   centre lines meet at 96,96) on right-angle turns; both share one cross profile */
+const RUT={s:new Image(),c:new Image(),n:0};RUT.s.onload=RUT.c.onload=()=>{if(++RUT.n>=2)bgCache=null;};RUT.s.src='mrd_s.webp';RUT.c.src='mrd_c.webp';
+const rutReady=()=>RUT.n>=2;
+function drawRuts(b,tp){const W=26,S=RUT.s,C=RUT.c,k=W/192,n=tp.length;if(n<2)return;
+ const dir=i=>{const dx=tp[i+1][0]-tp[i][0],dy=tp[i+1][1]-tp[i][1],l=Math.hypot(dx,dy)||1;return[dx/l,dy/l,l];};
+ const sq=i=>{if(i<=0||i>=n-1)return false;const a=dir(i-1),c=dir(i);return Math.abs(a[0]*c[0]+a[1]*c[1])<0.08;};
+ const pat=b.createPattern(S,'repeat');
+ for(let i=0;i<n-1;i++){const [ux,uy,l]=dir(i);if(l<0.5)continue;const h=W/2,e0=i>0?(sq(i)?-h:h):0,e1=i<n-2?(sq(i+1)?-h:h):0;
+  b.save();b.transform(ux,uy,-uy,ux,tp[i][0],tp[i][1]);pat.setTransform(new DOMMatrix().translate(0,-h).scale(k));b.fillStyle=pat;b.fillRect(-e0,-h,l+e0+e1,W);b.restore();}
+ for(let i=1;i<n-1;i++){if(!sq(i))continue;const a=dir(i-1),c=dir(i);b.save();b.transform(a[0],a[1],c[0],c[1],tp[i][0],tp[i][1]);b.drawImage(C,-96*k,-96*k,192*k,192*k);b.restore();}}
 /* «Болото 2» (test theme): painted textures and objects supplied by the player, placed by the same swamp code */
 const SW2={grass:new Image(),mud:new Image(),water:new Image(),atlas:new Image(),atlas2:new Image(),pads:new Image(),atlas3:new Image(),
  /* GPT decor sheets (step work, cut from magenta): rocks, plants, water plants */
@@ -1507,7 +1522,7 @@ function paintBg(){const bg=document.createElement('canvas');bg.width=Math.round
  for(let r=0;r<ROWS;r++){if(Math.abs(cy_(r)-BY)<30||BRS.some(q=>Math.abs(cy_(r)-q.by)<30))continue;for(const s of [-1])(sand?mesaRock:snow?snowRock:rock)(b,rx+s*22,cy_(r)+(rnd()-0.5)*14,0.75,rnd()<0.4);}
  const lineR=(w,col)=>{b.strokeStyle=col;b.lineWidth=w;b.lineJoin='round';b.lineCap='butt';b.beginPath();for(const road of ROADS)road.forEach((p,i)=>i?b.lineTo(p[0],p[1]):b.moveTo(p[0],p[1]));b.stroke();};
  // harvester track: drawn under the road so crossings look like crossings
- const tp=TRACK_PL;b.strokeStyle=sand?'#9A6E44':snow?'#8C7C6C':GP.track[0];b.lineWidth=20;b.lineJoin='round';b.lineCap='round';b.beginPath();tp.forEach((p,i)=>i?b.lineTo(p[0],p[1]):b.moveTo(p[0],p[1]));b.stroke();b.strokeStyle=sand?'#C29868':snow?'#ADA090':GP.track[1];b.lineWidth=15;b.stroke();b.setLineDash([3,5]);b.strokeStyle=snow?'rgba(70,55,40,0.5)':'rgba(90,60,30,0.55)';b.lineWidth=2;for(const o of [-4,4]){b.beginPath();offsetLine(tp,o).forEach((p,i)=>i?b.lineTo(p[0],p[1]):b.moveTo(p[0],p[1]));b.stroke();}b.setLineDash([]);
+ const tp=TRACK_PL;if(MAP.theme==='grass'&&rutReady())drawRuts(b,tp);else{b.strokeStyle=sand?'#9A6E44':snow?'#8C7C6C':GP.track[0];b.lineWidth=20;b.lineJoin='round';b.lineCap='round';b.beginPath();tp.forEach((p,i)=>i?b.lineTo(p[0],p[1]):b.moveTo(p[0],p[1]));b.stroke();b.strokeStyle=sand?'#C29868':snow?'#ADA090':GP.track[1];b.lineWidth=15;b.stroke();b.setLineDash([3,5]);b.strokeStyle=snow?'rgba(70,55,40,0.5)':'rgba(90,60,30,0.55)';b.lineWidth=2;for(const o of [-4,4]){b.beginPath();offsetLine(tp,o).forEach((p,i)=>i?b.lineTo(p[0],p[1]):b.moveTo(p[0],p[1]));b.stroke();}b.setLineDash([]);}
  if(GP.sw&&!snow&&!sand)lineR(51,'rgba(16,48,12,0.22)');b.save();b.translate(3,5);lineR(46,snow?'rgba(30,50,85,0.2)':GP.shadow);b.restore();
  if(sand){lineR(46,'#C99A60');lineR(43,'#7A4A2A');lineR(40,'#A8653C');lineR(34,'#B8744A');}
  else if(GP.sw&&GP.tex&&sw2Ready()){lineR(46,GP.road[0]);lineR(44,GP.road[1]);lineR(38,sw2Pat(b,'mud',0.35));lineR(38,'rgba(40,20,5,0.12)');}
@@ -2941,9 +2956,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.13-1155</div>
+<div id="appVer">v2026.11.13-1234</div>
 <script>
-window.APP_VERSION='2026.11.13-1155';
+window.APP_VERSION='2026.11.13-1234';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
