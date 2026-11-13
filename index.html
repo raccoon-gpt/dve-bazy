@@ -148,7 +148,7 @@ input{font-family:var(--display);font-size:24px;letter-spacing:6px;text-align:ce
 const VW=800,VH=400,CS=40,COLS=20,ROWS=10;
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 let SH='rgba(10,30,5,0.30)';const OL='#1F2A1A',FONT="'Rubik',system-ui,sans-serif";
-let DPR=1,bgCache=null,seed=11,ROAD_CLIP=null;
+let DPR=1,bgCache=null,seed=11,ROAD_CLIP=null,XBR=[];
 const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
 function P(c,pts,f,lw,sc){c.beginPath();pts.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.closePath();if(f){c.fillStyle=f;c.fill();}if(lw){c.lineWidth=lw;c.strokeStyle=sc||OL;c.stroke();}}
 function RR(c,x,y,w,h,r,f,lw,sc){c.beginPath();c.roundRect(x,y,w,h,r);if(f){c.fillStyle=f;c.fill();}if(lw){c.lineWidth=lw;c.strokeStyle=sc||OL;c.stroke();}}
@@ -695,13 +695,28 @@ function setupMap(id){MAPI=MAPS[id]?id:0;MAP=MAPS[MAPI];way=MAP.way;
   if(MAP.maxPads&&SLOTS.length>MAP.maxPads){const pd=q=>Math.min(q.y-SLOT_HALF-48,VH-66-(q.y+SLOT_HALF));const ex=SLOTS.filter(q=>!q.man).sort((a,b)=>pd(a)-pd(b)).slice(0,SLOTS.length-MAP.maxPads);for(const d of ex)SLOTS.splice(SLOTS.indexOf(d),1);}
   SLOTS.forEach((s,i)=>s.i=i);}
  NEAR_SLOTS=SLOTS.filter(s=>s.zone==='near').map(s=>s.i);FAR_SLOTS=SLOTS.filter(s=>s.zone==='far').map(s=>s.i);
- HWAY=MAP.px?MAP.hway.map(p=>p.slice()):MAP.hway.map(([c,r])=>[c*CS,r*CS]);
+ HWAY=MAP.px?MAP.hway.map(p=>p.slice()):MAP.hway.map(([c,r])=>[c*CS,r*CS]);XBR=findXBridges();
  hl=[0];for(let i=1;i<HWAY.length;i++)hl.push(hl[i-1]+Math.hypot(HWAY[i][0]-HWAY[i-1][0],HWAY[i][1]-HWAY[i-1][1]));HTOT=hl[hl.length-1];
  EDGE_D=road[0][0]-VW; // road distance where a unit crosses the border
  PLANE_K=(TOTAL-EDGE_D)/Math.max(1,VW-road[road.length-1][0]);ROAD_SAMPLES.length=0;for(let d=EDGE_D;d<=TOTAL;d+=10)ROAD_SAMPLES.push(at(d));BRS.forEach((r,i)=>{for(let d=EDGE_D;d<r.dm;d+=10)ROAD_SAMPLES.push(at(d,i+1));});
  SH=MAP.theme==='lava'?'rgba(0,0,0,0.35)':MAP.theme==='snow'?'rgba(30,50,85,0.26)':MAP.theme==='sand'?'rgba(80,45,10,0.28)':MAP.theme==='autumn'?'rgba(50,30,5,0.30)':(MAP.theme==='swamp'||MAP.theme==='swamp2')?'rgba(5,20,5,0.36)':'rgba(10,30,5,0.30)';
  ROAD_CLIP=null;bgCache=null;}
 setupMap(MAPI);
+/* little bridges where the harvester track crosses the main road: units drive over, the harvester passes underneath (and can't be hit there) */
+function findXBridges(){const out=[],tp=TRACK_PL;
+ for(const rd of ROADS)for(let i=0;i<rd.length-1;i++){const A=rd[i],B=rd[i+1];for(let j=0;j<tp.length-1;j++){const C=tp[j],D=tp[j+1];
+  const r0=B[0]-A[0],r1=B[1]-A[1],s0=D[0]-C[0],s1=D[1]-C[1],den=r0*s1-r1*s0;if(Math.abs(den)<1e-6)continue;
+  const t=((C[0]-A[0])*s1-(C[1]-A[1])*s0)/den,u=((C[0]-A[0])*r1-(C[1]-A[1])*r0)/den;if(t<0||t>1||u<0||u>1)continue;
+  const x=A[0]+r0*t,y=A[1]+r1*t;if(x>VW-50||x<0||y<0||y>VH)continue;
+  /* road must run straight a little on both sides, or the bridge would hang over a bend */
+  const L=Math.hypot(r0,r1);if(t*L<26||(1-t)*L<26)continue;
+  if(out.some(q=>Math.hypot(q.x-x,q.y-y)<40))continue;out.push({x,y,a:Math.atan2(r1,r0)});}}return out;}
+function underXBridge(x,y,m=0){for(const q of XBR){const dx=x-q.x,dy=y-q.y,c=Math.cos(q.a),s_=Math.sin(q.a),al=dx*c+dy*s_,ac=-dx*s_+dy*c;if(Math.abs(al)<30+m&&Math.abs(ac)<25+m)return q;}return null;}
+function drawXBridge(b,q,snow){b.save();b.translate(q.x,q.y);b.rotate(q.a);
+ for(const s of [-1,1]){const g=b.createLinearGradient(0,s*20,0,s*32);g.addColorStop(0,'rgba(0,0,0,0.38)');g.addColorStop(1,'rgba(0,0,0,0)');b.fillStyle=g;b.fillRect(-15,s>0?20:-32,30,12);}
+ RR(b,-30,-21,60,42,3,snow?'#6E5236':'#7A5230',2,OL);for(let i=-26;i<30;i+=7)L(b,[[i,-19],[i,19]],'rgba(60,35,15,0.6)',1.2);
+ if(snow)for(let i=-24;i<26;i+=9)E(b,i+(i%2?2:-2),-8+(i%3)*6,3,1.6,'rgba(250,253,255,0.85)');
+ for(const s of [-1,1]){RR(b,-33,s*21-4,66,8,2,'#3E3F40',1.6,OL);for(let i=-31;i<30;i+=10)P(b,[[i,s*21-4],[i+5,s*21-4],[i+2,s*21+4],[i-3,s*21+4]],'#F2C232');RR(b,-33,s*21-4,66,8,2,null,1.6,OL);}b.restore();}
 function hat(d){d=Math.max(0,Math.min(HTOT,d));let i=1;while(i<hl.length-1&&hl[i]<d)i++;const k=(d-hl[i-1])/(hl[i]-hl[i-1]||1);return [HWAY[i-1][0]+(HWAY[i][0]-HWAY[i-1][0])*k,HWAY[i-1][1]+(HWAY[i][1]-HWAY[i-1][1])*k];}
 
 /* ---------------- rules ---------------- */
@@ -834,7 +849,7 @@ function simSide(si,dt){const S=W.sides[si],O=W.sides[1-si];
   const sf=isAir(u)?1:slowAt(S,si,u);u.sl=sf<1?1:0;u.d+=dt*def.sp*sf*(u.k==='plane'?PLANE_K:bk(u))*(u.k==='titan'&&HU(u.o,'tit')>=1?1.1:1);
   if(u.d>=TOTAL){u.dead=true;u.breach=true;if(u.v)titanBank(u.o,u.v*TB_BREACH);S.lives=Math.max(0,S.lives-def.lives);S.lastHit='unit';S.breachT=W.t;ev({e:'breach',s:si});continue;}
   if(u.k==='titan'||u.k==='plane')continue;const p=uat(u,u.d);u.cd-=dt;if(u.k==='inf')snowThrow(si,S,u,p,dt);
-  let th=null,dh=1e9,hp_=null;for(const v of S.hv){const q=hat(v.d);const dd=Math.hypot(q[0]-p[0],q[1]-p[1]);if(dd<dh){dh=dd;th=v;hp_=q;}}
+  let th=null,dh=1e9,hp_=null;for(const v of S.hv){const q=hat(v.d);if(underXBridge(q[0],q[1]))continue;const dd=Math.hypot(q[0]-p[0],q[1]-p[1]);if(dd<dh){dh=dd;th=v;hp_=q;}}
   const rng=u.k==='titan'?0:u.k==='inf'?75:u.k==='heli'?120:110;const isH=dh<rng;
   const base=headingRoad(u.d,u.b);const want=isH?Math.atan2(hp_[1]-p[1],hp_[0]-p[0]):base;
   {let df=want-u.ga;while(df>Math.PI)df-=6.283;while(df<-Math.PI)df+=6.283;u.ga+=df*Math.min(1,dt*6);}
@@ -885,7 +900,7 @@ function snowThrow(si,S,u,p,dt,cross){u.sbc=(u.sbc??0)-dt;if(u.sbc>0)return;cons
  S.snow.push({tid:tw.id,t:SB_FLY});ev({e:'sb',s:si,u:u.id,t:tw.id,x:tw.x|0,y:(tw.y-12)|0,...(cross?{sx:px|0,sy:(p[1]-6)|0}:{})});}
 function slowAt(S,si,u){const p=uat(u,u.d);let sl=0;for(const tw of S.towers){if(tw.k!=='tes'||tw.fz>0)continue;const R=TW.tes.range*TES_R[tw.lv-1];if((p[0]-tw.x)**2+(p[1]-tw.y)**2<R*R)sl=Math.max(sl,TES_SLOW[tw.lv-1]);}return 1-sl;}
 function lvR(k,i){return (k==='tes'?TES_R:LVR)[i];}
-function hurtHarv(si,h,d){const S=W.sides[si];if(!h||!h.alive)return;h.hp-=d*(HU(si,'harv')>=1?1/1.2:1);S.hurtT=W.t;if(h.hp<=0){h.alive=false;S.hv.splice(S.hv.indexOf(h),1);const p=hat(h.d);ev({e:'boom',s:si,x:p[0]|0,y:p[1]|0,b:2});ev({e:'hvdie',s:si});}}
+function hurtHarv(si,h,d){const S=W.sides[si];if(!h||!h.alive)return;{const q=hat(h.d);if(underXBridge(q[0],q[1]))return;}h.hp-=d*(HU(si,'harv')>=1?1/1.2:1);S.hurtT=W.t;if(h.hp<=0){h.alive=false;S.hv.splice(S.hv.indexOf(h),1);const p=hat(h.d);ev({e:'boom',s:si,x:p[0]|0,y:p[1]|0,b:2});ev({e:'hvdie',s:si});}}
 const FREE_WAVE_EVERY=30;
 function freeWave(dt){const S=W.sides[1];W.fwT=(W.fwT??18)-dt;if(W.fwT>0)return;const D=DIFF[W.diff||'normal'];W.fwT=D.wave*(W.waveK||1)*(0.8+Math.random()*0.4);
  const t=W.t,n=Math.max(1,Math.round(Math.min(6,2+Math.floor(t/90))*D.waveN));for(let i=0;i<n&&S.queue.length<QUEUE_MAX+10;i++){const r=Math.random();S.queue.push('f:'+(t<120?'inf':t<300?(r<0.6?'inf':'jeep'):(r<0.4?'inf':r<0.7?'jeep':r<0.88?'tank':'heli')));}}
@@ -1395,6 +1410,7 @@ function paintLava(bg,b){
  b.save();b.shadowColor='rgba(255,90,20,0.8)';b.shadowBlur=8;lineR(46,'#E0601E');b.restore();lineR(43,'#2A2220');lineR(40,'#7A6E66');lineR(34,'#8C8078');
  for(const road of ROADS)for(let i=0;i<road.length-1;i++){const a=road[i],q=road[i+1],n=Math.hypot(q[0]-a[0],q[1]-a[1])/4;for(let k=0;k<n;k++){const x=a[0]+(q[0]-a[0])*k/n,y=a[1]+(q[1]-a[1])*k/n;b.fillStyle=rnd()<0.6?'rgba(40,32,28,0.5)':'rgba(190,180,170,0.45)';b.fillRect(x+(rnd()-0.5)*26,y+(rnd()-0.5)*26,1.8,1.8);}}
  // stone bridge over the lava
+ for(const q of XBR)drawXBridge(b,q,false);
  for(const BY of [BRIDGE_Y,...BRS.map(q=>q.by)]){b.save();b.translate(VW,BY);RR(b,-30,-21,60,42,3,'#5A524C',2,OL);for(let i=-26;i<30;i+=9)L(b,[[i,-19],[i,19]],'rgba(30,26,24,0.6)',1.4);
  for(const s of [-1,1]){RR(b,-33,s*21-4,66,8,2,'#2A2624',1.6,OL);for(let i=-31;i<30;i+=10)P(b,[[i,s*21-4],[i+5,s*21-4],[i+2,s*21+4],[i-3,s*21+4]],'#FF7A2A');RR(b,-33,s*21-4,66,8,2,null,1.6,OL);}b.restore();}
  for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++){const k=c+','+r;const x=c*CS,y=r*CS,cx=x+CS/2,cy=y+CS/2;if(kind[k]!=='grass')continue;
@@ -1601,6 +1617,7 @@ function paintBg(){const bg=document.createElement('canvas');bg.width=Math.round
   b.restore();}
  if(snow){// packed snow along the road edges
   for(const road of ROADS)for(let i=0;i<road.length-1;i++){const a=road[i],q=road[i+1],L=Math.hypot(q[0]-a[0],q[1]-a[1]),ux=(q[0]-a[0])/L,uy=(q[1]-a[1])/L;for(let t=rnd()*20;t<L;t+=14+rnd()*22){for(const sd of [-1,1]){if(rnd()<0.5)continue;const o=15+rnd()*3,x=a[0]+ux*t-uy*o*sd,y=a[1]+uy*t+ux*o*sd,rr=2+rnd()*4;E(b,x,y,rr+rnd()*2,rr*0.6,'rgba(245,250,255,0.75)');}}}}
+ for(const q of XBR)drawXBridge(b,q,snow);
  for(const BY of [BRIDGE_Y,...BRS.map(q=>q.by)]){b.save();b.translate(VW,BY);RR(b,-30,-21,60,42,3,snow?'#6E5236':'#7A5230',2,OL);for(let i=-26;i<30;i+=7)L(b,[[i,-19],[i,19]],'rgba(60,35,15,0.6)',1.2);
  if(snow)for(let i=-24;i<26;i+=9)E(b,i+(i%2?2:-2),-8+(i%3)*6,3,1.6,'rgba(250,253,255,0.85)');
  for(const s of [-1,1]){RR(b,-33,s*21-4,66,8,2,'#3E3F40',1.6,OL);for(let i=-31;i<30;i+=10)P(b,[[i,s*21-4],[i+5,s*21-4],[i+2,s*21+4],[i-3,s*21+4]],'#F2C232');RR(b,-33,s*21-4,66,8,2,null,1.6,OL);}b.restore();}
@@ -2066,7 +2083,7 @@ function drawMap(si,t){const S=viewW.sides[si];const owner=si,tmMine=tmOf(owner)
   for(let j=0;j<(tw.sbh|0);j++){const a=j*2.1+tw.id;E(ctx,tw.x+Math.cos(a)*9,tw.y-6+Math.sin(a)*6,3.2,2.6,'rgba(250,253,255,0.95)',0.8,'rgba(120,170,210,0.8)');}
   if(tw.th>0)hpBar(ctx,tw.x,tw.y-25,1-tw.th/TITAN_TW_HITS);
   }});}
- for(const h of S.hv){const p=hat(h.dd??h.d);objs.push({y:p[1],f:()=>{ctx.save();ctx.translate(p[0],p[1]);ctx.scale(0.8,0.8);harvester(ctx,0,0,h.a,h.load,h.stopped?0:t*1.6,h.stopped,h.wait>0&&h.d<1?t*14:0,tmMine,t);ctx.restore();hpBar(ctx,p[0],p[1]-22,h.hp/HARV_HP);}});}
+ for(const h of S.hv){const p=hat(h.dd??h.d);objs.push({y:p[1],f:()=>{ctx.save();{const q=underXBridge(p[0],p[1],30);if(q){const c=Math.cos(q.a),s_=Math.sin(q.a),pt=(u,v)=>[q.x+u*c-v*s_,q.y+u*s_+v*c],k=[pt(-33,-25),pt(33,-25),pt(33,25),pt(-33,25)];ctx.beginPath();ctx.rect(-50,-50,VW+100,VH+100);ctx.moveTo(k[0][0],k[0][1]);for(let i=3;i>=0;i--)ctx.lineTo(k[i][0],k[i][1]);ctx.closePath();ctx.clip('evenodd');}}ctx.translate(p[0],p[1]);ctx.scale(0.8,0.8);harvester(ctx,0,0,h.a,h.load,h.stopped?0:t*1.6,h.stopped,h.wait>0&&h.d<1?t*14:0,tmMine,t);ctx.restore();if(!underXBridge(p[0],p[1],4))hpBar(ctx,p[0],p[1]-22,h.hp/HARV_HP);}});}
  if(si===me)for(const m of S.mines||[]){objs.push({y:m.y-1,f:()=>{const bl=Math.sin(t*6)>0;
   E(ctx,m.x+2,m.y+3,10,5,SH);for(let i=0;i<8;i++){const a=i*0.785;L(ctx,[[m.x+Math.cos(a)*7,m.y+Math.sin(a)*5.6],[m.x+Math.cos(a)*10,m.y+Math.sin(a)*8]],'#2A2E33',2);}E(ctx,m.x,m.y,8,6.4,'#3A3F45',1.6,OL);E(ctx,m.x,m.y-1,5.5,4.2,'#5A6068');E(ctx,m.x,m.y-1,2.2,2,bl?'#FF4A3A':'#5A1E18',0.8,OL);if(bl)E(ctx,m.x,m.y-1,5,4,'rgba(255,74,58,0.35)');}});}
  {const ov=viewW.over;if(ov&&ov.why==='titan'&&ov.ts===si&&ov.tx!=null){const x=ov.tx,y=ov.ty;objs.push({y,f:()=>{const tw=tmOf(1-ov.w);ctx.save();ctx.translate(x,y);ctx.scale(0.98,0.98);
@@ -3009,9 +3026,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.13-2033</div>
+<div id="appVer">v2026.11.13-2044</div>
 <script>
-window.APP_VERSION='2026.11.13-2033';
+window.APP_VERSION='2026.11.13-2044';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
