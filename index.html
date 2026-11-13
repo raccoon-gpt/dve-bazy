@@ -1502,7 +1502,7 @@ function meadowRoad(b){const R0=19.5,D=DPR,Wd=Math.round(VW*D),Hd=Math.round(VH*
  const edge=(x,y)=>R0+vn(x,y,48,1)*1.0+vn(x,y,14,2)*0.3;
  const off=document.createElement('canvas');off.width=Wd;off.height=Hd;const oc=off.getContext('2d'),img=oc.createImageData(Wd,Hd),px=img.data;
  const L=[221,163,98],M=[208,146,84],K=[176,114,60],G=[156,208,98];const pts=[];
- const RD=(x,y)=>roadDistRound(x,y,26);
+ const RD=(x,y)=>roadDistRound(x,y,12);
  for(let by=0;by<VH;by+=8)for(let bx=0;bx<VW;bx+=8){if(roadDist(bx+4,by+4)>R0+16)continue;
   for(let dy=0;dy<8*D;dy++)for(let dx=0;dx<8*D;dx++){const X=Math.round(bx*D)+dx,Y=Math.round(by*D)+dy;if(X>=Wd||Y>=Hd)continue;const x=(X+0.5)/D,y=(Y+0.5)/D,d=RD(x,y),E=edge(x,y),o=(Y*Wd+X)*4;
    if(d<E+0.5){const a=Math.min(1,E-d+0.5),t=Math.max(0,Math.min(1,(d-(E-10))/10)),t2=t*t,m=vn(x,y,6,3)*0.05+vn(x,y,20,4)*0.05+(H(X,Y,5)-0.5)*0.05;
@@ -3009,9 +3009,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.13-1920</div>
+<div id="appVer">v2026.11.13-1938</div>
 <script>
-window.APP_VERSION='2026.11.13-1920';
+window.APP_VERSION='2026.11.13-1938';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
