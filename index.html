@@ -1095,7 +1095,8 @@ function botHold(si){if(!W.hu||si!==1||W.finale||capOf(W,'rkt')<1)return 0;const
  let eta=1e9;if(t-e[0][0]>8){for(const j of [1,2]){const left=e[e.length-1][j],rate=(e[0][j]-left)/(t-e[0][0]);if(rate>0.5)eta=Math.min(eta,left/rate);}}
  const soon=Math.max(0,Math.min(1,(eta-40)/50)),ramp=Math.max(0,Math.min(1,(t-90)/240));if(soon*ramp<=0)return 0;
  const L=Math.min(2,TW_MAXLV,capOf(W,'rkt'));let want=3*cumCost('rkt',L)+(Math.min(TW_MAXLV,capOf(W,'rkt'))>=3?2*upCost('rkt',2):0);
- for(const tw of S.towers)if(tw.k==='rkt')want-=tw.spent;return Math.max(0,Math.round(want*soon*ramp));}
+ for(const tw of S.towers)if(tw.k==='rkt')want-=tw.spent;/* never more than half of what it has: saving must not freeze every other goal */
+ return Math.max(0,Math.round(Math.min(want*soon*ramp,S.ore*0.5)));}
 function botRest(si,S,t,hold){
  const buildTower=()=>{const best=bestDefence(si);if(!best||S.ore<best.cost)return false;botExec(si,best.cmd);return true;};
  // basics first: a couple of towers and the safe extractor
@@ -1108,6 +1109,10 @@ function botRest(si,S,t,hold){
   if(room>0){const p=bestWave(si,S.ore)||massWave(si);if(p){const uc=unitCost(p.k,S.ua),n=Math.min(room,p.n,Math.floor(S.ore/uc));for(let i=0;i<n;i++)doCmd(si,{a:'send',k:p.k});}}
   if(S.ore>=unitCost('inf',S.ua)*3)return;}
  if(S.towers.length<2){const b=bestDefence(si,{buildOnly:true,maxCost:Math.max(TW.mg.cost,S.ore)});if(b&&S.ore>=b.cost)botExec(si,b.cmd);if(S.ore<TW.mg.cost||S.towers.length<1)return;}
+ /* campaign with a refund of 100%+: a lost unit pays back more than it cost and feeds the Titan, so the bot keeps a steady stream
+    of units on the road (a share of its spare money, a limited number in flight) instead of attacking only when it can break through */
+ if(W.hu&&REFUND_K>=1&&!W.finale&&t>20&&S.queue.filter(q=>q.indexOf(':')<0).length===0){const fly=[...S.units,...W.sides[1-si].units].filter(u=>u.o===si&&!u.dead&&u.pc>0).length,cap=Math.min(10,3+Math.floor(t/60));
+  if(fly<cap){const p=massWave(si);if(p){let k=p.k,uc=unitCost(k,S.ua);if(S.ore*0.25<uc){k='inf';uc=unitCost(k,S.ua);}const n=Math.min(cap-fly,8,Math.max(Math.floor(S.ore*0.25/uc),S.ore>=uc*3?1:0));for(let i=0;i<n;i++)doCmd(si,{a:'send',k});}}}
  // then save up for one goal at a time
  if(!botGoal[si]){
   /* priorities: defence → economy that pays back fast → armour on schedule → attacks with what is left.
@@ -1122,7 +1127,10 @@ function botRest(si,S,t,hold){
   else if(S.ua===4&&S.ore>=uaCost(S)*0.8)botGoal[si]='ua';
   else{const plan=bestWave(si,Math.max(S.ore,700));if(plan){botGoal[si]='attack';botPlan[si]=plan;}else if(S.ua<Math.min(UPG_MAX,capOf(W,'ua')))botGoal[si]='ua';else if(botPress[si]>=400)botGoal[si]='tower';else{botGoal[si]='mass';botPlan[si]=massWave(si);}}}
  const g=botGoal[si];const cost={uc:UC_COST,extup0:extUpCost(0),extup1:extUpCost(1),attack:botPlan[si]?botPlan[si].cost:200,mass:botPlan[si]?botPlan[si].cost:2000,tower:(bestDefence(si)||{cost:140}).cost,harv:HARV_COST2,rup:RUP_COST[Math.min(2,S.rl|0)],ext1:EXT_COST,uh:UH_COST,ua:uaCost(S)}[g];
- if(S.ore<cost){if(S.ore>cost*0.5+1500){if(botPress[si]>=400){const b=bestDefence(si);if(b&&S.ore-b.cost>cost*0.5)botExec(si,b.cmd);}else{const p=bestWave(si,S.ore-cost*0.5);if(p&&S.queue.filter(q=>q.indexOf(':')<0).length===0)for(let i=0;i<p.n;i++)doCmd(si,{a:'send',k:p.k});}}return;}botGoal[si]=null; /* spare money while saving goes into defence */
+ /* the anti-air savings never block the economy: refinery upgrades and harvesters may use them */
+ const eco=(g==='rup'||g==='harv')?hold:0;
+ if(S.ore+eco<cost){if(S.ore>cost*0.5+1500){if(botPress[si]>=400){const b=bestDefence(si);if(b&&S.ore-b.cost>cost*0.5)botExec(si,b.cmd);}else{const p=bestWave(si,S.ore-cost*0.5);if(p&&S.queue.filter(q=>q.indexOf(':')<0).length===0)for(let i=0;i<p.n;i++)doCmd(si,{a:'send',k:p.k});}}return;}botGoal[si]=null; /* spare money while saving goes into defence */
+ if(eco){S.ore+=eco;try{doCmd(si,{a:g});}finally{S.ore-=eco;}return;}
  if(g==='mass'){const p=botPlan[si];if(p&&S.queue.filter(q=>q.indexOf(':')<0).length===0)for(let i=0;i<p.n;i++)doCmd(si,{a:'send',k:p.k});botPlan[si]=null;}
  else if(g==='attack'){const p=bestWave(si,S.ore);if(p&&S.queue.filter(q=>q.indexOf(':')<0).length===0){for(let i=0;i<p.n;i++)doCmd(si,{a:'send',k:p.k});}botPlan[si]=null;}
  else if(g==='tower')buildTower();
@@ -3062,9 +3070,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-0123</div>
+<div id="appVer">v2026.11.14-0136</div>
 <script>
-window.APP_VERSION='2026.11.14-0123';
+window.APP_VERSION='2026.11.14-0136';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
