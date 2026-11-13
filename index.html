@@ -1487,6 +1487,42 @@ function sw2Scatter(b,ROADPT){const GG=k=>SW2R(SW2.G[k]),F=()=>rnd()<0.5;
   if(inPool(x,y,-5)){if(rnd()<0.7)spr(b,GG(rnd()<0.5?'pad':'duck'),x,y,9+rnd()*10,F());continue;}
   if(inPool(x,y,3))continue;
   const k=rnd();spr(b,GG(k<0.38?'leaf':k<0.72?'sedge':k<0.8?'flow':k<0.9?'bush':'moss'),x,y,10+rnd()*8,F());}}
+/* meadow road: a trodden dirt road whose edge wanders a little and is fringed with grass blades leaning onto it
+   (each blade a thin curved tapered stroke of its own length, lean and bend), a lighter grass strip outside, darker dirt along the rim */
+/* distance to the road with the inside of every bend filled in by a round fillet (outside of bends untouched) */
+function roadDistRound(x,y,k){let m=1e9;const sg=(ax,ay,bx,by)=>{const dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((x-ax)*dx+(y-ay)*dy)/l));return Math.hypot(x-ax-dx*t,y-ay-dy*t);};
+ for(const r of ROADS){let prev=null;for(let i=0;i<r.length-1;i++){const d=sg(r[i][0],r[i][1],r[i+1][0],r[i+1][1]);if(d<m)m=d;
+  if(prev!==null){const V=r[i],a0=V[0]-r[i-1][0],a1=V[1]-r[i-1][1],c0=r[i+1][0]-V[0],c1=r[i+1][1]-V[1],la=Math.hypot(a0,a1)||1,lc=Math.hypot(c0,c1)||1;
+   const bx=c0/lc-a0/la,by=c1/lc-a1/la,bl=Math.hypot(bx,by)||1,side=((x-V[0])*bx+(y-V[1])*by)/bl;if(side>0){const f=Math.min(1,side/8),h=Math.max(k-Math.abs(prev-d),0)/k,sm=Math.min(prev,d)-h*h*k/4*f*f*(3-2*f);if(sm<m)m=sm;}}prev=d;}}return m;}
+function meadowRoad(b){const R0=19.5,D=DPR,Wd=Math.round(VW*D),Hd=Math.round(VH*D);
+ let sd=91;const rr=()=>{sd=(sd*16807)%2147483647;return(sd-1)/2147483646;};
+ const H=(i,j,k)=>{let h=(i*374761393+j*668265263+k*2147483647)|0;h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967295;};
+ const vn=(x,y,sc,k)=>{x/=sc;y/=sc;const i=Math.floor(x),j=Math.floor(y),fx=x-i,fy=y-j,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy);const a=H(i,j,k),c=H(i+1,j,k),e=H(i,j+1,k),f=H(i+1,j+1,k);return(a+(c-a)*u+(e-a)*v+(a-c-e+f)*u*v)*2-1;};
+ const edge=(x,y)=>R0+vn(x,y,40,1)*1.8+vn(x,y,12,2)*0.6;
+ const off=document.createElement('canvas');off.width=Wd;off.height=Hd;const oc=off.getContext('2d'),img=oc.createImageData(Wd,Hd),px=img.data;
+ const L=[221,163,98],M=[208,146,84],K=[176,114,60],G=[156,208,98];const pts=[];
+ const RD=(x,y)=>roadDistRound(x,y,22);
+ for(let by=0;by<VH;by+=8)for(let bx=0;bx<VW;bx+=8){if(roadDist(bx+4,by+4)>R0+16)continue;
+  for(let dy=0;dy<8*D;dy++)for(let dx=0;dx<8*D;dx++){const X=Math.round(bx*D)+dx,Y=Math.round(by*D)+dy;if(X>=Wd||Y>=Hd)continue;const x=(X+0.5)/D,y=(Y+0.5)/D,d=RD(x,y),E=edge(x,y),o=(Y*Wd+X)*4;
+   if(d<E+0.5){const a=Math.min(1,E-d+0.5),t=Math.max(0,Math.min(1,(d-(E-10))/10)),t2=t*t,m=vn(x,y,6,3)*0.05+vn(x,y,20,4)*0.05+(H(X,Y,5)-0.5)*0.05;
+    let c=[0,1,2].map(i=>(L[i]+(M[i]-L[i])*t+(K[i]-M[i])*t2*t2)*(1+m));if(d>E-2){const q=Math.min(1,(d-(E-2))/2)*0.9;c=c.map((v,i)=>v+([58,92,30][i]-v)*q);}px[o]=c[0];px[o+1]=c[1];px[o+2]=c[2];px[o+3]=255*a;
+    if(d>E-0.5&&H(X,Y,6)<1.15/(D*D))pts.push([x,y]);}
+   else if(d<E+8){const a=0.42*(1-(d-E)/8)*(0.75+0.25*vn(x,y,7,7));px[o]=G[0];px[o+1]=G[1];px[o+2]=G[2];px[o+3]=255*a;}}}
+ oc.putImageData(img,0,0);b.drawImage(off,0,0,VW,VH);
+ const grad=(x,y)=>{const gx=RD(x+0.5,y)-RD(x-0.5,y),gy=RD(x,y+0.5)-RD(x,y-0.5),l=Math.hypot(gx,gy)||1;return[gx/l,gy/l];};
+ const blade=(x,y,ix,iy,len,w,lean,bend,col)=>{const c=Math.cos(lean),s_=Math.sin(lean),dx=ix*c-iy*s_,dy=ix*s_+iy*c,qx=-dy,qy=dx;
+  const tx=x+dx*len+qx*bend,ty=y+dy*len+qy*bend,mx=x+dx*len*0.55+qx*bend*0.45,my=y+dy*len*0.55+qy*bend*0.45;
+  b.beginPath();b.moveTo(x+qx*w/2,y+qy*w/2);b.quadraticCurveTo(mx+qx*w*0.3,my+qy*w*0.3,tx,ty);b.quadraticCurveTo(mx-qx*w*0.3,my-qy*w*0.3,x-qx*w/2,y-qy*w/2);b.closePath();b.fillStyle=col;b.fill();};
+ const DK=['#2C5A16','#326419','#284F14'],MD=['#4A8A26','#55962C','#3F7C22'],LT=['#7DBE48','#8CCB52'];
+ const B=pts.map(([x,y])=>{const g=grad(x,y);return[x,y,-g[0],-g[1]];});
+ for(let i=B.length-1;i>0;i--){const j=Math.floor(rr()*(i+1));[B[i],B[j]]=[B[j],B[i]];}
+ /* 1: sparse short dark blades right at the rim, leaning onto the road */
+ for(const [x,y,ix,iy] of B){if(rr()<0.6)continue;blade(x-ix*1.1,y-iy*1.1,ix,iy,1.6+rr()*1.6,1.1+rr()*0.6,(rr()-0.5)*0.9,(rr()-0.5)*1.2,DK[Math.floor(rr()*3)]);}
+ /* 2: mid-green blades rooted a bit further out, covering the dark roots so the rim reads as grass, not as a line */
+ for(const [x,y,ix,iy] of B){if(rr()<0.35)continue;blade(x-ix*1.8,y-iy*1.8,ix,iy,1.8+rr()*2.4,1.3+rr()*0.7,(rr()-0.5)*1.1,(rr()-0.5)*1.4,MD[Math.floor(rr()*3)]);}
+ /* 3: a few light tips catching the sun */
+ for(const [x,y,ix,iy] of B){if(rr()<0.8)continue;blade(x-ix*3.4,y-iy*3.4,ix,iy,1.6+rr()*1.8,1+rr()*0.5,(rr()-0.5)*1.2,(rr()-0.5)*1.2,LT[Math.floor(rr()*2)]);}
+}
 function paintBg(){const bg=document.createElement('canvas');bg.width=Math.round(VW*DPR);bg.height=Math.round(VH*DPR);const b=bg.getContext('2d');b.scale(DPR,DPR);seed=11;
  if(MAP.theme==='lava')return paintLava(bg,b);const snow=MAP.theme==='snow',sand=MAP.theme==='sand',BY=BRIDGE_Y;GP=GPAL[MAP.theme]||GPAL.grass;
  if(sand){b.fillStyle='#E2C084';b.fillRect(0,0,VW,VH);
@@ -1528,8 +1564,10 @@ function paintBg(){const bg=document.createElement('canvas');bg.width=Math.round
  const lineR=(w,col)=>{b.strokeStyle=col;b.lineWidth=w;b.lineJoin='round';b.lineCap='butt';b.beginPath();for(const road of ROADS)road.forEach((p,i)=>i?b.lineTo(p[0],p[1]):b.moveTo(p[0],p[1]));b.stroke();};
  // harvester track: drawn under the road so crossings look like crossings
  const tp=TRACK_PL;if(MAP.theme==='grass'&&rutReady())drawRuts(b,tp);else{b.strokeStyle=sand?'#9A6E44':snow?'#8C7C6C':GP.track[0];b.lineWidth=20;b.lineJoin='round';b.lineCap='round';b.beginPath();tp.forEach((p,i)=>i?b.lineTo(p[0],p[1]):b.moveTo(p[0],p[1]));b.stroke();b.strokeStyle=sand?'#C29868':snow?'#ADA090':GP.track[1];b.lineWidth=15;b.stroke();b.setLineDash([3,5]);b.strokeStyle=snow?'rgba(70,55,40,0.5)':'rgba(90,60,30,0.55)';b.lineWidth=2;for(const o of [-4,4]){b.beginPath();offsetLine(tp,o).forEach((p,i)=>i?b.lineTo(p[0],p[1]):b.moveTo(p[0],p[1]));b.stroke();}b.setLineDash([]);}
- if(GP.sw&&!snow&&!sand)lineR(51,'rgba(16,48,12,0.22)');b.save();b.translate(3,5);lineR(46,snow?'rgba(30,50,85,0.2)':GP.shadow);b.restore();
- if(sand){lineR(46,'#C99A60');lineR(43,'#7A4A2A');lineR(40,'#A8653C');lineR(34,'#B8744A');}
+ const MEADOW=GP===GPAL.grass&&!snow&&!sand;
+ if(GP.sw&&!snow&&!sand)lineR(51,'rgba(16,48,12,0.22)');if(!MEADOW){b.save();b.translate(3,5);lineR(46,snow?'rgba(30,50,85,0.2)':GP.shadow);b.restore();}
+ if(MEADOW)meadowRoad(b);
+ else if(sand){lineR(46,'#C99A60');lineR(43,'#7A4A2A');lineR(40,'#A8653C');lineR(34,'#B8744A');}
  else if(GP.sw&&GP.tex&&sw2Ready()){lineR(46,GP.road[0]);lineR(44,GP.road[1]);lineR(38,sw2Pat(b,'mud',0.35));lineR(38,'rgba(40,20,5,0.12)');}
  else if(GP.sw){lineR(46,GP.road[0]);lineR(44,GP.road[1]);lineR(38,GP.road[2]);lineR(32,GP.road[3]);}
  else if(!snow){lineR(46,GP.road[0]);lineR(43,GP.road[1]);lineR(40,GP.road[2]);lineR(34,GP.road[3]);}
@@ -2961,9 +2999,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.13-1249</div>
+<div id="appVer">v2026.11.13-1703</div>
 <script>
-window.APP_VERSION='2026.11.13-1249';
+window.APP_VERSION='2026.11.13-1703';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
