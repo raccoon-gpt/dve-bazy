@@ -3059,7 +3059,8 @@ function voiceTitanLow(){if(!viewW||!viewW.sides)return;let T=null;for(const S o
    Never once the player's own Titan has left the base. The next one counts 5 s from the end of the previous one. */
 const REMIND_IDLE=5;
 function vAct(){VQ.act=vNow();if(VQ.rq){VQ.q=VQ.q.filter(k=>!/^remind/.test(k));if(!(VQ.cur&&VQ.cur.k&&/^remind/.test(VQ.cur.k)))VQ.rq=false;}}
-function voiceRemind(M){if(M.titanOut||viewW.pause){if(VQ.rq&&!(VQ.cur&&/^remind/.test(VQ.cur.k||''))){VQ.q=VQ.q.filter(k=>!/^remind/.test(k));VQ.rq=false;}if(viewW.pause)VQ.act=Math.max(VQ.act,vNow()-REMIND_IDLE+1);return;}
+/* silent until the player's first unit purchase: the idle count starts from that line */
+function voiceRemind(M){if(!VQ.fout)return;if(M.titanOut||viewW.pause){if(VQ.rq&&!(VQ.cur&&/^remind/.test(VQ.cur.k||''))){VQ.q=VQ.q.filter(k=>!/^remind/.test(k));VQ.rq=false;}if(viewW.pause)VQ.act=Math.max(VQ.act,vNow()-REMIND_IDLE+1);return;}
  if(VQ.rq)return;if(vNow()-Math.max(VQ.act,VQ.remEnd)<REMIND_IDLE)return;VQ.rq=true;voiceGrp('remind');if(!VQ.q.some(k=>/^remind/.test(k))&&!(VQ.cur&&/^remind/.test(VQ.cur.k||'')))VQ.rq=false,VQ.act=vNow();}
 function voiceNear(M){/* the very first enemy unit on my side of the river: once per game */
  if(!VQ.first&&M.units.some(u=>u.o!==me&&!u.dead)){VQ.first=true;voiceGrp('first');}
@@ -3094,9 +3095,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-1155</div>
+<div id="appVer">v2026.11.14-1204</div>
 <script>
-window.APP_VERSION='2026.11.14-1155';
+window.APP_VERSION='2026.11.14-1204';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
