@@ -2653,8 +2653,9 @@ function campMap(i){const L=CAMP[i];let st=null;const code=CAMP_OV[i]||L.code;if
 let CAMP_RUN=null,CAMP_PREV=null,CAMP_SEL=null,CAMP_T0=0;
 function campStart(i){const d=CAMP_DIFF;if(CAMP_PREV==null)CAMP_PREV=MAPI;MAPS[CAMP_I]=campMap(i);setupMap(CAMP_I);bgCache=null;viewW=null;
  const keep=diff;diff=d;soloGo();diff=keep;CAMP_RUN={i,diff:d};W.caps=campCaps(i+1);W.hu={...CAMP_P.up};for(const k in FREE_SQ)W.sides[0].fcd[k]=huFreeCd(0,k);
- /* later bases fight harder: a little more income and loot for the bot, free waves a little more often */
- const B=W.sides[1],k=1+0.01*i;B.incK*=k;B.cashK*=k;W.waveK=1-0.012*i;document.getElementById('camp').hidden=true;}
+ /* later bases fight harder: a little more income for the bot, free waves a little more often.
+    Harvester load and kill rewards are the same as the player's. */
+ const B=W.sides[1],k=1+0.01*i;B.incK*=k;B.cashK=1;B.hload=HARV_LOAD;W.waveK=1-0.012*i;document.getElementById('camp').hidden=true;}
 function campWin(){if(!CAMP_RUN)return;const i=CAMP_RUN.i,S=W&&W.sides[0],s=campStars(S?S.lives:0);CAMP_RUN.won=s;const was=CAMP_P.stars[i]|0;if(was<s){CAMP_ANIM={i,was,st:s,t0:0};CAMP_P.stars[i]=s;campSave();}}
 let CAMP_ANIM=null;
 function campOpen(){const o=document.getElementById('camp');o.hidden=false;HANG=null;CAMP_CONF=null;document.getElementById('lobby').hidden=true;CAMP_SEL=null;CAMP_T0=now();campResize();CV.z=CAMZ;if(CAMP_ANIM){CAMP_ANIM.t0=0;CAMP_ANIM.snd=null;const f=CAMP_PT[CAMP_ANIM.i];camFocus(f[0]+20,f[1]-20);return;}const n=campNext(),f=CAMP_PT[n<0?CAMP.length-1:n];camFocus(f[0]+20,f[1]-20);}
@@ -3202,9 +3203,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-2254</div>
+<div id="appVer">v2026.11.14-2345</div>
 <script>
-window.APP_VERSION='2026.11.14-2254';
+window.APP_VERSION='2026.11.14-2345';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
