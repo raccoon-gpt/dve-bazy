@@ -2392,7 +2392,7 @@ let hudA=1,hudT=0,NK_BACK=0;
 
 /* ---------------- input ---------------- */
 function toLocal(ev){const r=cv.getBoundingClientRect();return[(ev.clientX-r.left)*VW/r.width,(ev.clientY-r.top)*VH/r.height];}
-function sendCmd(cmd){if(cmd&&cmd.a==='send')vAct();if(cmd&&cmd.a==='send'&&!VQ.fout&&viewW&&viewW.sides&&!viewW.over){const S=viewW.sides[me];if(S&&S.ore>=unitCost(cmd.k,S.ua)){VQ.fout=true;voiceGrp('fout');}}if(mode==='guest'){if(room)room.emit('cmd',{g:code,c:cmd}).catch(()=>{});}else doCmd(me,cmd);}
+function sendCmd(cmd){if(cmd&&cmd.a==='send'&&!VQ.fout&&viewW&&viewW.sides&&!viewW.over){const S=viewW.sides[me];if(S&&S.ore>=unitCost(cmd.k,S.ua)){VQ.fout=true;vAct();voiceGrp('fout');}}if(mode==='guest'){if(room)room.emit('cmd',{g:code,c:cmd}).catch(()=>{});}else doCmd(me,cmd);}
 let down=null;
 cv.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,t:performance.now()};});
 cv.addEventListener('pointerdown',e=>{if(mode!=='editor')return;try{cv.setPointerCapture(e.pointerId);}catch(_){}auUnlock();edDown(...toLocal(e));});
@@ -2932,7 +2932,7 @@ if(e.e==='breach'&&e.s===me&&!VQ.breach){VQ.breach=true;voice('batk1');}
 /* an enemy ran onto my mine */
 if(e.e==='mineboom'&&e.s===me)voiceGrp('mine');
 /* my first mine of the game: "mine set" (later ones are placed silently) */
-if(e.e==='mset'){if(e.s===me)vAct();if(e.s===me&&!VQ.mset){VQ.mset=true;voiceGrp('mset');}return;}/* an enemy rocket hits my mine (the white flash) */
+if(e.e==='mset'){if(e.s===me&&!VQ.mset){VQ.mset=true;vAct();voiceGrp('mset');}return;}/* an enemy rocket hits my mine (the white flash) */
 if(e.e==='nkb'&&e.s===me){vAct();voiceGrp('nkb');}/* my own Titan rolls out */
 if(e.e==='tout'){voiceGrp(e.s===me?'tout':'etout');return;}if(e.e==='vrain'){if(e.s===me){vAct();voiceGrp('rain');}return;}if(e.e==='vtw'){if(e.s===me){vAct();voiceGrp('tw4');}return;}if(e.e==='vbig'){if(e.s===me)vAct();if(e.s===me)voice(Math.random()<0.5?'mazor1':'mazor2');return;}if(e.e==='nkc'){if(e.n===NUKE_COUNT&&e.s!==me)voice('nuke');if(e.n===2&&e.s===me)voice('rzap1');if(e.s===me||e.s===view){const t=AU.ctx.currentTime,o=bus(0.4);tn(o,t,0.12,'square',e.n<=3?1320:880,0,0.18,0.005);}return;}if(e.e==='nkl'){if(e.s===me)vAct();SFX.nukeLaunch();return;}if(e.e==='nkf'){SFX.whistle(NK.fall);return;}if(e.e==='nkb'){SFX.nukeBoom();return;}if(e.e==='bigboom'){if(e.s===view){SFX.boom(2.6,1);SFX.boom(2,0.8);}return;}if(e.e==='fw'){if(e.s===view){SFX.small(0.4);setTimeout(()=>{try{SFX.crack(0.9);}catch(_){}},550);}return;}if(e.e==='cap'){if(e.s===view)SFX.upgrade();return;}if(e.e==='mineboom'&&e.s===view){SFX.boom(3,1);SFX.boom(2.2,1);return;}if(e.e==='freeze'&&e.s===me){SFX.freeze();return;}if(e.e==='rainfall'&&e.s===view){SFX.whistle(e.T);return;}if(e.e==='ff'){if(e.s===view)SFX.enemyShot(e.k,1);return;}if(e.e==='zap'){if(e.s===view||e.s===me){const tw=towerById(e.s,e.t);SFX.zap(tw?tw.lv:1,e.s===view?1:0.3);}return;}if(e.e==='mineset'&&e.s===me){SFX.build();return;}
  /* the opponent's half is heard only while you are looking at it; your own half stays audible (quieter) when you look away */
@@ -3054,7 +3054,7 @@ function voiceGrp(g){const G=VGRP[g],c=G.ks.length>1?G.ks.filter(k=>k!==G.last):
 const TLOW=[9500,4500];
 function voiceTitanLow(){if(!viewW||!viewW.sides)return;let T=null;for(const S of viewW.sides)for(const u of S.units)if(u.k==='titan'&&u.o===me&&!u.dead)T=u;if(!T)return;
  let hit=false;while(VQ.tlow<TLOW.length&&T.hp<=TLOW[VQ.tlow]){VQ.tlow++;hit=true;}if(hit)voiceGrp('tlow');}
-/* "buy units" reminder: after 5 s in which the player did nothing that is voiced (or bought no unit) it queues like a priority line
+/* "buy units" reminder: after 5 s in which the player did nothing that is voiced (only voiced actions count: the first unit, the first mine, …) it queues like a priority line
    (so it waits for a line already playing); a new voiced action of the player before it starts cancels it.
    Never once the player's own Titan has left the base. The next one counts 5 s from the end of the previous one. */
 const REMIND_IDLE=5;
@@ -3094,9 +3094,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-1151</div>
+<div id="appVer">v2026.11.14-1155</div>
 <script>
-window.APP_VERSION='2026.11.14-1151';
+window.APP_VERSION='2026.11.14-1155';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
