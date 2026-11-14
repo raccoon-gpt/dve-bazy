@@ -1113,7 +1113,9 @@ function bestDefence(si,o){o=o||{};const S=W.sides[si];let best=null;const consi
  for(const tw of S.towers)if(tw.lv<Math.min(TW_MAXLV,capOf(W,tw.k))){const c=upCost(tw.k,tw.lv);consider(towerValue(si,tw.k,nextLv(tw.lv),tw.x,tw.y)-towerValue(si,tw.k,tw.lv,tw.x,tw.y),c,{a:'up',id:tw.id});}
  /* rebuild: selling refunds 100%, so swap a tower that no longer fits the threat for the best other kind the same money (plus a bit) can buy */
  const tr=titanReach(si);/* cannons that reach the enemy Titan are kept for it */
- const swap=W.finale&&botSwapOk(si),sk=swap?1:SELL_K,budget=S.ore*(swap?1:0.6);for(const tw of S.towers){if(tr&&tw.k==='can'&&tr(tw.x,tw.y,tw.lv))continue;const old=towerValue(si,tw.k,tw.lv,tw.x,tw.y);const far=SLOTS[tw.s].zone==='far';
+ /* swapping only once the pads are full: with free pads a new tower is always better than selling one at a loss
+    (before, a rich bot kept selling and rebuilding back and forth instead of building) */
+ const swap=W.finale&&botSwapOk(si),sk=swap?1:SELL_K,budget=S.ore*(swap?1:0.6);if(!freeNear.length)for(const tw of S.towers){if(tr&&tw.k==='can'&&tr(tw.x,tw.y,tw.lv))continue;const old=towerValue(si,tw.k,tw.lv,tw.x,tw.y);const far=SLOTS[tw.s].zone==='far';
   for(const k2 of far?['rkt']:['mg','can','tes','rkt']){if(k2===tw.k||capOf(W,k2)<1)continue;let L=0;for(let l=1;l<=Math.min(TW_MAXLV,capOf(W,k2));l=nextLv(l)){if(cumCost(k2,l)<=tw.spent*sk+budget)L=l;}if(!L)continue;
    const gain=towerValue(si,k2,L,tw.x,tw.y)-old;if(gain<=old*(swap?0.1:0.3)||gain<=0)continue;consider(gain,Math.max(40,cumCost(k2,L)-tw.spent*sk),{a:'replace',id:tw.id,k:k2,lv:L});}}
  return best;}
@@ -1121,10 +1123,12 @@ function botThink(dt,si){if(!W||W.over||W.nuke)return;botT[si]-=dt;if(botT[si]>0
  botSuper(si);
  /* aircraft over the bot's land and not enough rockets to stop them: anti-air comes before any saving */
  {const air=[...S.units,...W.sides[1-si].units].filter(u=>u.o!==si&&!u.dead&&isAir(u));if(air.length){const airHp=air.reduce((a,u)=>a+u.hp,0);
-   let aa=0;for(const tw of S.towers)if(tw.k==='rkt')aa+=TW.rkt.dmg*LVM[tw.lv-1]/(TW.rkt.cd*LVC[tw.lv-1]);
-   if(aa*25<airHp){const sv=botThreat[si];botThreat[si]={inf:0.05,jeep:0.05,tank:0.05,heli:Math.max(1,sv.heli),plane:Math.max(1,sv.plane)};let b=null;try{b=bestDefence(si);}finally{botThreat[si]=sv;}
+   /* up to 3 anti-air actions per think while the rockets can't hold the aircraft */
+   let acted=false;for(let it=0;it<3;it++){let aa=0;for(const tw of S.towers)if(tw.k==='rkt')aa+=TW.rkt.dmg*LVM[tw.lv-1]/(TW.rkt.cd*LVC[tw.lv-1]);
+   if(aa*25>=airHp)break;const sv=botThreat[si],nw=botNow[si];botThreat[si]={inf:0.05,jeep:0.05,tank:0.05,heli:Math.max(1,sv.heli),plane:Math.max(1,sv.plane)};botNow[si]=null;let b=null;try{b=bestDefence(si);}finally{botThreat[si]=sv;botNow[si]=nw;}
     const isAA=b&&(b.cmd.a==='build'&&b.cmd.k==='rkt'||b.cmd.a==='replace'&&b.cmd.k==='rkt'||b.cmd.a==='up'&&(S.towers.find(t=>t.id===b.cmd.id)||{}).k==='rkt');
-    if(isAA&&S.ore>=b.cost){botExec(si,b.cmd);return;}}}}
+    if(!(isAA&&S.ore>=b.cost))break;const n0=S.towers.length,o0=S.ore;botExec(si,b.cmd);acted=true;if(S.ore===o0&&S.towers.length===n0)break;}
+   if(acted)return;}}
  /* rebuilds waiting for their pad: the money is set aside at the sale and spent once the delay is over */
  if(S.pend&&S.pend.length){S.pend=S.pend.filter(p=>{if(W.t<p.t)return true;S.ore+=p.c;if(!slotFree(S,p.s))return false;doCmd(si,{a:'build',s:p.s,k:p.k,any:p.any});const nt=S.towers.find(q=>q.s===p.s);if(nt)for(let l=1;l<p.lv;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});return false;});}
  if(botTitanFocus(si))return;
@@ -1162,12 +1166,12 @@ function botRest(si,S,t,hold){
      (before: an attack "looked possible" almost always, so it kept buying unarmoured waves and never invested) */
   const O=W.sides[1-si];const threat=O.units.filter(u=>u.o!==si).length+S.units.filter(u=>u.o!==si).length;
   const press=botPress[si],calm=press<400&&t-(S.breachT??-99)>40;const wantT=Math.min(14,2+Math.floor(t/150)+Math.floor(press/700)+(t-(S.breachT??-99)<20?2:0));
-  const wantHv=Math.min(HARV_MAXN,1+Math.floor(t/70)),wantUa=(calm?[45,120,220,340,480]:[60,150,270,420,600]).filter(x=>t>x*(S.uaT||1)).length;
+  const wantHv=Math.min(HARV_MAXN,1+Math.floor(t/70)),wantUa=Math.min(capOf(W,'ua'),(calm?[45,120,220,340,480]:[60,150,270,420,600]).filter(x=>t>x*(S.uaT||1)).length);/* never aim past the level's armour cap: an unreachable goal used to freeze all spending */
   if((S.towers.length<wantT||threat>=4)&&Math.random()<(calm?0.3:0.55))botGoal[si]='tower';
     else if((S.rl|0)<RUP_MAX&&S.dep[1]>3000&&t>[0,50,130][S.rl|0])botGoal[si]='rup';
     else if((S.rl|0)>=RUP_MAX&&S.hv.length<wantHv&&S.dep[1]>3000)botGoal[si]='harv';
   else if(S.ua<wantUa&&Math.random()<0.55)botGoal[si]='ua';
-  else if(S.ua===4&&S.ore>=uaCost(S)*0.8)botGoal[si]='ua';
+  else if(S.ua===4&&S.ua<capOf(W,'ua')&&S.ore>=uaCost(S)*0.8)botGoal[si]='ua';
   else{const plan=bestWave(si,Math.max(S.ore,700));if(plan){botGoal[si]='attack';botPlan[si]=plan;}else if(S.ua<Math.min(UPG_MAX,capOf(W,'ua')))botGoal[si]='ua';else if(botPress[si]>=400)botGoal[si]='tower';else{botGoal[si]='mass';botPlan[si]=massWave(si);}}}
  const g=botGoal[si];const cost={uc:UC_COST,extup0:extUpCost(0),extup1:extUpCost(1),attack:botPlan[si]?botPlan[si].cost:200,mass:botPlan[si]?botPlan[si].cost:2000,tower:(bestDefence(si)||{cost:140}).cost,harv:HARV_COST2,rup:RUP_COST[Math.min(2,S.rl|0)],ext1:EXT_COST,uh:UH_COST,ua:uaCost(S)}[g];
  /* the anti-air savings never block the economy: refinery upgrades and harvesters may use them */
@@ -3133,9 +3137,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-1420</div>
+<div id="appVer">v2026.11.14-1502</div>
 <script>
-window.APP_VERSION='2026.11.14-1420';
+window.APP_VERSION='2026.11.14-1502';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
