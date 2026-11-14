@@ -1056,16 +1056,17 @@ const botT=[0,0],botGoal=[null,null],botPlan=[null,null];
 /* the bot remembers what the opponent sends (by hit points) and builds/upgrades whatever kills THAT best per crystal */
 const botSeen=[{},{}],botThreat=[{inf:1,jeep:1,tank:1,heli:0.3,plane:0.3},{inf:1,jeep:1,tank:1,heli:0.3,plane:0.3}];
 const botPress=[0,0];
-function updThreat(si){const S=W.sides[si],th=botThreat[si];for(const k in th)th[k]*=0.985;botPress[si]*=0.985;
+/* the bot has no memory of past waves: it builds against what has actually left the enemy base (on either half of the map).
+   Nothing on the road — nothing to build or sell. botPress still tracks how hard it has been pushed lately (economy pacing). */
+function updThreat(si){const S=W.sides[si];botPress[si]*=0.985;
  /* an enemy Titan raises the pressure the moment it rolls out, but stays out of the unit mix: its huge health would make every
     pad look like a cannon pad and leave jeeps and infantry unanswered — botTitanFocus deals with the Titan itself */
  for(const u of W.sides[1-si].units)if(u.k==='titan'&&u.o!==si&&!botSeen[si][u.id]){botSeen[si][u.id]=1;botPress[si]+=u.mx;}
- for(const u of S.units){if(u.o===si||botSeen[si][u.id])continue;botSeen[si][u.id]=1;if(u.k!=='titan')th[u.k]+=u.mx/100;botPress[si]+=u.mx;}
- /* what is on the road right now weighs as much as the long-term memory */
- const now={inf:0,jeep:0,tank:0,heli:0,plane:0};let nt=0;for(const u of S.units)if(u.o!==si&&!u.dead&&u.k!=='titan'){now[u.k]+=u.hp;nt+=u.hp;}botNow[si]=nt>0?now:null;}
-const botNow=[null,null];
+ for(const u of [...S.units,...W.sides[1-si].units]){if(u.o===si||botSeen[si][u.id])continue;botSeen[si][u.id]=1;botPress[si]+=u.mx;}
+ const now={inf:0,jeep:0,tank:0,heli:0,plane:0};let nt=0;for(const u of [...S.units,...W.sides[1-si].units])if(u.o!==si&&!u.dead&&u.k!=='titan'){now[u.k]+=u.hp;nt+=u.hp;}botNow[si]=nt>0?now:null;}
+const botNow=[null,null],botOv=[null,null];/* botOv: a forced mix (the air emergency) */
 const TWVS={tes:{inf:1.2,jeep:1.3,tank:1.1,heli:0,plane:0},mg:{inf:1,jeep:1,tank:1,heli:0,plane:0},can:{inf:0.85,jeep:0.45,tank:1.15,heli:0,plane:0},rkt:{inf:1.3,jeep:1,tank:1,heli:1.3,plane:1.2}};
-function towerValue(si,k,lv,x,y){const t0=botThreat[si],t0s=t0.inf+t0.jeep+t0.tank+t0.heli+t0.plane,nw=botNow[si],th=nw?{}:t0;if(nw){const ns=nw.inf+nw.jeep+nw.tank+nw.heli+nw.plane;for(const u in t0)th[u]=0.5*t0[u]/t0s+0.5*nw[u]/ns;}const tot=th.inf+th.jeep+th.tank+th.heli+th.plane,d=TW[k];const R=d.range*lvR(k,lv-1);let n=0;for(const p of ROAD_SAMPLES)if((p[0]-x)**2+(p[1]-y)**2<R*R)n++;const L=n*10;
+function towerValue(si,k,lv,x,y){const th=botOv[si]||botNow[si];if(!th)return 0;const tot=th.inf+th.jeep+th.tank+th.heli+th.plane,d=TW[k];const R=d.range*lvR(k,lv-1);let n=0;for(const p of ROAD_SAMPLES)if((p[0]-x)**2+(p[1]-y)**2<R*R)n++;const L=n*10;
  const dpsOf=u=>k==='tes'?TES_DMG[lv-1]*1.4:d.dmg*((k==='can'&&u==='tank')?CAN_LVM:(k==='mg'&&u==='inf')?MG_LVM:LVM)[lv-1]/(d.cd*LVC[lv-1]);let v=0;for(const u of ['inf','jeep','tank','heli','plane'])v+=th[u]/tot*dpsOf(u)*ARMOR[k][u]*TWVS[k][u]*L/UN[u].sp;return v;}
 function cumCost(k,L){let c=TW[k].cost;for(let l=1;l<L;l=nextLv(l))c+=upCost(k,l);return c;}
 /* campaign bot: may sell and rebuild towers in the finale too (full refund there); the 5 s pad rule applies all game */
@@ -1102,8 +1103,10 @@ function botTitanFocus(si){const S=W.sides[si];const reach=titanReach(si);if(!re
 const WAVE_T=8;
 function twDps(k,L,u,n){if(k==='tes')return u==='heli'||u==='plane'?0:TES_DMG[L-1]*Math.min(5,n)*ARMOR.tes[u];const d=TW[k];
  let v=d.dmg*(k==='can'?CAN_LVM:k==='mg'?MG_LVM:LVM)[L-1]/(d.cd*LVC[L-1])*ARMOR[k][u];if(k==='can')v*=1+0.3*Math.min(3,n-1);return v;}
-function botWaveFocus(si){const S=W.sides[si];const foes=S.units.filter(u=>u.o!==si&&!u.dead&&u.k!=='titan');if(!foes.length)return false;
- const paths=foes.map(u=>{const pts=[];for(let a=0;a<=180;a+=30)pts.push(uat(u,Math.min(TOTAL,u.d+a)));return pts;});
+function botWaveFocus(si){const S=W.sides[si];
+ /* first look: units still on the enemy half (they will ride the whole road here); then the close look once they are on this side */
+ const mine=new Set(S.units),foes=[...S.units,...W.sides[1-si].units].filter(u=>u.o!==si&&!u.dead&&u.k!=='titan');if(!foes.length)return false;
+ const paths=foes.map(u=>{const pts=[];if(mine.has(u))for(let a=0;a<=180;a+=30)pts.push(uat(u,Math.min(TOTAL,u.d+a)));else for(let a=EDGE_D;a<=TOTAL;a+=40)pts.push(uat(u,a));return pts;});
  const hpTot=foes.reduce((a,u)=>a+u.hp,0);
  /* effective damage per second a tower of kind k, level L at (x,y) puts on the wave */
  const eff=(k,L,x,y)=>{const R=TW[k].range*lvR(k,L-1);const hit=[];foes.forEach((u,i)=>{if(paths[i].some(p=>(p[0]-x)**2+(p[1]-y)**2<R*R))hit.push(u);});if(!hit.length)return 0;
@@ -1122,8 +1125,7 @@ function botWaveFocus(si){const S=W.sides[si];const foes=S.units.filter(u=>u.o!=
 const AA_T=8;
 function botSwapOk(si){return !!W.hu&&si===1;}
 function botExec(si,cmd){const S=W.sides[si];
- /* hard cap: while nobody attacks the bot, new towers stop at a small baseline whatever path asked for them */
- if(cmd.a==='build'&&botPress[si]<400&&!W.sides[1-si].titanOut&&W.t-(S.breachT??-99)>40&&S.towers.length>=Math.min(7,3+Math.floor(W.t/150)))return;if(cmd.a==='replace'&&W.finale&&!botSwapOk(si))return;if(cmd.a==='build'&&padBusy(S,cmd.s))return;if(cmd.a!=='replace'){doCmd(si,cmd);return;}const tw=S.towers.find(t=>t.id===cmd.id);if(!tw)return;const s=tw.s;
+if(cmd.a==='replace'&&W.finale&&!botSwapOk(si))return;if(cmd.a==='build'&&padBusy(S,cmd.s))return;if(cmd.a!=='replace'){doCmd(si,cmd);return;}const tw=S.towers.find(t=>t.id===cmd.id);if(!tw)return;const s=tw.s;
  if(W.hu&&si===1){if(W.finale){S.ore+=tw.spent;S.towers.splice(S.towers.indexOf(tw),1);ev({e:'sold',s:si,x:tw.x,y:tw.y});}else doCmd(si,{a:'sell',id:tw.id});padHold(si,s);
   /* another empty pad is free right now: build there at once; otherwise wait 5 s for this one */
   const fr=cmd.here?[]:[...NEAR_SLOTS,...FAR_SLOTS].filter(i=>slotFree(S,i)&&!padBusy(S,i));
@@ -1136,7 +1138,7 @@ if(W.finale){const i=S.towers.indexOf(tw);S.ore+=tw.spent;S.towers.splice(i,1);e
 const botAirPk=[0,0];
 function bestDefence(si,o){o=o||{};const S=W.sides[si];let best=null;let aaNow=0;for(const tw of S.towers)if(tw.k==='rkt')aaNow+=TW.rkt.dmg*LVM[tw.lv-1]/(TW.rkt.cd*LVC[tw.lv-1]);const rktOk=aaNow*AA_T<botAirPk[si];
  const isRkt=c=>c.k==='rkt'||c.a==='up'&&(S.towers.find(t=>t.id===c.id)||{}).k==='rkt';
- const consider=(score,cost,cmd)=>{if(!rktOk&&isRkt(cmd))return;if(o.maxCost&&cost>o.maxCost)return;if(W.finale&&cmd.a==='replace'&&!botSwapOk(si))return;/* towers can't be sold in the finale (campaign bot: 3 swaps once the Titan is on its land) */if(o.buildOnly&&cmd.a!=='build')return;const s=score/cost;if(!best||s>best.s)best={s,cost,cmd};};
+ const consider=(score,cost,cmd)=>{if(score<=0)return;if(!rktOk&&isRkt(cmd))return;if(o.maxCost&&cost>o.maxCost)return;if(W.finale&&cmd.a==='replace'&&!botSwapOk(si))return;/* towers can't be sold in the finale (campaign bot: 3 swaps once the Titan is on its land) */if(o.buildOnly&&cmd.a!=='build')return;const s=score/cost;if(!best||s>best.s)best={s,cost,cmd};};
  const freeNear=NEAR_SLOTS.filter(i=>slotFree(S,i)&&!padBusy(S,i)),freeFar=FAR_SLOTS.filter(i=>slotFree(S,i)&&!padBusy(S,i));
  for(const i of freeNear.slice().sort((a,b)=>SLOTS[a].x-SLOTS[b].x).slice(0,10))for(const k of ['mg','can','tes','rkt'])if(capOf(W,k)>0)consider(towerValue(si,k,1,SLOTS[i].x,SLOTS[i].y),TW[k].cost,{a:'build',s:i,k});
  for(const i of freeFar)consider(towerValue(si,'rkt',1,SLOTS[i].x,SLOTS[i].y),TW.rkt.cost,{a:'build',s:i,k:'rkt'});
@@ -1155,7 +1157,7 @@ function botThink(dt,si){if(!W||W.over||W.nuke)return;botT[si]-=dt;if(botT[si]>0
  {if(botAirPk.w!==W){botAirPk[0]=botAirPk[1]=0;botAirPk.w=W;}const air=[...S.units,...W.sides[1-si].units].filter(u=>u.o!==si&&!u.dead&&isAir(u));botAirPk[si]=Math.max(botAirPk[si]*0.985,air.reduce((a,u)=>a+u.hp,0));if(air.length){const airHp=air.reduce((a,u)=>a+u.hp,0);
    /* up to 3 anti-air actions per think while the rockets can't hold the aircraft */
    let acted=false;for(let it=0;it<3;it++){let aa=0;for(const tw of S.towers)if(tw.k==='rkt')aa+=TW.rkt.dmg*LVM[tw.lv-1]/(TW.rkt.cd*LVC[tw.lv-1]);
-   if(aa*AA_T>=airHp)break;const sv=botThreat[si],nw=botNow[si];botThreat[si]={inf:0.05,jeep:0.05,tank:0.05,heli:Math.max(1,sv.heli),plane:Math.max(1,sv.plane)};botNow[si]=null;let b=null;try{b=bestDefence(si);}finally{botThreat[si]=sv;botNow[si]=nw;}
+   if(aa*AA_T>=airHp)break;botOv[si]={inf:0.05,jeep:0.05,tank:0.05,heli:1,plane:1};let b=null;try{b=bestDefence(si);}finally{botOv[si]=null;}
     const isAA=b&&(b.cmd.a==='build'&&b.cmd.k==='rkt'||b.cmd.a==='replace'&&b.cmd.k==='rkt'||b.cmd.a==='up'&&(S.towers.find(t=>t.id===b.cmd.id)||{}).k==='rkt');
     if(!(isAA&&S.ore>=b.cost))break;const n0=S.towers.length,o0=S.ore;botExec(si,b.cmd);acted=true;if(S.ore===o0&&S.towers.length===n0)break;}
    if(acted)return;}}
@@ -1188,7 +1190,7 @@ function botRest(si,S,t,hold){
   const pk=unitCost('plane',S.ua),np=Math.min(Math.ceil(room*0.6),Math.floor(S.ore/pk));for(let i=0;i<np;i++)doCmd(si,{a:'send',k:'plane'});room-=np;
   if(room>0){const p=bestWave(si,S.ore)||massWave(si);if(p){const uc=unitCost(p.k,S.ua),n=Math.min(room,p.n,Math.floor(S.ore/uc));for(let i=0;i<n;i++)doCmd(si,{a:'send',k:p.k});}}
   if(S.ore>=unitCost('inf',S.ua)*3)return;}
- if(S.towers.length<2){const b=bestDefence(si,{buildOnly:true,maxCost:Math.max(TW.mg.cost,S.ore)});if(b&&S.ore>=b.cost)botExec(si,b.cmd);if(S.ore<TW.mg.cost||S.towers.length<1)return;}
+ if(S.towers.length<2&&botNow[si]){const b=bestDefence(si,{buildOnly:true,maxCost:Math.max(TW.mg.cost,S.ore)});if(b&&S.ore>=b.cost)botExec(si,b.cmd);if(S.ore<TW.mg.cost||S.towers.length<1)return;}
  /* campaign with a refund of 100%+: a lost unit pays back more than it cost and feeds the Titan, so the bot keeps a steady stream
     of units on the road (a share of its spare money, a limited number in flight) instead of attacking only when it can break through */
  if(W.hu&&REFUND_K>=1&&!W.finale&&t>20&&S.queue.filter(q=>q.indexOf(':')<0).length===0){const fly=[...S.units,...W.sides[1-si].units].filter(u=>u.o===si&&!u.dead&&u.pc>0).length,cap=Math.min(10,3+Math.floor(t/60));
@@ -1200,16 +1202,16 @@ function botRest(si,S,t,hold){
   const O=W.sides[1-si];const threat=O.units.filter(u=>u.o!==si).length+S.units.filter(u=>u.o!==si).length;
   const press=botPress[si],calm=press<400&&t-(S.breachT??-99)>40;const wantT=Math.min(14,2+Math.floor(t/150)+Math.floor(press/700)+(t-(S.breachT??-99)<20?2:0));
   const wantHv=Math.min(HARV_MAXN,1+Math.floor(t/70)),wantUa=Math.min(capOf(W,'ua'),(calm?[45,120,220,340,480]:[60,150,270,420,600]).filter(x=>t>x*(S.uaT||1)).length);/* never aim past the level's armour cap: an unreachable goal used to freeze all spending */
-  if((S.towers.length<wantT||threat>=4)&&Math.random()<(calm?0.3:0.55))botGoal[si]='tower';
+  if(botNow[si]&&(S.towers.length<wantT||threat>=4)&&Math.random()<(calm?0.3:0.55))botGoal[si]='tower';
     else if((S.rl|0)<RUP_MAX&&S.dep[1]>3000&&t>[0,50,130][S.rl|0])botGoal[si]='rup';
     else if((S.rl|0)>=RUP_MAX&&S.hv.length<wantHv&&S.dep[1]>3000)botGoal[si]='harv';
   else if(S.ua<wantUa&&Math.random()<0.55)botGoal[si]='ua';
   else if(S.ua===4&&S.ua<capOf(W,'ua')&&S.ore>=uaCost(S)*0.8)botGoal[si]='ua';
-  else{const plan=bestWave(si,Math.max(S.ore,700));if(plan){botGoal[si]='attack';botPlan[si]=plan;}else if(S.ua<Math.min(UPG_MAX,capOf(W,'ua')))botGoal[si]='ua';else if(botPress[si]>=400)botGoal[si]='tower';else{botGoal[si]='mass';botPlan[si]=massWave(si);}}}
+  else{const plan=bestWave(si,Math.max(S.ore,700));if(plan){botGoal[si]='attack';botPlan[si]=plan;}else if(S.ua<Math.min(UPG_MAX,capOf(W,'ua')))botGoal[si]='ua';else if(botNow[si]&&botPress[si]>=400)botGoal[si]='tower';else{botGoal[si]='mass';botPlan[si]=massWave(si);}}}
  const g=botGoal[si];const cost={uc:UC_COST,extup0:extUpCost(0),extup1:extUpCost(1),attack:botPlan[si]?botPlan[si].cost:200,mass:botPlan[si]?botPlan[si].cost:2000,tower:(bestDefence(si)||{cost:140}).cost,harv:HARV_COST2,rup:RUP_COST[Math.min(2,S.rl|0)],ext1:EXT_COST,uh:UH_COST,ua:uaCost(S)}[g];
  /* the anti-air savings never block the economy: refinery upgrades and harvesters may use them */
  const eco=(g==='rup'||g==='harv')?hold:0;
- if(S.ore+eco<cost){if(S.ore>cost*0.5+1500){if(botPress[si]>=400){const b=bestDefence(si);if(b&&S.ore-b.cost>cost*0.5)botExec(si,b.cmd);}else{const p=bestWave(si,S.ore-cost*0.5);if(p&&S.queue.filter(q=>q.indexOf(':')<0).length===0)for(let i=0;i<p.n;i++)doCmd(si,{a:'send',k:p.k});}}return;}botGoal[si]=null; /* spare money while saving goes into defence */
+ if(S.ore+eco<cost){if(S.ore>cost*0.5+1500){if(botNow[si]){const b=bestDefence(si);if(b&&S.ore-b.cost>cost*0.5)botExec(si,b.cmd);}else{const p=bestWave(si,S.ore-cost*0.5);if(p&&S.queue.filter(q=>q.indexOf(':')<0).length===0)for(let i=0;i<p.n;i++)doCmd(si,{a:'send',k:p.k});}}return;}botGoal[si]=null; /* spare money while saving goes into defence */
  if(eco){S.ore+=eco;try{doCmd(si,{a:g});}finally{S.ore-=eco;}return;}
  if(g==='mass'){const p=botPlan[si];if(p&&S.queue.filter(q=>q.indexOf(':')<0).length===0)for(let i=0;i<p.n;i++)doCmd(si,{a:'send',k:p.k});botPlan[si]=null;}
  else if(g==='attack'){const p=bestWave(si,S.ore);if(p&&S.queue.filter(q=>q.indexOf(':')<0).length===0){for(let i=0;i<p.n;i++)doCmd(si,{a:'send',k:p.k});}botPlan[si]=null;}
@@ -3170,9 +3172,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-1535</div>
+<div id="appVer">v2026.11.14-1608</div>
 <script>
-window.APP_VERSION='2026.11.14-1535';
+window.APP_VERSION='2026.11.14-1608';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
