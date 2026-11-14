@@ -1057,11 +1057,15 @@ const botT=[0,0],botGoal=[null,null],botPlan=[null,null];
 const botSeen=[{},{}],botThreat=[{inf:1,jeep:1,tank:1,heli:0.3,plane:0.3},{inf:1,jeep:1,tank:1,heli:0.3,plane:0.3}];
 const botPress=[0,0];
 function updThreat(si){const S=W.sides[si],th=botThreat[si];for(const k in th)th[k]*=0.985;botPress[si]*=0.985;
- /* an enemy Titan counts the moment it rolls out (it is a heavy tank target), not only once it crosses the border */
- for(const u of W.sides[1-si].units)if(u.k==='titan'&&u.o!==si&&!botSeen[si][u.id]){botSeen[si][u.id]=1;th.tank+=u.mx/100;botPress[si]+=u.mx;}
- for(const u of S.units){if(u.o===si||botSeen[si][u.id])continue;botSeen[si][u.id]=1;th[u.k==='titan'?'tank':u.k]+=u.mx/100;botPress[si]+=u.mx;}}
+ /* an enemy Titan raises the pressure the moment it rolls out, but stays out of the unit mix: its huge health would make every
+    pad look like a cannon pad and leave jeeps and infantry unanswered — botTitanFocus deals with the Titan itself */
+ for(const u of W.sides[1-si].units)if(u.k==='titan'&&u.o!==si&&!botSeen[si][u.id]){botSeen[si][u.id]=1;botPress[si]+=u.mx;}
+ for(const u of S.units){if(u.o===si||botSeen[si][u.id])continue;botSeen[si][u.id]=1;if(u.k!=='titan')th[u.k]+=u.mx/100;botPress[si]+=u.mx;}
+ /* what is on the road right now weighs as much as the long-term memory */
+ const now={inf:0,jeep:0,tank:0,heli:0,plane:0};let nt=0;for(const u of S.units)if(u.o!==si&&!u.dead&&u.k!=='titan'){now[u.k]+=u.hp;nt+=u.hp;}botNow[si]=nt>0?now:null;}
+const botNow=[null,null];
 const TWVS={tes:{inf:1.2,jeep:1.3,tank:1.1,heli:0,plane:0},mg:{inf:1,jeep:1,tank:1,heli:0,plane:0},can:{inf:0.85,jeep:0.45,tank:1.15,heli:0,plane:0},rkt:{inf:1.3,jeep:1,tank:1,heli:1.3,plane:1.2}};
-function towerValue(si,k,lv,x,y){const th=botThreat[si],tot=th.inf+th.jeep+th.tank+th.heli+th.plane,d=TW[k];const R=d.range*lvR(k,lv-1);let n=0;for(const p of ROAD_SAMPLES)if((p[0]-x)**2+(p[1]-y)**2<R*R)n++;const L=n*10;
+function towerValue(si,k,lv,x,y){const t0=botThreat[si],t0s=t0.inf+t0.jeep+t0.tank+t0.heli+t0.plane,nw=botNow[si],th=nw?{}:t0;if(nw){const ns=nw.inf+nw.jeep+nw.tank+nw.heli+nw.plane;for(const u in t0)th[u]=0.5*t0[u]/t0s+0.5*nw[u]/ns;}const tot=th.inf+th.jeep+th.tank+th.heli+th.plane,d=TW[k];const R=d.range*lvR(k,lv-1);let n=0;for(const p of ROAD_SAMPLES)if((p[0]-x)**2+(p[1]-y)**2<R*R)n++;const L=n*10;
  const dpsOf=u=>k==='tes'?TES_DMG[lv-1]*1.4:d.dmg*((k==='can'&&u==='tank')?CAN_LVM:(k==='mg'&&u==='inf')?MG_LVM:LVM)[lv-1]/(d.cd*LVC[lv-1]);let v=0;for(const u of ['inf','jeep','tank','heli','plane'])v+=th[u]/tot*dpsOf(u)*ARMOR[k][u]*TWVS[k][u]*L/UN[u].sp;return v;}
 function cumCost(k,L){let c=TW[k].cost;for(let l=1;l<L;l=nextLv(l))c+=upCost(k,l);return c;}
 /* campaign bot: may sell and rebuild towers in the finale too (full refund there); the 5 s pad rule applies all game */
@@ -1071,19 +1075,22 @@ function padHold(si,s){if(!W.hu||si!==1)return;const S=W.sides[si];(S.padT||(S.p
 function padBusy(S,i){return !!(S.padT&&S.padT[i]>W.t);}
 /* the enemy Titan is on the bot's land: what counts now is damage on the Titan where it is and where it will stop, not the
    long-term threat mix. Cannons (the only real Titan killers) go onto the pads that reach it: free pads first, then machine guns
-   and — unless enemy aircraft are over the bot's land — rocket towers get swapped for cannons, then cannons in reach get upgraded.
+   and rocket towers (as long as the remaining rockets still hold the aircraft over the bot's land) get swapped for cannons, then cannons in reach get upgraded.
    Radars stay (they slow it). Up to 3 actions per think. */
-function botTitanFocus(si){const S=W.sides[si];const T=S.units.find(u=>u.k==='titan'&&u.o!==si&&!u.dead);if(!T||capOf(W,'can')<1)return false;
- const pts=[uat(T,T.d),uat(T,Math.min(TOTAL-TITAN_STOP,T.d+40)),at(TOTAL-TITAN_STOP)],maxL=Math.min(TW_MAXLV,capOf(W,'can'));
- const reach=(x,y)=>{const r=TW.can.range*lvR('can',0)*0.95;return pts.some(p=>(p[0]-x)**2+(p[1]-y)**2<r*r);};
- const airNear=S.units.some(u=>u.o!==si&&!u.dead&&isAir(u)),swapOk=!W.finale||botSwapOk(si);
+function titanReach(si){const S=W.sides[si];const T=S.units.find(u=>u.k==='titan'&&u.o!==si&&!u.dead);if(!T)return null;
+ const pts=[uat(T,T.d),uat(T,Math.min(TOTAL-TITAN_STOP,T.d+40)),at(TOTAL-TITAN_STOP)],r=TW.can.range*lvR('can',0)*0.95;return (x,y)=>pts.some(p=>(p[0]-x)**2+(p[1]-y)**2<r*r);}
+function botTitanFocus(si){const S=W.sides[si];const reach=titanReach(si);if(!reach||capOf(W,'can')<1)return false;
+ const maxL=Math.min(TW_MAXLV,capOf(W,'can'));
+ /* a rocket tower may go if the other rockets still hold the aircraft over the bot's land (same 25 s rule as the air emergency) */
+ const air=[...S.units,...W.sides[1-si].units].filter(u=>u.o!==si&&!u.dead&&isAir(u)),airHp=air.reduce((a,u)=>a+u.hp,0),rdps=tw=>TW.rkt.dmg*LVM[tw.lv-1]/(TW.rkt.cd*LVC[tw.lv-1]);
+ let aa=0;for(const tw of S.towers)if(tw.k==='rkt')aa+=rdps(tw);const swapOk=!W.finale||botSwapOk(si);
  const bestL=money=>{let L=0;for(let l=1;l<=maxL;l=nextLv(l))if(cumCost('can',l)<=money)L=l;return L;};
  let n=0;
  for(let it=0;it<3;it++){let done=false;
   for(const i of NEAR_SLOTS){if(!slotFree(S,i)||padBusy(S,i)||!reach(SLOTS[i].x,SLOTS[i].y))continue;const L=bestL(S.ore);if(!L)break;
    doCmd(si,{a:'build',s:i,k:'can'});const nt=S.towers.find(q=>q.s===i);if(nt)for(let l=1;l<L;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});done=true;break;}
-  if(!done&&swapOk)for(const tw of S.towers){if(!(tw.k==='mg'||tw.k==='rkt'&&!airNear)||!reach(tw.x,tw.y)||SLOTS[tw.s].zone==='far')continue;
-   const back=W.finale?tw.spent:Math.round(tw.spent*SELL_K),L=bestL(S.ore+back);if(!L)continue;botExec(si,{a:'replace',id:tw.id,k:'can',lv:L,here:1});done=true;break;}
+  if(!done&&swapOk)for(const tw of S.towers){if(!(tw.k==='mg'||tw.k==='rkt'&&(aa-rdps(tw))*25>=airHp)||!reach(tw.x,tw.y)||SLOTS[tw.s].zone==='far')continue;
+   const back=W.finale?tw.spent:Math.round(tw.spent*SELL_K),L=bestL(S.ore+back);if(!L)continue;if(tw.k==='rkt')aa-=rdps(tw);botExec(si,{a:'replace',id:tw.id,k:'can',lv:L,here:1});done=true;break;}
   if(!done)for(const tw of S.towers){if(tw.k!=='can'||tw.lv>=maxL||!reach(tw.x,tw.y))continue;const c=upCost('can',tw.lv);if(S.ore<c)continue;doCmd(si,{a:'up',id:tw.id});done=true;break;}
   if(!done)break;n++;}
  return n>0;}
@@ -1104,7 +1111,8 @@ function bestDefence(si,o){o=o||{};const S=W.sides[si];let best=null;const consi
  for(const i of freeFar)consider(towerValue(si,'rkt',1,SLOTS[i].x,SLOTS[i].y),TW.rkt.cost,{a:'build',s:i,k:'rkt'});
  for(const tw of S.towers)if(tw.lv<Math.min(TW_MAXLV,capOf(W,tw.k))){const c=upCost(tw.k,tw.lv);consider(towerValue(si,tw.k,nextLv(tw.lv),tw.x,tw.y)-towerValue(si,tw.k,tw.lv,tw.x,tw.y),c,{a:'up',id:tw.id});}
  /* rebuild: selling refunds 100%, so swap a tower that no longer fits the threat for the best other kind the same money (plus a bit) can buy */
- const swap=W.finale&&botSwapOk(si),sk=swap?1:SELL_K,budget=S.ore*(swap?1:0.6);for(const tw of S.towers){const old=towerValue(si,tw.k,tw.lv,tw.x,tw.y);const far=SLOTS[tw.s].zone==='far';
+ const tr=titanReach(si);/* cannons that reach the enemy Titan are kept for it */
+ const swap=W.finale&&botSwapOk(si),sk=swap?1:SELL_K,budget=S.ore*(swap?1:0.6);for(const tw of S.towers){if(tr&&tw.k==='can'&&tr(tw.x,tw.y))continue;const old=towerValue(si,tw.k,tw.lv,tw.x,tw.y);const far=SLOTS[tw.s].zone==='far';
   for(const k2 of far?['rkt']:['mg','can','tes','rkt']){if(k2===tw.k||capOf(W,k2)<1)continue;let L=0;for(let l=1;l<=Math.min(TW_MAXLV,capOf(W,k2));l=nextLv(l)){if(cumCost(k2,l)<=tw.spent*sk+budget)L=l;}if(!L)continue;
    const gain=towerValue(si,k2,L,tw.x,tw.y)-old;if(gain<=old*(swap?0.1:0.3)||gain<=0)continue;consider(gain,Math.max(40,cumCost(k2,L)-tw.spent*sk),{a:'replace',id:tw.id,k:k2,lv:L});}}
  return best;}
@@ -3124,9 +3132,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-1327</div>
+<div id="appVer">v2026.11.14-1349</div>
 <script>
-window.APP_VERSION='2026.11.14-1327';
+window.APP_VERSION='2026.11.14-1349';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
