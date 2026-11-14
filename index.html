@@ -2392,7 +2392,7 @@ let hudA=1,hudT=0,NK_BACK=0;
 
 /* ---------------- input ---------------- */
 function toLocal(ev){const r=cv.getBoundingClientRect();return[(ev.clientX-r.left)*VW/r.width,(ev.clientY-r.top)*VH/r.height];}
-function sendCmd(cmd){if(cmd&&cmd.a==='send'&&!VQ.fout&&viewW&&viewW.sides&&!viewW.over){const S=viewW.sides[me];if(S&&S.ore>=unitCost(cmd.k,S.ua)){VQ.fout=true;vAct();voiceGrp('fout');}}if(mode==='guest'){if(room)room.emit('cmd',{g:code,c:cmd}).catch(()=>{});}else doCmd(me,cmd);}
+function sendCmd(cmd){if(cmd&&cmd.a==='send'&&!VQ.fout&&viewW&&viewW.sides&&!viewW.over){const S=viewW.sides[me];if(S&&S.ore>=unitCost(cmd.k,S.ua)){VQ.fout=true;vAct();VQ.need=REMIND_FIRST;voiceGrp('fout');}}if(mode==='guest'){if(room)room.emit('cmd',{g:code,c:cmd}).catch(()=>{});}else doCmd(me,cmd);}
 let down=null;
 cv.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,t:performance.now()};});
 cv.addEventListener('pointerdown',e=>{if(mode!=='editor')return;try{cv.setPointerCapture(e.pointerId);}catch(_){}auUnlock();edDown(...toLocal(e));});
@@ -3022,13 +3022,13 @@ const VOICE={mine:{src:'voice_mine2.mp3',vol:0.9,pri:1},nuke:{src:'voice_nuke2.m
  nkb1:{src:'voice_nkb1.mp3',vol:0.9,pri:1},nkb2:{src:'voice_nkb2.mp3',vol:0.9,pri:1},nkb3:{src:'voice_nkb3.mp3',vol:0.9,pri:1},nkb4:{src:'voice_nkb4.mp3',vol:0.9,pri:1},nkb5:{src:'voice_nkb5.mp3',vol:0.9,pri:1},nkb6:{src:'voice_nkb6.mp3',vol:0.9,pri:1},
  vrag1:{src:'voice_vrag1.mp3',vol:0.9},vrag2:{src:'voice_vrag2.mp3',vol:0.9},vrag3:{src:'voice_vrag3.mp3',vol:0.9},vrag4:{src:'voice_vrag4.mp3',vol:0.9},vrag5:{src:'voice_vrag5.mp3',vol:0.9},vrag6:{src:'voice_vrag6.mp3',vol:0.9},vrag7:{src:'voice_vrag7.mp3',vol:0.9},vrag8:{src:'voice_vrag8.mp3',vol:0.9},vrag9:{src:'voice_vrag9.mp3',vol:0.9},
  loh1:{src:'voice_loh1.mp3',vol:0.9,pri:1},loh2:{src:'voice_loh2.mp3',vol:0.9,pri:1},loh3:{src:'voice_loh3.mp3',vol:0.9,pri:1},loh4:{src:'voice_loh4.mp3',vol:0.9,pri:1},loh5:{src:'voice_loh5.mp3',vol:0.9,pri:1},loh6:{src:'voice_loh6.mp3',vol:0.9,pri:1},loh7:{src:'voice_loh7.mp3',vol:0.9,pri:1},loh8:{src:'voice_loh8.mp3',vol:0.9,pri:1},loh9:{src:'voice_loh9.mp3',vol:0.9,pri:1},loh10:{src:'voice_loh10.mp3',vol:0.9,pri:1}};
-const VOICE_GAP=2,VOICE_PRI_GAP=1,VQ={cur:null,end:-99,q:[],t:0,g:0,tshot:false,mset:false,breach:false,first:false,fout:false,act:0,remEnd:0,rq:false,hv:false,tlow:0};let VOICE_PREV=0,VOICE_NKP=0;
+const VOICE_GAP=2,VOICE_PRI_GAP=1,VQ={cur:null,end:-99,q:[],t:0,g:0,tshot:false,mset:false,breach:false,first:false,fout:false,act:0,need:20,rl:null,alert:false,rq:false,hv:false,tlow:0};let VOICE_PREV=0,VOICE_NKP=0;
 const vNow=()=>performance.now()/1000;
 /* voices are decoded into Web Audio buffers up front: playback then starts instantly and "ended" is reliable
    (with <audio> elements a slow first download could hold a line back and then let it start on top of the next one) */
 function voiceLoad(){if(!AU.ctx)return;for(const k in VOICE){const v=VOICE[k];if(v.buf||v.ld||v.bad)continue;
  v.ld=fetch(v.src).then(r=>{if(!r.ok)throw 0;return r.arrayBuffer();}).then(b=>new Promise((res,rej)=>AU.ctx.decodeAudioData(b,res,rej))).then(b=>{v.buf=b;voicePump();}).catch(()=>{v.bad=true;voicePump();});}}
-function voiceDone(tok){if(VQ.cur!==tok)return;if(tok.k&&/^remind/.test(tok.k)){VQ.rq=false;VQ.lw=false;VQ.remEnd=vNow();}if(tok.k&&/^(win|lose)\d/.test(tok.k))endUnduck();VQ.cur=null;VQ.src=null;VQ.end=vNow();clearTimeout(VQ.g);voicePump();}
+function voiceDone(tok){if(VQ.cur!==tok)return;if(tok.k&&/^remind/.test(tok.k)){VQ.rq=false;vRestart(REMIND_IDLE);}if(tok.k&&/^(win|lose)\d/.test(tok.k))endUnduck();VQ.cur=null;VQ.src=null;VQ.end=vNow();clearTimeout(VQ.g);voicePump();}
 function voicePlay(k){const v=VOICE[k];if(!v||!v.buf||!AU.ctx)return false;const tok={k};VQ.cur=tok;
  try{if(AU.ctx.state==='suspended')AU.ctx.resume();const src=AU.ctx.createBufferSource(),g=AU.ctx.createGain();g.gain.value=v.vol;src.buffer=v.buf;src.connect(g);g.connect(AU.master||AU.ctx.destination);
   src.onended=()=>voiceDone(tok);VQ.src=src;clearTimeout(VQ.g);VQ.g=setTimeout(()=>voiceDone(tok),(v.buf.duration+0.6)*1000);src.start();}catch(_){voiceDone(tok);return false;}return true;}
@@ -3040,7 +3040,7 @@ function voicePump(){if(VQ.cur||!VQ.q.length)return;if(voiceOver())VQ.q=VQ.q.fil
 function voice(k){if(!AU.on||!AU.ctx)return;const v=VOICE[k];if(!v)return;if(VOICE_NOEND.includes(k)&&voiceOver())return;voiceLoad();
  if(v.pri){if(!VQ.q.includes(k))VQ.q.push(k);voicePump();return;}
  if(!v.buf||VQ.cur||VQ.q.length||vNow()<VQ.end+VOICE_GAP)return;voicePlay(k);}
-function voiceReset(){END_DUCK=null;try{if(VQ.src)VQ.src.stop();}catch(_){}VQ.cur=null;VQ.src=null;VQ.q.length=0;clearTimeout(VQ.t);clearTimeout(VQ.g);for(const g in VGRP){VGRP[g].seen.clear();if(!VGRP[g].keep)VGRP[g].last='';}VQ.tshot=false;VQ.mset=false;VQ.breach=false;VQ.first=false;VQ.fout=false;VQ.act=vNow();VQ.remEnd=0;VQ.rq=false;VQ.lw=false;VQ.hv=false;VQ.tlow=0;VOICE_PREV=0;VOICE_NKP=0;}
+function voiceReset(){END_DUCK=null;try{if(VQ.src)VQ.src.stop();}catch(_){}VQ.cur=null;VQ.src=null;VQ.q.length=0;clearTimeout(VQ.t);clearTimeout(VQ.g);for(const g in VGRP){VGRP[g].seen.clear();if(!VGRP[g].keep)VGRP[g].last='';}VQ.tshot=false;VQ.mset=false;VQ.breach=false;VQ.first=false;VQ.fout=false;VQ.act=vNow();VQ.rq=false;VQ.need=REMIND_FIRST;VQ.rl=null;VQ.alert=false;VQ.hv=false;VQ.tlow=0;VOICE_PREV=0;VOICE_NKP=0;}
 /* enemy units on my side of the river: a random line from a group (never the same one twice running) when a unit, for the first time,
    - is halfway along the road (between 65% and 80% of its length): "the enemy broke through";
    - is right at my base (the last 90 px): a taunt */
@@ -3054,16 +3054,24 @@ function voiceGrp(g){const G=VGRP[g],c=G.ks.length>1?G.ks.filter(k=>k!==G.last):
 const TLOW=[9500,4500];
 function voiceTitanLow(){if(!viewW||!viewW.sides)return;let T=null;for(const S of viewW.sides)for(const u of S.units)if(u.k==='titan'&&u.o===me&&!u.dead)T=u;if(!T)return;
  let hit=false;while(VQ.tlow<TLOW.length&&T.hp<=TLOW[VQ.tlow]){VQ.tlow++;hit=true;}if(hit)voiceGrp('tlow');}
-/* "buy units" reminder: after 5 s in which the player did nothing that is voiced (only voiced actions count: the first unit, the first mine, …) it queues like a priority line
-   (so it waits for a line already playing); a new voiced action of the player before it starts cancels it.
-   Never once the player's own Titan has left the base. The next one counts 5 s from the end of the previous one. */
-const REMIND_IDLE=10,REMIND_FIRST=15;/* 15 s after the first-unit line and after the queue empties, 10 s after the previous reminder */
-function vAct(){VQ.act=vNow();if(VQ.rq){VQ.q=VQ.q.filter(k=>!/^remind/.test(k));if(!(VQ.cur&&VQ.cur.k&&/^remind/.test(VQ.cur.k)))VQ.rq=false;}}
-/* silent until the player's first unit purchase: the idle count starts from that line */
-function voiceRemind(M){if(!VQ.fout)return;const busy=M.queue&&M.queue.length>0;/* units waiting in my queue: no reminder */
- if(busy){VQ.act=vNow();VQ.lw=true;}/* the count restarts (10 s) once the queue is empty */
- if(M.titanOut||viewW.pause||busy){if(VQ.rq&&!(VQ.cur&&/^remind/.test(VQ.cur.k||''))){VQ.q=VQ.q.filter(k=>!/^remind/.test(k));VQ.rq=false;}if(viewW.pause)VQ.act=Math.max(VQ.act,vNow()-REMIND_IDLE+1);return;}
- if(VQ.rq)return;if(vNow()-Math.max(VQ.act,VQ.remEnd)<(VQ.remEnd&&!VQ.lw?REMIND_IDLE:REMIND_FIRST))return;VQ.rq=true;voiceGrp('remind');if(!VQ.q.some(k=>/^remind/.test(k))&&!(VQ.cur&&/^remind/.test(VQ.cur.k||'')))VQ.rq=false,VQ.act=vNow();}
+/* "buy units" reminder (priority-like: waits for a line already playing). The count restarts from each event, with that event's
+   length — counts never add up, the latest one wins:
+   20 s — after the first-unit line, and whenever the last unit leaves my queue;
+   15 s — after the previous reminder, after my harvester base (refinery) goes up a level, after a ballistic missile has exploded;
+   a voiced action of mine (first mine, rain, tower lv4, …) restarts the current count with the same length and cancels a waiting reminder.
+   Silent: before my first unit purchase, while units wait in my queue, during an air alert (either side bought a missile),
+   on pause, and for good once my own Titan has left the base. A reminder already playing is never cut off. */
+const REMIND_IDLE=15,REMIND_FIRST=20;
+function vAct(){VQ.act=vNow();vDropRemind();}
+function vDropRemind(){if(VQ.rq){VQ.q=VQ.q.filter(k=>!/^remind/.test(k));if(!(VQ.cur&&VQ.cur.k&&/^remind/.test(VQ.cur.k)))VQ.rq=false;}}
+function vRestart(sec){VQ.act=vNow();VQ.need=sec;}
+function voiceRemind(M){if(!VQ.fout)return;
+ const rl=M.rl|0;if(VQ.rl==null)VQ.rl=rl;if(rl>VQ.rl){VQ.rl=rl;vRestart(REMIND_IDLE);vDropRemind();}
+ const busy=M.queue&&M.queue.length>0,alert=!!viewW.nuke||viewW.sides.some(S=>(S.nkT||0)>0);
+ if(busy)vRestart(REMIND_FIRST);
+ if(alert)VQ.alert=true;else if(VQ.alert){VQ.alert=false;vRestart(REMIND_IDLE);}
+ if(M.titanOut||viewW.pause||busy||alert){vDropRemind();if(viewW.pause)VQ.act=Math.max(VQ.act,vNow()-VQ.need+1);return;}
+ if(VQ.rq)return;if(vNow()-VQ.act<VQ.need)return;VQ.rq=true;voiceGrp('remind');if(!VQ.q.some(k=>/^remind/.test(k))&&!(VQ.cur&&/^remind/.test(VQ.cur.k||'')))VQ.rq=false,vRestart(VQ.need);}
 function voiceNear(M){/* the very first enemy unit on my side of the river: once per game */
  if(!VQ.first&&M.units.some(u=>u.o!==me&&!u.dead)){VQ.first=true;voiceGrp('first');}
 const zone={mid:u=>u.d>=TOTAL*0.65&&u.d<=TOTAL*0.80,near:u=>u.d>=TOTAL-LOH_D};
@@ -3097,9 +3105,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-1224</div>
+<div id="appVer">v2026.11.14-1247</div>
 <script>
-window.APP_VERSION='2026.11.14-1224';
+window.APP_VERSION='2026.11.14-1247';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
