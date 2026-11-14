@@ -87,6 +87,8 @@ input{font-family:var(--display);font-size:24px;letter-spacing:6px;text-align:ce
   <div class="hint">Карты хранятся в этом браузере. «Код» превращает карту в текст: перешлите его, и карту можно добавить на другом телефоне.</div>
   <div class="row" style="width:100%;align-items:center"><input id="mmCode" autocomplete="off" placeholder="Вставьте код карты" aria-label="Код карты" style="flex:1 1 160px;width:auto;letter-spacing:0;font-size:15px;text-align:left;user-select:text;-webkit-user-select:text"><button id="mmAdd" style="flex:0 0 auto">Добавить</button></div>
   <div class="status" id="mmStatus"></div>
+  <div class="hint" style="margin-top:4px">Поставить карту на уровень кампании: вставьте код в поле выше, выберите уровень и нажмите «В кампанию». ★ — у уровня своя карта.</div>
+  <div class="row" style="width:100%;align-items:center"><select id="mmLv" aria-label="Уровень кампании" style="flex:1 1 160px;min-width:0;padding:10px 8px;border-radius:12px;font:inherit;font-size:15px;font-weight:700;background:#0F150C;color:#E8F0DE;border:2px solid #0C120B"></select><button id="mmCamp" style="flex:0 0 auto">В кампанию</button><button id="mmCampReset" style="flex:0 0 auto">Стандартная</button></div>
   <div class="row" style="width:100%"><button class="primary" id="mmClose">Закрыть</button></div>
  </div>
 </div>
@@ -2642,7 +2644,10 @@ const CAMP_START=[128,120],CAMP_END=[70,262],CAMP_IMG=new Image();CAMP_IMG.src='
 let CAMP_P={stars:{}};try{const j=JSON.parse(localStorage.getItem('dvebazy-camp2')||'null');if(j&&typeof j==='object')CAMP_P={stars:j.stars||{},up:j.up||{}};}catch(e){}if(!CAMP_P.up)CAMP_P.up={};
 function campSave(){try{localStorage.setItem('dvebazy-camp2',JSON.stringify(CAMP_P));}catch(e){}}
 const campOpenLv=i=>i===0||(CAMP_P.stars[i-1]|0)>0;
-function campMap(i){const L=CAMP[i];let st=null;if(L.code){const r=mmFromCode(L.code);if(r)st=r.st;}
+/* maps the player put on campaign levels himself (this browser only); the level keeps its own name */
+let CAMP_OV={};try{CAMP_OV=JSON.parse(localStorage.getItem('dvebazy-campmaps')||'{}')||{};}catch(e){}
+function campOvSave(){try{localStorage.setItem('dvebazy-campmaps',JSON.stringify(CAMP_OV));}catch(e){}}
+function campMap(i){const L=CAMP[i];let st=null;const code=CAMP_OV[i]||L.code;if(code){const r=mmFromCode(code);if(r)st=r.st;}
  if(!st){st=genRandomEd(L.seed)||genRandomEd(L.seed+7)||genRandomEd(12345);st.theme=L.th;if(L.th==='lava')st.pond=null;}
  const m=mapFromEd({...st,name:L.n});m.name=L.n;return m;}
 let CAMP_RUN=null,CAMP_PREV=null,CAMP_SEL=null,CAMP_T0=0;
@@ -2906,7 +2911,11 @@ function mmRender(){const L=document.getElementById('mmList');L.textContent='';
    SFX.click();MY=MY.filter(x=>x.id!==it.id);mmSave(MY);if(MY_CUR===it.id){MY_CUR=null;try{localStorage.removeItem('dvebazy-cur');}catch(e){}delete MAPS[CUSTOM_I];if(MAPI===CUSTOM_I){setupMap(0);viewW=null;}markMap();edLobbyBtn();}mmRender();});
   row.append(top,bt);L.appendChild(row);}
  }
-document.getElementById('bMyMaps').onclick=()=>{SFX.click();mmStatus('');document.getElementById('mmCode').value='';mmRender();document.getElementById('myMaps').hidden=false;};
+function mmLvFill(){const sel=document.getElementById('mmLv'),v=sel.value;sel.textContent='';CAMP.forEach((L,i)=>{const o=document.createElement('option');o.value=i;o.textContent=(CAMP_OV[i]?'★ ':'')+(i+1)+'. '+L.n;sel.appendChild(o);});if(v!=='')sel.value=v;}
+document.getElementById('mmCamp').onclick=()=>{const code=(document.getElementById('mmCode').value||'').trim();const r=code&&mmFromCode(code);if(!r){SFX.deny();mmStatus(code?'Не получилось прочитать код. Скопируйте его целиком.':'Сначала вставьте код карты в поле выше.');return;}
+ const i=+document.getElementById('mmLv').value;CAMP_OV[i]=code;campOvSave();SFX.build();document.getElementById('mmCode').value='';mmLvFill();mmStatus('Карта поставлена на уровень '+(i+1)+' «'+CAMP[i].n+'»');};
+document.getElementById('mmCampReset').onclick=()=>{const i=+document.getElementById('mmLv').value;if(!CAMP_OV[i]){SFX.deny();mmStatus('На уровне '+(i+1)+' и так стандартная карта.');return;}delete CAMP_OV[i];campOvSave();SFX.click();mmLvFill();mmStatus('Уровню '+(i+1)+' «'+CAMP[i].n+'» вернули стандартную карту');};
+document.getElementById('bMyMaps').onclick=()=>{SFX.click();mmStatus('');document.getElementById('mmCode').value='';mmRender();mmLvFill();document.getElementById('myMaps').hidden=false;};
 document.getElementById('mmClose').onclick=()=>{SFX.click();document.getElementById('myMaps').hidden=true;lobbyPrev();};
 document.getElementById('mmAdd').onclick=()=>{const r=mmFromCode(document.getElementById('mmCode').value||'');if(!r){SFX.deny();mmStatus('Не получилось прочитать код. Скопируйте его целиком.');return;}SFX.build();mmPut(r.st,r.name);document.getElementById('mmCode').value='';mmStatus('Карта «'+r.name+'» добавлена');mmRender();};
 markMap();
@@ -3193,9 +3202,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-2237</div>
+<div id="appVer">v2026.11.14-2254</div>
 <script>
-window.APP_VERSION='2026.11.14-2237';
+window.APP_VERSION='2026.11.14-2254';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
