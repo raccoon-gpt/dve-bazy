@@ -2629,7 +2629,7 @@ const CAMP_I=11,CAMP_DIFF='normal';
 const campStars=l=>l>=18?3:l>=10?2:1;
 /* levels: random editor maps (fixed seeds) in the region's theme; a level with `code` uses a hand-made map */
 const CAMP=[
- {n:'Тихий луг',th:'grass',seed:101},{n:'Речной брод',th:'grass',seed:202},{n:'Старая мельница',th:'grass',seed:303},{n:'Водопады',th:'grass',seed:404},{n:'Каменный мост',th:'grass',seed:505},
+ {n:'Тихий луг',th:'grass',seed:101,code:'DB1:eyJ2Ijo0LCJuIjoiMSIsInQiOiJncmFzcyIsImZhIjpbMSw2XSwicmUiOls0LDZdLCJmMCI6bnVsbCwiZjEiOlsxMiw2XSwicmQiOltbMSw2XSxbMSw1XSxbMSw0XSxbMSwzXSxbMSwyXSxbMiwyXSxbMywyXSxbNCwyXSxbNSwyXSxbNiwyXSxbNiwzXSxbNiw0XSxbNyw0XSxbOCw0XSxbOSw0XSxbMTAsNF0sWzExLDRdLFsxMiw0XSxbMTMsNF0sWzE0LDRdLFsxNSw0XSxbMTUsNV0sWzE1LDZdLFsxNiw2XSxbMTcsNl0sWzE4LDZdXSwiYnIiOltdLCJwIjpudWxsLCJwZCI6W1szMTAsMTMwLCJuZWFyIl0sWzM3MCwxMzAsIm5lYXIiXSxbNDMwLDEzMCwibmVhciJdLFs0OTAsMTMwLCJuZWFyIl0sWzU1MCwxMzAsIm5lYXIiXSxbNTcyLDIzMCwibmVhciJdLFs1MTIsMjI4LCJuZWFyIl0sWzQ1MiwyMzAsIm5lYXIiXSxbMzkyLDIzMCwibmVhciJdLFszMzIsMjMwLCJuZWFyIl0sWzI3MiwyMzAsIm5lYXIiXSxbMjEwLDE1MCwibmVhciJdLFs2NzAsMjEwLCJuZWFyIl1dfQ=='},{n:'Речной брод',th:'grass',seed:202},{n:'Старая мельница',th:'grass',seed:303},{n:'Водопады',th:'grass',seed:404},{n:'Каменный мост',th:'grass',seed:505},
  {n:'Край пустыни',th:'sand',seed:606},{n:'Кристальная долина',th:'sand',seed:707},{n:'Каменные дюны',th:'sand',seed:808},{n:'Красные столовые горы',th:'sand',seed:1616},{n:'Буровая',th:'sand',seed:1717},
  {n:'Ледяной ручей',th:'snow',seed:909},{n:'Радар',th:'snow',seed:1010},{n:'Снежный перевал',th:'snow',seed:1111},{n:'Ледник',th:'snow',seed:1818},{n:'Сосновый спуск',th:'snow',seed:1919},
  {n:'Топкий берег',th:'swamp',seed:2020},{n:'Мёртвые деревья',th:'swamp',seed:2121},{n:'Туманная заводь',th:'swamp',seed:2222},{n:'Гнилые мостки',th:'swamp',seed:2323},{n:'Сердце трясины',th:'swamp',seed:2424},
@@ -3193,9 +3193,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-2103</div>
+<div id="appVer">v2026.11.14-2237</div>
 <script>
-window.APP_VERSION='2026.11.14-2103';
+window.APP_VERSION='2026.11.14-2237';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
