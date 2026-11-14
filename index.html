@@ -780,7 +780,7 @@ const huSellK=si=>HU(si,'tow')>=3?1:SELL_K;
 const huCrit=si=>HU(si,'tow')>=1&&Math.random()<0.3?2:1;
 const huSplashK=si=>HU(si,'tow')>=5?0.9:TW.can.splashK;
 /* rockets of the upgraded towers also hit ground units that are frozen or slowed by a radar */
-const TITAN_TW_HITS=4,RKT_GROUND={inf:0.6,jeep:0.8,tank:1,titan:1};const huRg=si=>HU(si,'tow')>=4;const gHeld=u=>!!(u.fz||u.sl);
+const TITAN_BASE_CD=1.5,TITAN_TW_HITS=4,RKT_GROUND={inf:0.6,jeep:0.8,tank:1,titan:1};const huRg=si=>HU(si,'tow')>=4;const gHeld=u=>!!(u.fz||u.sl);
 function newHarv(){return{id:nextId++,alive:true,d:0,dir:-1,load:0,cargo:0,wait:0,stopped:false,hp:HARV_HP,a:0,repair:false,heal:0}}
 function newWorld(){nextId=1000;return{t:0,sides:[newSide(),newSide()],over:null,pause:false,speed:1}}
 /* unit price grows with armour level: a max-armour tank costs 500 */
@@ -863,7 +863,7 @@ function simSide(si,dt){const S=W.sides[si],O=W.sides[1-si];
   if(S.frzT>(u.k==='titan'&&HU(u.o,'tit')>=4?2:0)){u.fz=1;continue;}u.fz=0;
   if(S.confT>0&&u.k!=='plane'){u.cf=1;u.cd-=dt;if(u.cd<=0){const p=uat(u,u.d);let tg=null,bd=1e9;for(const v of S.units){if(v===u||v.dead||v.o===si)continue;const q=uat(v,v.d);const dd=(q[0]-p[0])**2+(q[1]-p[1])**2;if(dd<bd){bd=dd;tg=v;}}
     if(tg&&bd<160*160){u.cd=FF_CD[u.k];const q=uat(tg,tg.d);u.ga=Math.atan2(q[1]-p[1],q[0]-p[0]);damageUnit(si,tg,FF_DMG[u.k]);ev({e:'ff',s:si,u:u.id,x:q[0]|0,y:q[1]|0,k:u.k==='tank'?1:0});}else u.cd=0.3;}continue;}u.cf=0;
-  if(u.k==='titan'&&u.d>=TOTAL-TITAN_STOP){u.cd-=dt;{const p=uat(u,u.d),bp=at(TOTAL-8);u.ga=Math.atan2(bp[1]-p[1],bp[0]-p[0]);}if(u.cd<=0){u.cd=1;S.lives=Math.max(0,S.lives-1);S.lastHit='titan';S.breachT=W.t;const bp=at(TOTAL-8);ev({e:'tshot',s:si,u:u.id,x:bp[0]|0,y:bp[1]|0});}continue;}
+  if(u.k==='titan'&&u.d>=TOTAL-TITAN_STOP){u.cd-=dt;{const p=uat(u,u.d),bp=at(TOTAL-8);u.ga=Math.atan2(bp[1]-p[1],bp[0]-p[0]);}if(u.cd<=0){u.cd=TITAN_BASE_CD;S.lives=Math.max(0,S.lives-1);S.lastHit='titan';S.breachT=W.t;const bp=at(TOTAL-8);ev({e:'tshot',s:si,u:u.id,x:bp[0]|0,y:bp[1]|0});}continue;}
   if(u.k==='titan'){u.cd-=dt;const p=uat(u,u.d);let tw=null,bd=170*170;for(const q of S.towers){const dd=(q.x-p[0])**2+(q.y-p[1])**2;if(dd<bd){bd=dd;tw=q;}}{const want=tw?Math.atan2(tw.y-p[1],tw.x-p[0]):headingRoad(u.d,u.b);let df=want-u.ga;while(df>Math.PI)df-=6.283;while(df<-Math.PI)df+=6.283;u.ga+=df*Math.min(1,dt*5);if(tw&&u.cd<=0&&Math.abs(df)<0.3){u.cd=1.3;ev({e:'tfire',s:si,u:u.id,x:tw.x|0,y:tw.y-6|0});if(HU(u.o,'tit')>=5){tw.th=(tw.th|0)+1;if(tw.th>=TITAN_TW_HITS){S.towers.splice(S.towers.indexOf(tw),1);padHold(si,tw.s);ev({e:'boom',s:si,x:tw.x|0,y:tw.y|0,b:2});ev({e:'twdie',s:si,x:tw.x|0,y:tw.y|0});}}}}}
   const sf=isAir(u)?1:slowAt(S,si,u);u.sl=sf<1?1:0;u.d+=dt*def.sp*sf*(u.k==='plane'?PLANE_K:bk(u))*(u.k==='titan'&&HU(u.o,'tit')>=1?1.1:1);
   if(u.d>=TOTAL){u.dead=true;u.breach=true;if(u.v)titanBank(u.o,u.v*TB_BREACH);S.lives=Math.max(0,S.lives-def.lives);S.lastHit='unit';S.breachT=W.t;ev({e:'breach',s:si});continue;}
@@ -3085,9 +3085,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-0240</div>
+<div id="appVer">v2026.11.14-1004</div>
 <script>
-window.APP_VERSION='2026.11.14-0240';
+window.APP_VERSION='2026.11.14-1004';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
