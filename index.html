@@ -1117,6 +1117,9 @@ function botWaveFocus(si){const S=W.sides[si];const foes=S.units.filter(u=>u.o!=
   for(const tw of S.towers){if(tw.lv>=Math.min(TW_MAXLV,capOf(W,tw.k)))continue;const L2=nextLv(tw.lv),c=upCost(tw.k,tw.lv);con(eff(tw.k,L2,tw.x,tw.y)-eff(tw.k,tw.lv,tw.x,tw.y),c,()=>doCmd(si,{a:'up',id:tw.id}));}
   if(!best)break;const o0=S.ore;best.f();if(S.ore===o0)break;n++;}
  return n>0;}
+/* seconds the enemy aircraft are assumed to stay under the bot's rockets: the bot wants its rocket damage over that time to
+   exceed the aircraft's total health (25 s was far too optimistic — a plane crosses the field much faster) */
+const AA_T=8;
 function botSwapOk(si){return !!W.hu&&si===1;}
 function botExec(si,cmd){const S=W.sides[si];
  /* hard cap: while nobody attacks the bot, new towers stop at a small baseline whatever path asked for them */
@@ -1128,7 +1131,12 @@ function botExec(si,cmd){const S=W.sides[si];
    if(bi>=0){doCmd(si,{a:'build',s:bi,k:cmd.k});const nt=S.towers.find(q=>q.s===bi);if(nt)for(let l=1;l<cmd.lv;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});return;}}
   const c=Math.min(S.ore,cumCost(cmd.k,cmd.lv));S.ore-=c;(S.pend||(S.pend=[])).push({s,k:cmd.k,lv:cmd.lv,t:W.t+PAD_CD,c,any:cmd.here?1:0});return;}
 if(W.finale){const i=S.towers.indexOf(tw);S.ore+=tw.spent;S.towers.splice(i,1);ev({e:'sold',s:si,x:tw.x,y:tw.y});}else doCmd(si,{a:'sell',id:tw.id});doCmd(si,{a:'build',s,k:cmd.k,any:cmd.here?1:0});const nt=S.towers.find(t=>t.s===s);if(nt){for(let l=1;l<cmd.lv;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});}}
-function bestDefence(si,o){o=o||{};const S=W.sides[si];let best=null;const consider=(score,cost,cmd)=>{if(o.maxCost&&cost>o.maxCost)return;if(W.finale&&cmd.a==='replace'&&!botSwapOk(si))return;/* towers can't be sold in the finale (campaign bot: 3 swaps once the Titan is on its land) */if(o.buildOnly&&cmd.a!=='build')return;const s=score/cost;if(!best||s>best.s)best={s,cost,cmd};};
+/* the biggest air raid seen lately (decays): ordinary building adds rocket towers only while the rockets can't yet stop a raid
+   that size — the long-term memory of a few planes used to fill the map with rockets while tanks rolled in */
+const botAirPk=[0,0];
+function bestDefence(si,o){o=o||{};const S=W.sides[si];let best=null;let aaNow=0;for(const tw of S.towers)if(tw.k==='rkt')aaNow+=TW.rkt.dmg*LVM[tw.lv-1]/(TW.rkt.cd*LVC[tw.lv-1]);const rktOk=aaNow*AA_T<botAirPk[si];
+ const isRkt=c=>c.k==='rkt'||c.a==='up'&&(S.towers.find(t=>t.id===c.id)||{}).k==='rkt';
+ const consider=(score,cost,cmd)=>{if(!rktOk&&isRkt(cmd))return;if(o.maxCost&&cost>o.maxCost)return;if(W.finale&&cmd.a==='replace'&&!botSwapOk(si))return;/* towers can't be sold in the finale (campaign bot: 3 swaps once the Titan is on its land) */if(o.buildOnly&&cmd.a!=='build')return;const s=score/cost;if(!best||s>best.s)best={s,cost,cmd};};
  const freeNear=NEAR_SLOTS.filter(i=>slotFree(S,i)&&!padBusy(S,i)),freeFar=FAR_SLOTS.filter(i=>slotFree(S,i)&&!padBusy(S,i));
  for(const i of freeNear.slice().sort((a,b)=>SLOTS[a].x-SLOTS[b].x).slice(0,10))for(const k of ['mg','can','tes','rkt'])if(capOf(W,k)>0)consider(towerValue(si,k,1,SLOTS[i].x,SLOTS[i].y),TW[k].cost,{a:'build',s:i,k});
  for(const i of freeFar)consider(towerValue(si,'rkt',1,SLOTS[i].x,SLOTS[i].y),TW.rkt.cost,{a:'build',s:i,k:'rkt'});
@@ -1144,7 +1152,7 @@ function bestDefence(si,o){o=o||{};const S=W.sides[si];let best=null;const consi
 function botThink(dt,si){if(!W||W.over||W.nuke)return;botT[si]-=dt;if(botT[si]>0)return;botT[si]=1.2+Math.random()*0.8;const S=W.sides[si];const t=W.t;updThreat(si);
  botSuper(si);
  /* aircraft over the bot's land and not enough rockets to stop them: anti-air comes before any saving */
- {const air=[...S.units,...W.sides[1-si].units].filter(u=>u.o!==si&&!u.dead&&isAir(u));if(air.length){const airHp=air.reduce((a,u)=>a+u.hp,0);
+ {if(botAirPk.w!==W){botAirPk[0]=botAirPk[1]=0;botAirPk.w=W;}const air=[...S.units,...W.sides[1-si].units].filter(u=>u.o!==si&&!u.dead&&isAir(u));botAirPk[si]=Math.max(botAirPk[si]*0.985,air.reduce((a,u)=>a+u.hp,0));if(air.length){const airHp=air.reduce((a,u)=>a+u.hp,0);
    /* up to 3 anti-air actions per think while the rockets can't hold the aircraft */
    let acted=false;for(let it=0;it<3;it++){let aa=0;for(const tw of S.towers)if(tw.k==='rkt')aa+=TW.rkt.dmg*LVM[tw.lv-1]/(TW.rkt.cd*LVC[tw.lv-1]);
    if(aa*AA_T>=airHp)break;const sv=botThreat[si],nw=botNow[si];botThreat[si]={inf:0.05,jeep:0.05,tank:0.05,heli:Math.max(1,sv.heli),plane:Math.max(1,sv.plane)};botNow[si]=null;let b=null;try{b=bestDefence(si);}finally{botThreat[si]=sv;botNow[si]=nw;}
@@ -1161,7 +1169,6 @@ function botThink(dt,si){if(!W||W.over||W.nuke)return;botT[si]-=dt;if(botT[si]>0
    mines run dry, so when that is close the bot stops saving — the bonus will pay for rockets if they are needed then. */
 /* seconds the enemy aircraft are assumed to stay under the bot's rockets: the bot wants its rocket damage over that time to
    exceed the aircraft's total health (25 s was far too optimistic — a plane crosses the field much faster) */
-const AA_T=8;
 const ECO=new WeakMap();
 function botHold(si){if(!W.hu||si!==1||W.finale||capOf(W,'rkt')<1)return 0;const S=W.sides[si],t=W.t;
  let e=ECO.get(W);if(!e){e=[];ECO.set(W,e);}e.push([t,S.dep[0]+S.dep[1],W.sides[0].dep[0]+W.sides[0].dep[1]]);while(e.length>2&&t-e[1][0]>25)e.shift();
@@ -3163,9 +3170,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-1515</div>
+<div id="appVer">v2026.11.14-1535</div>
 <script>
-window.APP_VERSION='2026.11.14-1515';
+window.APP_VERSION='2026.11.14-1535';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
