@@ -3022,7 +3022,7 @@ const VOICE={mine:{src:'voice_mine2.mp3',vol:0.9,pri:1},nuke:{src:'voice_nuke2.m
  nkb1:{src:'voice_nkb1.mp3',vol:0.9,pri:1},nkb2:{src:'voice_nkb2.mp3',vol:0.9,pri:1},nkb3:{src:'voice_nkb3.mp3',vol:0.9,pri:1},nkb4:{src:'voice_nkb4.mp3',vol:0.9,pri:1},nkb5:{src:'voice_nkb5.mp3',vol:0.9,pri:1},nkb6:{src:'voice_nkb6.mp3',vol:0.9,pri:1},
  vrag1:{src:'voice_vrag1.mp3',vol:0.9},vrag2:{src:'voice_vrag2.mp3',vol:0.9},vrag3:{src:'voice_vrag3.mp3',vol:0.9},vrag4:{src:'voice_vrag4.mp3',vol:0.9},vrag5:{src:'voice_vrag5.mp3',vol:0.9},vrag6:{src:'voice_vrag6.mp3',vol:0.9},vrag7:{src:'voice_vrag7.mp3',vol:0.9},vrag8:{src:'voice_vrag8.mp3',vol:0.9},vrag9:{src:'voice_vrag9.mp3',vol:0.9},
  loh1:{src:'voice_loh1.mp3',vol:0.9,pri:1},loh2:{src:'voice_loh2.mp3',vol:0.9,pri:1},loh3:{src:'voice_loh3.mp3',vol:0.9,pri:1},loh4:{src:'voice_loh4.mp3',vol:0.9,pri:1},loh5:{src:'voice_loh5.mp3',vol:0.9,pri:1},loh6:{src:'voice_loh6.mp3',vol:0.9,pri:1},loh7:{src:'voice_loh7.mp3',vol:0.9,pri:1},loh8:{src:'voice_loh8.mp3',vol:0.9,pri:1},loh9:{src:'voice_loh9.mp3',vol:0.9,pri:1},loh10:{src:'voice_loh10.mp3',vol:0.9,pri:1}};
-const VOICE_GAP=2,VOICE_PRI_GAP=1,VQ={cur:null,end:-99,q:[],t:0,g:0,tshot:false,mset:false,breach:false,first:false,fout:false,act:0,need:25,rl:null,alert:false,rq:false,hv:false,tlow:0};let VOICE_PREV=0,VOICE_NKP=0;
+const VOICE_GAP=2,VOICE_PRI_GAP=1,VQ={cur:null,end:-99,q:[],t:0,g:0,tshot:false,mset:false,breach:false,first:false,fout:false,act:0,need:40,rl:null,alert:false,rq:false,hv:false,tlow:0};let VOICE_PREV=0,VOICE_NKP=0;
 const vNow=()=>performance.now()/1000;
 /* voices are decoded into Web Audio buffers up front: playback then starts instantly and "ended" is reliable
    (with <audio> elements a slow first download could hold a line back and then let it start on top of the next one) */
@@ -3056,12 +3056,12 @@ function voiceTitanLow(){if(!viewW||!viewW.sides)return;let T=null;for(const S o
  let hit=false;while(VQ.tlow<TLOW.length&&T.hp<=TLOW[VQ.tlow]){VQ.tlow++;hit=true;}if(hit)voiceGrp('tlow');}
 /* "buy units" reminder (priority-like: waits for a line already playing). The count restarts from each event, with that event's
    length — counts never add up, the latest one wins:
-   25 s — after the first-unit line, and whenever the last unit leaves my queue;
-   20 s — after the previous reminder, after my harvester base (refinery) goes up a level, after a ballistic missile has exploded;
+   40 s — after the first-unit line, and whenever the last unit leaves my queue;
+   25 s — after the previous reminder, after my harvester base (refinery) goes up a level, after a ballistic missile has exploded;
    a voiced action of mine (first mine, rain, tower lv4, …) restarts the current count with the same length and cancels a waiting reminder.
    Silent: before my first unit purchase, while units wait in my queue, during an air alert (either side bought a missile),
    on pause, and for good once my own Titan has left the base. A reminder already playing is never cut off. */
-const REMIND_IDLE=20,REMIND_FIRST=25;
+const REMIND_IDLE=25,REMIND_FIRST=40;
 function vAct(){VQ.act=vNow();vDropRemind();}
 function vDropRemind(){if(VQ.rq){VQ.q=VQ.q.filter(k=>!/^remind/.test(k));if(!(VQ.cur&&VQ.cur.k&&/^remind/.test(VQ.cur.k)))VQ.rq=false;}}
 function vRestart(sec){VQ.act=vNow();VQ.need=sec;}
@@ -3105,9 +3105,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-1303</div>
+<div id="appVer">v2026.11.14-1319</div>
 <script>
-window.APP_VERSION='2026.11.14-1303';
+window.APP_VERSION='2026.11.14-1319';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
