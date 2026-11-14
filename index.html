@@ -1036,7 +1036,7 @@ function startEnding(){const E=W.over;const L=1-E.w;E.t=0;E.cap=false;E.ruin=fal
  q.sort((a,b)=>a.t-b.t);W.endQ=q;}
 function endingStep(dt){const E=W.over;if(E.done)return;if(E.t===undefined)startEnding();E.t+=dt;const q=W.endQ||[];while(q.length&&q[0].t<=E.t)q.shift().f();
  for(let s=0;s<2;s++)W.sides[s].units=W.sides[s].units.filter(u=>!u.dead);if(E.t>=END_T[E.why])E.done=true;}
-function titanHp(S){return Math.round(TITAN_BASE+(S.tb||0));}
+function titanHp(S){return Math.round(((W&&W.titanBase)??TITAN_BASE)+(S.tb||0));}/* a campaign level may set its own starting Titan health */
 function spawnTitan(si){const S=W.sides[si];if(S.titanOut)return;S.titanOut=true;
  /* a player's paid units still waiting in the queue were bought before the Titan: mark them 'p:' so they keep their worth and feed it (not the bot's) */
  if(humanSide(si))S.queue=S.queue.map(k=>k.indexOf(':')<0?'p:'+k:k);ev({e:'tout',s:si});if(W.freeBot&&si===1){S.ore+=FINALE_BONUS;ev({e:'cash',s:si,v:FINALE_BONUS});}const u=UN.titan,thp=titanHp(S);S.units.push({id:nextId++,o:si,al:0,k:'titan',d:TOTAL,b:NB?(S.brN=(S.brN|0)+1)%(NB+1):0,hp:thp,mx:thp,dm:1,cd:1,ga:0,ph:0});ev({e:'titan',s:si});}
@@ -2634,7 +2634,7 @@ const CAMP_I=11,CAMP_DIFF='normal';
 const campStars=l=>l>=18?3:l>=10?2:1;
 /* levels: random editor maps (fixed seeds) in the region's theme; a level with `code` uses a hand-made map */
 const CAMP=[
- {n:'Тихий луг',th:'grass',seed:101,dep:[15000,30000],code:'DB1:eyJ2Ijo0LCJuIjoiMSIsInQiOiJncmFzcyIsImZhIjpbMSw2XSwicmUiOls0LDZdLCJmMCI6bnVsbCwiZjEiOlsxMiw2XSwicmQiOltbMSw2XSxbMSw1XSxbMSw0XSxbMSwzXSxbMSwyXSxbMiwyXSxbMywyXSxbNCwyXSxbNSwyXSxbNiwyXSxbNiwzXSxbNiw0XSxbNyw0XSxbOCw0XSxbOSw0XSxbMTAsNF0sWzExLDRdLFsxMiw0XSxbMTMsNF0sWzE0LDRdLFsxNSw0XSxbMTUsNV0sWzE1LDZdLFsxNiw2XSxbMTcsNl0sWzE4LDZdXSwiYnIiOltdLCJwIjpudWxsLCJwZCI6W1szMTAsMTMwLCJuZWFyIl0sWzM3MCwxMzAsIm5lYXIiXSxbNDMwLDEzMCwibmVhciJdLFs0OTAsMTMwLCJuZWFyIl0sWzU1MCwxMzAsIm5lYXIiXSxbNTcyLDIzMCwibmVhciJdLFs1MTIsMjI4LCJuZWFyIl0sWzQ1MiwyMzAsIm5lYXIiXSxbMzkyLDIzMCwibmVhciJdLFszMzIsMjMwLCJuZWFyIl0sWzI3MiwyMzAsIm5lYXIiXSxbMjEwLDE1MCwibmVhciJdLFs2NzAsMjEwLCJuZWFyIl1dfQ=='},{n:'Речной брод',th:'grass',seed:202},{n:'Старая мельница',th:'grass',seed:303},{n:'Водопады',th:'grass',seed:404},{n:'Каменный мост',th:'grass',seed:505},
+ {n:'Тихий луг',th:'grass',seed:101,dep:[15000,30000],titan:1000,code:'DB1:eyJ2Ijo0LCJuIjoiMSIsInQiOiJncmFzcyIsImZhIjpbMSw2XSwicmUiOls0LDZdLCJmMCI6bnVsbCwiZjEiOlsxMiw2XSwicmQiOltbMSw2XSxbMSw1XSxbMSw0XSxbMSwzXSxbMSwyXSxbMiwyXSxbMywyXSxbNCwyXSxbNSwyXSxbNiwyXSxbNiwzXSxbNiw0XSxbNyw0XSxbOCw0XSxbOSw0XSxbMTAsNF0sWzExLDRdLFsxMiw0XSxbMTMsNF0sWzE0LDRdLFsxNSw0XSxbMTUsNV0sWzE1LDZdLFsxNiw2XSxbMTcsNl0sWzE4LDZdXSwiYnIiOltdLCJwIjpudWxsLCJwZCI6W1szMTAsMTMwLCJuZWFyIl0sWzM3MCwxMzAsIm5lYXIiXSxbNDMwLDEzMCwibmVhciJdLFs0OTAsMTMwLCJuZWFyIl0sWzU1MCwxMzAsIm5lYXIiXSxbNTcyLDIzMCwibmVhciJdLFs1MTIsMjI4LCJuZWFyIl0sWzQ1MiwyMzAsIm5lYXIiXSxbMzkyLDIzMCwibmVhciJdLFszMzIsMjMwLCJuZWFyIl0sWzI3MiwyMzAsIm5lYXIiXSxbMjEwLDE1MCwibmVhciJdLFs2NzAsMjEwLCJuZWFyIl1dfQ=='},{n:'Речной брод',th:'grass',seed:202},{n:'Старая мельница',th:'grass',seed:303},{n:'Водопады',th:'grass',seed:404},{n:'Каменный мост',th:'grass',seed:505},
  {n:'Край пустыни',th:'sand',seed:606},{n:'Кристальная долина',th:'sand',seed:707},{n:'Каменные дюны',th:'sand',seed:808},{n:'Красные столовые горы',th:'sand',seed:1616},{n:'Буровая',th:'sand',seed:1717},
  {n:'Ледяной ручей',th:'snow',seed:909},{n:'Радар',th:'snow',seed:1010},{n:'Снежный перевал',th:'snow',seed:1111},{n:'Ледник',th:'snow',seed:1818},{n:'Сосновый спуск',th:'snow',seed:1919},
  {n:'Топкий берег',th:'swamp',seed:2020},{n:'Мёртвые деревья',th:'swamp',seed:2121},{n:'Туманная заводь',th:'swamp',seed:2222},{n:'Гнилые мостки',th:'swamp',seed:2323},{n:'Сердце трясины',th:'swamp',seed:2424},
@@ -2660,6 +2660,7 @@ function campStart(i){const d=CAMP_DIFF;if(CAMP_PREV==null)CAMP_PREV=MAPI;MAPS[C
     Harvester load and kill rewards are the same as the player's. */
  const B=W.sides[1],k=1+0.01*i;B.incK*=k;B.cashK=1;B.hload=HARV_LOAD;
  /* a level may set its own mine sizes (both sides) */
+if(CAMP[i].titan)W.titanBase=CAMP[i].titan;
  if(CAMP[i].dep){W.depMax=CAMP[i].dep.slice();for(const S of W.sides)S.dep=CAMP[i].dep.slice();}W.waveK=1-0.012*i;document.getElementById('camp').hidden=true;}
 function campWin(){if(!CAMP_RUN)return;const i=CAMP_RUN.i,S=W&&W.sides[0],s=campStars(S?S.lives:0);CAMP_RUN.won=s;const was=CAMP_P.stars[i]|0;if(was<s){CAMP_ANIM={i,was,st:s,t0:0};CAMP_P.stars[i]=s;campSave();}}
 let CAMP_ANIM=null;
@@ -3208,9 +3209,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.15-0009</div>
+<div id="appVer">v2026.11.15-0021</div>
 <script>
-window.APP_VERSION='2026.11.15-0009';
+window.APP_VERSION='2026.11.15-0021';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
