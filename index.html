@@ -1122,7 +1122,7 @@ function botWaveFocus(si){const S=W.sides[si];
  return n>0;}
 /* seconds the enemy aircraft are assumed to stay under the bot's rockets: the bot wants its rocket damage over that time to
    exceed the aircraft's total health (25 s was far too optimistic — a plane crosses the field much faster) */
-const AA_T=8;
+const AA_T=3;
 function botSwapOk(si){return !!W.hu&&si===1;}
 function botExec(si,cmd){const S=W.sides[si];
 if(cmd.a==='replace'&&W.finale&&!botSwapOk(si))return;if(cmd.a==='build'&&padBusy(S,cmd.s))return;if(cmd.a!=='replace'){doCmd(si,cmd);return;}const tw=S.towers.find(t=>t.id===cmd.id);if(!tw)return;const s=tw.s;
@@ -3172,9 +3172,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-1608</div>
+<div id="appVer">v2026.11.14-1613</div>
 <script>
-window.APP_VERSION='2026.11.14-1608';
+window.APP_VERSION='2026.11.14-1613';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
