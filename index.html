@@ -1069,13 +1069,31 @@ function cumCost(k,L){let c=TW[k].cost;for(let l=1;l<L;l=nextLv(l))c+=upCost(k,l
 const PAD_CD=5;
 function padHold(si,s){if(!W.hu||si!==1)return;const S=W.sides[si];(S.padT||(S.padT={}))[s]=W.t+PAD_CD;}
 function padBusy(S,i){return !!(S.padT&&S.padT[i]>W.t);}
+/* the enemy Titan is on the bot's land: what counts now is damage on the Titan where it is and where it will stop, not the
+   long-term threat mix. Cannons (the only real Titan killers) go onto the pads that reach it: free pads first, then machine guns
+   and — unless enemy aircraft are over the bot's land — rocket towers get swapped for cannons, then cannons in reach get upgraded.
+   Radars stay (they slow it). Up to 3 actions per think. */
+function botTitanFocus(si){const S=W.sides[si];const T=S.units.find(u=>u.k==='titan'&&u.o!==si&&!u.dead);if(!T||capOf(W,'can')<1)return false;
+ const pts=[uat(T,T.d),uat(T,Math.min(TOTAL-TITAN_STOP,T.d+40)),at(TOTAL-TITAN_STOP)],maxL=Math.min(TW_MAXLV,capOf(W,'can'));
+ const reach=(x,y)=>{const r=TW.can.range*lvR('can',0)*0.95;return pts.some(p=>(p[0]-x)**2+(p[1]-y)**2<r*r);};
+ const airNear=S.units.some(u=>u.o!==si&&!u.dead&&isAir(u)),swapOk=!W.finale||botSwapOk(si);
+ const bestL=money=>{let L=0;for(let l=1;l<=maxL;l=nextLv(l))if(cumCost('can',l)<=money)L=l;return L;};
+ let n=0;
+ for(let it=0;it<3;it++){let done=false;
+  for(const i of NEAR_SLOTS){if(!slotFree(S,i)||padBusy(S,i)||!reach(SLOTS[i].x,SLOTS[i].y))continue;const L=bestL(S.ore);if(!L)break;
+   doCmd(si,{a:'build',s:i,k:'can'});const nt=S.towers.find(q=>q.s===i);if(nt)for(let l=1;l<L;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});done=true;break;}
+  if(!done&&swapOk)for(const tw of S.towers){if(!(tw.k==='mg'||tw.k==='rkt'&&!airNear)||!reach(tw.x,tw.y)||SLOTS[tw.s].zone==='far')continue;
+   const back=W.finale?tw.spent:Math.round(tw.spent*SELL_K),L=bestL(S.ore+back);if(!L)continue;botExec(si,{a:'replace',id:tw.id,k:'can',lv:L,here:1});done=true;break;}
+  if(!done)for(const tw of S.towers){if(tw.k!=='can'||tw.lv>=maxL||!reach(tw.x,tw.y))continue;const c=upCost('can',tw.lv);if(S.ore<c)continue;doCmd(si,{a:'up',id:tw.id});done=true;break;}
+  if(!done)break;n++;}
+ return n>0;}
 function botSwapOk(si){return !!W.hu&&si===1;}
 function botExec(si,cmd){const S=W.sides[si];
  /* hard cap: while nobody attacks the bot, new towers stop at a small baseline whatever path asked for them */
  if(cmd.a==='build'&&botPress[si]<400&&!W.sides[1-si].titanOut&&W.t-(S.breachT??-99)>40&&S.towers.length>=Math.min(7,3+Math.floor(W.t/150)))return;if(cmd.a==='replace'&&W.finale&&!botSwapOk(si))return;if(cmd.a==='build'&&padBusy(S,cmd.s))return;if(cmd.a!=='replace'){doCmd(si,cmd);return;}const tw=S.towers.find(t=>t.id===cmd.id);if(!tw)return;const s=tw.s;
  if(W.hu&&si===1){if(W.finale){S.ore+=tw.spent;S.towers.splice(S.towers.indexOf(tw),1);ev({e:'sold',s:si,x:tw.x,y:tw.y});}else doCmd(si,{a:'sell',id:tw.id});padHold(si,s);
   /* another empty pad is free right now: build there at once; otherwise wait 5 s for this one */
-  const fr=[...NEAR_SLOTS,...FAR_SLOTS].filter(i=>slotFree(S,i)&&!padBusy(S,i));
+  const fr=cmd.here?[]:[...NEAR_SLOTS,...FAR_SLOTS].filter(i=>slotFree(S,i)&&!padBusy(S,i));
   if(fr.length){let bi=-1,bv=-1;for(const i of fr){if(SLOTS[i].zone==='far'&&cmd.k!=='rkt')continue;const v=towerValue(si,cmd.k,1,SLOTS[i].x,SLOTS[i].y);if(v>bv){bv=v;bi=i;}}
    if(bi>=0){doCmd(si,{a:'build',s:bi,k:cmd.k});const nt=S.towers.find(q=>q.s===bi);if(nt)for(let l=1;l<cmd.lv;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});return;}}
   const c=Math.min(S.ore,cumCost(cmd.k,cmd.lv));S.ore-=c;(S.pend||(S.pend=[])).push({s,k:cmd.k,lv:cmd.lv,t:W.t+PAD_CD,c});return;}
@@ -1100,6 +1118,7 @@ function botThink(dt,si){if(!W||W.over||W.nuke)return;botT[si]-=dt;if(botT[si]>0
     if(isAA&&S.ore>=b.cost){botExec(si,b.cmd);return;}}}}
  /* rebuilds waiting for their pad: the money is set aside at the sale and spent once the delay is over */
  if(S.pend&&S.pend.length){S.pend=S.pend.filter(p=>{if(W.t<p.t)return true;S.ore+=p.c;if(!slotFree(S,p.s))return false;doCmd(si,{a:'build',s:p.s,k:p.k});const nt=S.towers.find(q=>q.s===p.s);if(nt)for(let l=1;l<p.lv;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});return false;});}
+ if(botTitanFocus(si))return;
  const hold=botHold(si);if(hold>0){S.ore-=hold;try{botRest(si,S,t,hold);}finally{S.ore+=hold;}}else botRest(si,S,t,0);}
 /* campaign bot's anti-air savings: money for ~3 rocket towers and their upgrades that ordinary spending won't touch.
    Only the air emergency above (and a severe ground shortage) may use it. The 10k finale bonus arrives once either side's
@@ -3105,9 +3124,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-1319</div>
+<div id="appVer">v2026.11.14-1327</div>
 <script>
-window.APP_VERSION='2026.11.14-1319';
+window.APP_VERSION='2026.11.14-1327';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
