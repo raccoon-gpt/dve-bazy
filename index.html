@@ -1095,6 +1095,28 @@ function botTitanFocus(si){const S=W.sides[si];const reach=titanReach(si);if(!re
   if(!done)for(const tw of S.towers){if(tw.k!=='can'||tw.lv>=maxL||!reach(tw.x,tw.y,maxL))continue;const c=upCost('can',tw.lv);if(S.ore<c)continue;doCmd(si,{a:'up',id:tw.id});done=true;break;}
   if(!done)break;n++;}
  return n>0;}
+/* an enemy wave on the bot's land (Titan aside — botTitanFocus has it): judge towers by the damage they can put on THIS wave,
+   along the stretch of road each unit will cover in the next seconds, with the right tower for each kind of unit
+   (machine guns / radar for infantry and jeeps, cannons for tanks, rockets for aircraft — all through the armour table).
+   While the towers that reach the wave can't kill it in WAVE_T seconds, the bot builds or upgrades — up to 3 actions per think. */
+const WAVE_T=8;
+function twDps(k,L,u,n){if(k==='tes')return u==='heli'||u==='plane'?0:TES_DMG[L-1]*Math.min(5,n)*ARMOR.tes[u];const d=TW[k];
+ let v=d.dmg*(k==='can'?CAN_LVM:k==='mg'?MG_LVM:LVM)[L-1]/(d.cd*LVC[L-1])*ARMOR[k][u];if(k==='can')v*=1+0.3*Math.min(3,n-1);return v;}
+function botWaveFocus(si){const S=W.sides[si];const foes=S.units.filter(u=>u.o!==si&&!u.dead&&u.k!=='titan');if(!foes.length)return false;
+ const paths=foes.map(u=>{const pts=[];for(let a=0;a<=180;a+=30)pts.push(uat(u,Math.min(TOTAL,u.d+a)));return pts;});
+ const hpTot=foes.reduce((a,u)=>a+u.hp,0);
+ /* effective damage per second a tower of kind k, level L at (x,y) puts on the wave */
+ const eff=(k,L,x,y)=>{const R=TW[k].range*lvR(k,L-1);const hit=[];foes.forEach((u,i)=>{if(paths[i].some(p=>(p[0]-x)**2+(p[1]-y)**2<R*R))hit.push(u);});if(!hit.length)return 0;
+  const hp=hit.reduce((a,u)=>a+u.hp,0);let v=0;for(const u of hit)v+=u.hp/hp*twDps(k,L,u.k,hit.length);return v*Math.min(1,hp/hpTot*foes.length/hit.length);};
+ const have=()=>S.towers.reduce((a,tw)=>a+eff(tw.k,tw.lv,tw.x,tw.y),0);
+ let n=0;
+ for(let it=0;it<3;it++){if(have()*WAVE_T>=hpTot)break;let best=null;const con=(sc,c,f)=>{if(c>S.ore||sc<=0)return;if(!best||sc/c>best.s)best={s:sc/c,f};};
+  for(const i of [...NEAR_SLOTS,...FAR_SLOTS]){if(!slotFree(S,i)||padBusy(S,i))continue;const sl=SLOTS[i];
+   for(const k of ['mg','can','tes','rkt']){if(capOf(W,k)<1||sl.zone==='far'&&!TW[k].far)continue;const mx=Math.min(TW_MAXLV,capOf(W,k));
+    for(let L=1;L<=mx;L=nextLv(L)){const c=cumCost(k,L);if(c>S.ore*0.6)break;con(eff(k,L,sl.x,sl.y),c,()=>{doCmd(si,{a:'build',s:i,k});const nt=S.towers.find(q=>q.s===i);if(nt)for(let l=1;l<L;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});});}}}
+  for(const tw of S.towers){if(tw.lv>=Math.min(TW_MAXLV,capOf(W,tw.k)))continue;const L2=nextLv(tw.lv),c=upCost(tw.k,tw.lv);con(eff(tw.k,L2,tw.x,tw.y)-eff(tw.k,tw.lv,tw.x,tw.y),c,()=>doCmd(si,{a:'up',id:tw.id}));}
+  if(!best)break;const o0=S.ore;best.f();if(S.ore===o0)break;n++;}
+ return n>0;}
 function botSwapOk(si){return !!W.hu&&si===1;}
 function botExec(si,cmd){const S=W.sides[si];
  /* hard cap: while nobody attacks the bot, new towers stop at a small baseline whatever path asked for them */
@@ -1132,6 +1154,7 @@ function botThink(dt,si){if(!W||W.over||W.nuke)return;botT[si]-=dt;if(botT[si]>0
  /* rebuilds waiting for their pad: the money is set aside at the sale and spent once the delay is over */
  if(S.pend&&S.pend.length){S.pend=S.pend.filter(p=>{if(W.t<p.t)return true;S.ore+=p.c;if(!slotFree(S,p.s))return false;doCmd(si,{a:'build',s:p.s,k:p.k,any:p.any});const nt=S.towers.find(q=>q.s===p.s);if(nt)for(let l=1;l<p.lv;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});return false;});}
  if(botTitanFocus(si))return;
+ if(botWaveFocus(si))return;
  const hold=botHold(si);if(hold>0){S.ore-=hold;try{botRest(si,S,t,hold);}finally{S.ore+=hold;}}else botRest(si,S,t,0);}
 /* campaign bot's anti-air savings: money for ~3 rocket towers and their upgrades that ordinary spending won't touch.
    Only the air emergency above (and a severe ground shortage) may use it. The 10k finale bonus arrives once either side's
@@ -3140,9 +3163,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-1506</div>
+<div id="appVer">v2026.11.14-1515</div>
 <script>
-window.APP_VERSION='2026.11.14-1506';
+window.APP_VERSION='2026.11.14-1515';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
