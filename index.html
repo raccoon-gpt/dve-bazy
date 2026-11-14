@@ -3028,7 +3028,7 @@ const vNow=()=>performance.now()/1000;
    (with <audio> elements a slow first download could hold a line back and then let it start on top of the next one) */
 function voiceLoad(){if(!AU.ctx)return;for(const k in VOICE){const v=VOICE[k];if(v.buf||v.ld||v.bad)continue;
  v.ld=fetch(v.src).then(r=>{if(!r.ok)throw 0;return r.arrayBuffer();}).then(b=>new Promise((res,rej)=>AU.ctx.decodeAudioData(b,res,rej))).then(b=>{v.buf=b;voicePump();}).catch(()=>{v.bad=true;voicePump();});}}
-function voiceDone(tok){if(VQ.cur!==tok)return;if(tok.k&&/^remind/.test(tok.k)){VQ.rq=false;VQ.remEnd=vNow();}if(tok.k&&/^(win|lose)\d/.test(tok.k))endUnduck();VQ.cur=null;VQ.src=null;VQ.end=vNow();clearTimeout(VQ.g);voicePump();}
+function voiceDone(tok){if(VQ.cur!==tok)return;if(tok.k&&/^remind/.test(tok.k)){VQ.rq=false;VQ.lw=false;VQ.remEnd=vNow();}if(tok.k&&/^(win|lose)\d/.test(tok.k))endUnduck();VQ.cur=null;VQ.src=null;VQ.end=vNow();clearTimeout(VQ.g);voicePump();}
 function voicePlay(k){const v=VOICE[k];if(!v||!v.buf||!AU.ctx)return false;const tok={k};VQ.cur=tok;
  try{if(AU.ctx.state==='suspended')AU.ctx.resume();const src=AU.ctx.createBufferSource(),g=AU.ctx.createGain();g.gain.value=v.vol;src.buffer=v.buf;src.connect(g);g.connect(AU.master||AU.ctx.destination);
   src.onended=()=>voiceDone(tok);VQ.src=src;clearTimeout(VQ.g);VQ.g=setTimeout(()=>voiceDone(tok),(v.buf.duration+0.6)*1000);src.start();}catch(_){voiceDone(tok);return false;}return true;}
@@ -3040,7 +3040,7 @@ function voicePump(){if(VQ.cur||!VQ.q.length)return;if(voiceOver())VQ.q=VQ.q.fil
 function voice(k){if(!AU.on||!AU.ctx)return;const v=VOICE[k];if(!v)return;if(VOICE_NOEND.includes(k)&&voiceOver())return;voiceLoad();
  if(v.pri){if(!VQ.q.includes(k))VQ.q.push(k);voicePump();return;}
  if(!v.buf||VQ.cur||VQ.q.length||vNow()<VQ.end+VOICE_GAP)return;voicePlay(k);}
-function voiceReset(){END_DUCK=null;try{if(VQ.src)VQ.src.stop();}catch(_){}VQ.cur=null;VQ.src=null;VQ.q.length=0;clearTimeout(VQ.t);clearTimeout(VQ.g);for(const g in VGRP){VGRP[g].seen.clear();if(!VGRP[g].keep)VGRP[g].last='';}VQ.tshot=false;VQ.mset=false;VQ.breach=false;VQ.first=false;VQ.fout=false;VQ.act=vNow();VQ.remEnd=0;VQ.rq=false;VQ.hv=false;VQ.tlow=0;VOICE_PREV=0;VOICE_NKP=0;}
+function voiceReset(){END_DUCK=null;try{if(VQ.src)VQ.src.stop();}catch(_){}VQ.cur=null;VQ.src=null;VQ.q.length=0;clearTimeout(VQ.t);clearTimeout(VQ.g);for(const g in VGRP){VGRP[g].seen.clear();if(!VGRP[g].keep)VGRP[g].last='';}VQ.tshot=false;VQ.mset=false;VQ.breach=false;VQ.first=false;VQ.fout=false;VQ.act=vNow();VQ.remEnd=0;VQ.rq=false;VQ.lw=false;VQ.hv=false;VQ.tlow=0;VOICE_PREV=0;VOICE_NKP=0;}
 /* enemy units on my side of the river: a random line from a group (never the same one twice running) when a unit, for the first time,
    - is halfway along the road (between 65% and 80% of its length): "the enemy broke through";
    - is right at my base (the last 90 px): a taunt */
@@ -3061,8 +3061,9 @@ const REMIND_IDLE=5,REMIND_FIRST=10;/* the first one waits 10 s after the first-
 function vAct(){VQ.act=vNow();if(VQ.rq){VQ.q=VQ.q.filter(k=>!/^remind/.test(k));if(!(VQ.cur&&VQ.cur.k&&/^remind/.test(VQ.cur.k)))VQ.rq=false;}}
 /* silent until the player's first unit purchase: the idle count starts from that line */
 function voiceRemind(M){if(!VQ.fout)return;const busy=M.queue&&M.queue.length>0;/* units waiting in my queue: no reminder */
+ if(busy){VQ.act=vNow();VQ.lw=true;}/* the count restarts (10 s) once the queue is empty */
  if(M.titanOut||viewW.pause||busy){if(VQ.rq&&!(VQ.cur&&/^remind/.test(VQ.cur.k||''))){VQ.q=VQ.q.filter(k=>!/^remind/.test(k));VQ.rq=false;}if(viewW.pause)VQ.act=Math.max(VQ.act,vNow()-REMIND_IDLE+1);return;}
- if(VQ.rq)return;if(vNow()-Math.max(VQ.act,VQ.remEnd)<(VQ.remEnd?REMIND_IDLE:REMIND_FIRST))return;VQ.rq=true;voiceGrp('remind');if(!VQ.q.some(k=>/^remind/.test(k))&&!(VQ.cur&&/^remind/.test(VQ.cur.k||'')))VQ.rq=false,VQ.act=vNow();}
+ if(VQ.rq)return;if(vNow()-Math.max(VQ.act,VQ.remEnd)<(VQ.remEnd&&!VQ.lw?REMIND_IDLE:REMIND_FIRST))return;VQ.rq=true;voiceGrp('remind');if(!VQ.q.some(k=>/^remind/.test(k))&&!(VQ.cur&&/^remind/.test(VQ.cur.k||'')))VQ.rq=false,VQ.act=vNow();}
 function voiceNear(M){/* the very first enemy unit on my side of the river: once per game */
  if(!VQ.first&&M.units.some(u=>u.o!==me&&!u.dead)){VQ.first=true;voiceGrp('first');}
 const zone={mid:u=>u.d>=TOTAL*0.65&&u.d<=TOTAL*0.80,near:u=>u.d>=TOTAL-LOH_D};
@@ -3096,9 +3097,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-1213</div>
+<div id="appVer">v2026.11.14-1216</div>
 <script>
-window.APP_VERSION='2026.11.14-1213';
+window.APP_VERSION='2026.11.14-1216';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
