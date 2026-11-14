@@ -864,7 +864,7 @@ function simSide(si,dt){const S=W.sides[si],O=W.sides[1-si];
   if(S.confT>0&&u.k!=='plane'){u.cf=1;u.cd-=dt;if(u.cd<=0){const p=uat(u,u.d);let tg=null,bd=1e9;for(const v of S.units){if(v===u||v.dead||v.o===si)continue;const q=uat(v,v.d);const dd=(q[0]-p[0])**2+(q[1]-p[1])**2;if(dd<bd){bd=dd;tg=v;}}
     if(tg&&bd<160*160){u.cd=FF_CD[u.k];const q=uat(tg,tg.d);u.ga=Math.atan2(q[1]-p[1],q[0]-p[0]);damageUnit(si,tg,FF_DMG[u.k]);ev({e:'ff',s:si,u:u.id,x:q[0]|0,y:q[1]|0,k:u.k==='tank'?1:0});}else u.cd=0.3;}continue;}u.cf=0;
   if(u.k==='titan'&&u.d>=TOTAL-TITAN_STOP){u.cd-=dt;{const p=uat(u,u.d),bp=at(TOTAL-8);u.ga=Math.atan2(bp[1]-p[1],bp[0]-p[0]);}if(u.cd<=0){u.cd=1;S.lives=Math.max(0,S.lives-1);S.lastHit='titan';S.breachT=W.t;const bp=at(TOTAL-8);ev({e:'tshot',s:si,u:u.id,x:bp[0]|0,y:bp[1]|0});}continue;}
-  if(u.k==='titan'){u.cd-=dt;const p=uat(u,u.d);let tw=null,bd=170*170;for(const q of S.towers){const dd=(q.x-p[0])**2+(q.y-p[1])**2;if(dd<bd){bd=dd;tw=q;}}{const want=tw?Math.atan2(tw.y-p[1],tw.x-p[0]):headingRoad(u.d,u.b);let df=want-u.ga;while(df>Math.PI)df-=6.283;while(df<-Math.PI)df+=6.283;u.ga+=df*Math.min(1,dt*5);if(tw&&u.cd<=0&&Math.abs(df)<0.3){u.cd=1.3;ev({e:'tfire',s:si,u:u.id,x:tw.x|0,y:tw.y-6|0});if(HU(u.o,'tit')>=5){tw.th=(tw.th|0)+1;if(tw.th>=TITAN_TW_HITS){S.towers.splice(S.towers.indexOf(tw),1);ev({e:'boom',s:si,x:tw.x|0,y:tw.y|0,b:2});ev({e:'twdie',s:si,x:tw.x|0,y:tw.y|0});}}}}}
+  if(u.k==='titan'){u.cd-=dt;const p=uat(u,u.d);let tw=null,bd=170*170;for(const q of S.towers){const dd=(q.x-p[0])**2+(q.y-p[1])**2;if(dd<bd){bd=dd;tw=q;}}{const want=tw?Math.atan2(tw.y-p[1],tw.x-p[0]):headingRoad(u.d,u.b);let df=want-u.ga;while(df>Math.PI)df-=6.283;while(df<-Math.PI)df+=6.283;u.ga+=df*Math.min(1,dt*5);if(tw&&u.cd<=0&&Math.abs(df)<0.3){u.cd=1.3;ev({e:'tfire',s:si,u:u.id,x:tw.x|0,y:tw.y-6|0});if(HU(u.o,'tit')>=5){tw.th=(tw.th|0)+1;if(tw.th>=TITAN_TW_HITS){S.towers.splice(S.towers.indexOf(tw),1);padHold(si,tw.s);ev({e:'boom',s:si,x:tw.x|0,y:tw.y|0,b:2});ev({e:'twdie',s:si,x:tw.x|0,y:tw.y|0});}}}}}
   const sf=isAir(u)?1:slowAt(S,si,u);u.sl=sf<1?1:0;u.d+=dt*def.sp*sf*(u.k==='plane'?PLANE_K:bk(u))*(u.k==='titan'&&HU(u.o,'tit')>=1?1.1:1);
   if(u.d>=TOTAL){u.dead=true;u.breach=true;if(u.v)titanBank(u.o,u.v*TB_BREACH);S.lives=Math.max(0,S.lives-def.lives);S.lastHit='unit';S.breachT=W.t;ev({e:'breach',s:si});continue;}
   if(u.k==='titan'||u.k==='plane')continue;const p=uat(u,u.d);u.cd-=dt;if(u.k==='inf')snowThrow(si,S,u,p,dt);
@@ -1062,12 +1062,18 @@ function towerValue(si,k,lv,x,y){const th=botThreat[si],tot=th.inf+th.jeep+th.ta
  const dpsOf=u=>k==='tes'?TES_DMG[lv-1]*1.4:d.dmg*((k==='can'&&u==='tank')?CAN_LVM:(k==='mg'&&u==='inf')?MG_LVM:LVM)[lv-1]/(d.cd*LVC[lv-1]);let v=0;for(const u of ['inf','jeep','tank','heli','plane'])v+=th[u]/tot*dpsOf(u)*ARMOR[k][u]*TWVS[k][u]*L/UN[u].sp;return v;}
 function cumCost(k,L){let c=TW[k].cost;for(let l=1;l<L;l=nextLv(l))c+=upCost(k,l);return c;}
 /* campaign bot: once the player's Titan is on its land it may sell and rebuild any number of towers for the rest of the finale (full refund) */
+/* campaign bot: a pad stays empty for 5 s after its tower is sold or destroyed (the player has no such delay) */
+const PAD_CD=5;
+function padHold(si,s){if(!W.hu||si!==1)return;const S=W.sides[si];(S.padT||(S.padT={}))[s]=W.t+PAD_CD;}
+function padBusy(S,i){return !!(S.padT&&S.padT[i]>W.t);}
 function botSwapOk(si){if(!W.hu||si!==1)return false;const S=W.sides[si];if(!S.swapOn){if(!S.units.some(u=>u.k==='titan'&&u.o!==si&&!u.dead))return false;S.swapOn=true;}return true;}
 function botExec(si,cmd){const S=W.sides[si];
  /* hard cap: while nobody attacks the bot, new towers stop at a small baseline whatever path asked for them */
- if(cmd.a==='build'&&botPress[si]<400&&!W.sides[1-si].titanOut&&W.t-(S.breachT??-99)>40&&S.towers.length>=Math.min(7,3+Math.floor(W.t/150)))return;if(cmd.a==='replace'&&W.finale&&!botSwapOk(si))return;if(cmd.a!=='replace'){doCmd(si,cmd);return;}const tw=S.towers.find(t=>t.id===cmd.id);if(!tw)return;const s=tw.s;if(W.finale){const i=S.towers.indexOf(tw);S.ore+=tw.spent;S.towers.splice(i,1);ev({e:'sold',s:si,x:tw.x,y:tw.y});}else doCmd(si,{a:'sell',id:tw.id});doCmd(si,{a:'build',s,k:cmd.k});const nt=S.towers.find(t=>t.s===s);if(nt){nt.swT=W.t;for(let l=1;l<cmd.lv;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});}}
+ if(cmd.a==='build'&&botPress[si]<400&&!W.sides[1-si].titanOut&&W.t-(S.breachT??-99)>40&&S.towers.length>=Math.min(7,3+Math.floor(W.t/150)))return;if(cmd.a==='replace'&&W.finale&&!botSwapOk(si))return;if(cmd.a==='build'&&padBusy(S,cmd.s))return;if(cmd.a!=='replace'){doCmd(si,cmd);return;}const tw=S.towers.find(t=>t.id===cmd.id);if(!tw)return;const s=tw.s;
+ if(W.hu&&si===1){if(W.finale){S.ore+=tw.spent;S.towers.splice(S.towers.indexOf(tw),1);ev({e:'sold',s:si,x:tw.x,y:tw.y});}else doCmd(si,{a:'sell',id:tw.id});padHold(si,s);const c=Math.min(S.ore,cumCost(cmd.k,cmd.lv));S.ore-=c;(S.pend||(S.pend=[])).push({s,k:cmd.k,lv:cmd.lv,t:W.t+PAD_CD,c});return;}
+if(W.finale){const i=S.towers.indexOf(tw);S.ore+=tw.spent;S.towers.splice(i,1);ev({e:'sold',s:si,x:tw.x,y:tw.y});}else doCmd(si,{a:'sell',id:tw.id});doCmd(si,{a:'build',s,k:cmd.k});const nt=S.towers.find(t=>t.s===s);if(nt){nt.swT=W.t;for(let l=1;l<cmd.lv;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});}}
 function bestDefence(si,o){o=o||{};const S=W.sides[si];let best=null;const consider=(score,cost,cmd)=>{if(o.maxCost&&cost>o.maxCost)return;if(W.finale&&cmd.a==='replace'&&!botSwapOk(si))return;/* towers can't be sold in the finale (campaign bot: 3 swaps once the Titan is on its land) */if(o.buildOnly&&cmd.a!=='build')return;if(cmd.a==='build'&&cmd.k!=='rkt'&&padFloor>0&&freeAll-1<padFloor)return;const s=score/cost;if(!best||s>best.s)best={s,cost,cmd};};
- const freeNear=NEAR_SLOTS.filter(i=>slotFree(S,i)),freeFar=FAR_SLOTS.filter(i=>slotFree(S,i));
+ const freeNear=NEAR_SLOTS.filter(i=>slotFree(S,i)&&!padBusy(S,i)),freeFar=FAR_SLOTS.filter(i=>slotFree(S,i)&&!padBusy(S,i));
  /* campaign bot: always keeps 3–5 empty pads for rocket towers (built only when aircraft actually come) */
  const freeAll=freeNear.length+freeFar.length,padFloor=W.hu&&si===1&&capOf(W,'rkt')>0?Math.max(3,Math.min(5,Math.round(SLOTS.length*0.25))):0;
  for(const i of freeNear.slice().sort((a,b)=>SLOTS[a].x-SLOTS[b].x).slice(0,10))for(const k of ['mg','can','tes','rkt'])if(capOf(W,k)>0)consider(towerValue(si,k,1,SLOTS[i].x,SLOTS[i].y),TW[k].cost,{a:'build',s:i,k});
@@ -1086,6 +1092,8 @@ function botThink(dt,si){if(!W||W.over||W.nuke)return;botT[si]-=dt;if(botT[si]>0
    if(aa*25<airHp){const sv=botThreat[si];botThreat[si]={inf:0.05,jeep:0.05,tank:0.05,heli:Math.max(1,sv.heli),plane:Math.max(1,sv.plane)};let b=null;try{b=bestDefence(si);}finally{botThreat[si]=sv;}
     const isAA=b&&(b.cmd.a==='build'&&b.cmd.k==='rkt'||b.cmd.a==='replace'&&b.cmd.k==='rkt'||b.cmd.a==='up'&&(S.towers.find(t=>t.id===b.cmd.id)||{}).k==='rkt');
     if(isAA&&S.ore>=b.cost){botExec(si,b.cmd);return;}}}}
+ /* rebuilds waiting for their pad: the money is set aside at the sale and spent once the delay is over */
+ if(S.pend&&S.pend.length){S.pend=S.pend.filter(p=>{if(W.t<p.t)return true;S.ore+=p.c;if(!slotFree(S,p.s))return false;doCmd(si,{a:'build',s:p.s,k:p.k});const nt=S.towers.find(q=>q.s===p.s);if(nt){nt.swT=W.t;for(let l=1;l<p.lv;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});}return false;});}
  const hold=botHold(si);if(hold>0){S.ore-=hold;try{botRest(si,S,t,hold);}finally{S.ore+=hold;}}else botRest(si,S,t,0);}
 /* campaign bot's anti-air savings: money for ~3 rocket towers and their upgrades that ordinary spending won't touch.
    Only the air emergency above (and a severe ground shortage) may use it. The 10k finale bonus arrives once either side's
@@ -3071,9 +3079,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-0208</div>
+<div id="appVer">v2026.11.14-0215</div>
 <script>
-window.APP_VERSION='2026.11.14-0208';
+window.APP_VERSION='2026.11.14-0215';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
