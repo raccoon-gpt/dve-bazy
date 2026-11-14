@@ -801,7 +801,7 @@ function ev(e){netEvents.push(e);addFx(e);}
 function doCmd(si,cmd){if(!W||W.over)return;if(W.nuke&&cmd&&cmd.a!=='pause')return;if(cmd&&cmd.a==='nukebuy'){const S=W.sides[si];if(S.ore<NUKE_COST||S.nkCd>0||S.nkT>0||W.sides[1-si].dep[1]<=0)return;S.ore-=NUKE_COST;S.nkT=NUKE_COUNT;S.nkCd=NUKE_CD;ev({e:'nkc',s:si,n:NUKE_COUNT});return;}const S=W.sides[si],O=W.sides[1-si];if(!cmd||typeof cmd!=='object')return;
  const a=cmd.a;
  if(a==='pause'){W.pause=!W.pause;return;}if(a==='speed'){W.speed=W.speed===2?1:2;return;}if(W.pause)return;
- if(a==='build'){const i=cmd.s|0,k=cmd.k;const def=TW[k];if(!def)return;if(capOf(W,k)<1)return;const sl=SLOTS[i];if(!slotFree(S,i))return;if(sl.zone==='far'&&!def.far)return;if(S.ore<def.cost)return;S.ore-=def.cost;S.towers.push({id:nextId++,s:i,k,lv:1,a:faceRoad(sl.x,sl.y),cd:0.5,spent:def.cost,x:sl.x,y:sl.y});ev({e:'built',s:si,x:sl.x,y:sl.y});}
+ if(a==='build'){const i=cmd.s|0,k=cmd.k;const def=TW[k];if(!def)return;if(capOf(W,k)<1)return;const sl=SLOTS[i];if(!slotFree(S,i))return;if(sl.zone==='far'&&!def.far&&!(cmd.any&&!humanSide(si)))return;/* far pads: rockets only — except the bot fighting an enemy Titan */if(S.ore<def.cost)return;S.ore-=def.cost;S.towers.push({id:nextId++,s:i,k,lv:1,a:faceRoad(sl.x,sl.y),cd:0.5,spent:def.cost,x:sl.x,y:sl.y});ev({e:'built',s:si,x:sl.x,y:sl.y});}
  else if(a==='up'){const tw=S.towers.find(t=>t.id===cmd.id);if(!tw||tw.lv>=TW_MAXLV||tw.lv>=capOf(W,tw.k))return;const cost=upCost(tw.k,tw.lv);if(S.ore<cost)return;S.ore-=cost;tw.spent+=cost;tw.lv=nextLv(tw.lv);tw._cov=undefined;ev({e:'up',s:si,x:tw.x,y:tw.y});if(tw.lv>=TW_MAXLV)ev({e:'vtw',s:si});}
  else if(a==='sell'){if(W.finale)return;const i=S.towers.findIndex(t=>t.id===cmd.id);if(i<0)return;const tw=S.towers[i];S.ore+=Math.round(tw.spent*huSellK(si));S.towers.splice(i,1);ev({e:'sold',s:si,x:tw.x,y:tw.y});}
  else if(a==='extup'){const f=cmd.f|0;if(f!==0||S.dep[f]<=0||!S.ext[f]||S.ext[f]>=EXT_MAXLV)return;const c=extUpCost(f);if(S.ore<c)return;S.ore-=c;S.ext[f]++;ev({e:'up',s:si,x:FIELDS[f].x,y:FIELDS[f].y});}
@@ -1088,9 +1088,9 @@ function botTitanFocus(si){const S=W.sides[si];const reach=titanReach(si);if(!re
  const bestL=money=>{let L=0;for(let l=1;l<=maxL;l=nextLv(l))if(cumCost('can',l)<=money)L=l;return L;};
  let n=0;
  for(let it=0;it<3;it++){let done=false;
-  for(const i of NEAR_SLOTS){if(!slotFree(S,i)||padBusy(S,i)||!reach(SLOTS[i].x,SLOTS[i].y,maxL))continue;const L=bestL(S.ore);if(!L)break;if(!reach(SLOTS[i].x,SLOTS[i].y,L))continue;
-   doCmd(si,{a:'build',s:i,k:'can'});const nt=S.towers.find(q=>q.s===i);if(nt)for(let l=1;l<L;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});done=true;break;}
-  if(!done&&swapOk)for(const tw of S.towers){if(!(tw.k==='mg'||tw.k==='rkt'&&(aa-rdps(tw))*25>=airHp)||!reach(tw.x,tw.y,maxL)||SLOTS[tw.s].zone==='far')continue;
+  for(const i of [...NEAR_SLOTS,...FAR_SLOTS]){if(!slotFree(S,i)||padBusy(S,i)||!reach(SLOTS[i].x,SLOTS[i].y,maxL))continue;const L=bestL(S.ore);if(!L)break;if(!reach(SLOTS[i].x,SLOTS[i].y,L))continue;
+   doCmd(si,{a:'build',s:i,k:'can',any:1});const nt=S.towers.find(q=>q.s===i);if(nt)for(let l=1;l<L;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});done=true;break;}
+  if(!done&&swapOk)for(const tw of S.towers){if(!(tw.k==='mg'||tw.k==='rkt'&&(aa-rdps(tw))*25>=airHp)||!reach(tw.x,tw.y,maxL))continue;
    const back=W.finale?tw.spent:Math.round(tw.spent*SELL_K),L=bestL(S.ore+back);if(!L||!reach(tw.x,tw.y,L))continue;if(tw.k==='rkt')aa-=rdps(tw);botExec(si,{a:'replace',id:tw.id,k:'can',lv:L,here:1});done=true;break;}
   if(!done)for(const tw of S.towers){if(tw.k!=='can'||tw.lv>=maxL||!reach(tw.x,tw.y,maxL))continue;const c=upCost('can',tw.lv);if(S.ore<c)continue;doCmd(si,{a:'up',id:tw.id});done=true;break;}
   if(!done)break;n++;}
@@ -1104,8 +1104,8 @@ function botExec(si,cmd){const S=W.sides[si];
   const fr=cmd.here?[]:[...NEAR_SLOTS,...FAR_SLOTS].filter(i=>slotFree(S,i)&&!padBusy(S,i));
   if(fr.length){let bi=-1,bv=-1;for(const i of fr){if(SLOTS[i].zone==='far'&&cmd.k!=='rkt')continue;const v=towerValue(si,cmd.k,1,SLOTS[i].x,SLOTS[i].y);if(v>bv){bv=v;bi=i;}}
    if(bi>=0){doCmd(si,{a:'build',s:bi,k:cmd.k});const nt=S.towers.find(q=>q.s===bi);if(nt)for(let l=1;l<cmd.lv;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});return;}}
-  const c=Math.min(S.ore,cumCost(cmd.k,cmd.lv));S.ore-=c;(S.pend||(S.pend=[])).push({s,k:cmd.k,lv:cmd.lv,t:W.t+PAD_CD,c});return;}
-if(W.finale){const i=S.towers.indexOf(tw);S.ore+=tw.spent;S.towers.splice(i,1);ev({e:'sold',s:si,x:tw.x,y:tw.y});}else doCmd(si,{a:'sell',id:tw.id});doCmd(si,{a:'build',s,k:cmd.k});const nt=S.towers.find(t=>t.s===s);if(nt){for(let l=1;l<cmd.lv;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});}}
+  const c=Math.min(S.ore,cumCost(cmd.k,cmd.lv));S.ore-=c;(S.pend||(S.pend=[])).push({s,k:cmd.k,lv:cmd.lv,t:W.t+PAD_CD,c,any:cmd.here?1:0});return;}
+if(W.finale){const i=S.towers.indexOf(tw);S.ore+=tw.spent;S.towers.splice(i,1);ev({e:'sold',s:si,x:tw.x,y:tw.y});}else doCmd(si,{a:'sell',id:tw.id});doCmd(si,{a:'build',s,k:cmd.k,any:cmd.here?1:0});const nt=S.towers.find(t=>t.s===s);if(nt){for(let l=1;l<cmd.lv;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});}}
 function bestDefence(si,o){o=o||{};const S=W.sides[si];let best=null;const consider=(score,cost,cmd)=>{if(o.maxCost&&cost>o.maxCost)return;if(W.finale&&cmd.a==='replace'&&!botSwapOk(si))return;/* towers can't be sold in the finale (campaign bot: 3 swaps once the Titan is on its land) */if(o.buildOnly&&cmd.a!=='build')return;const s=score/cost;if(!best||s>best.s)best={s,cost,cmd};};
  const freeNear=NEAR_SLOTS.filter(i=>slotFree(S,i)&&!padBusy(S,i)),freeFar=FAR_SLOTS.filter(i=>slotFree(S,i)&&!padBusy(S,i));
  for(const i of freeNear.slice().sort((a,b)=>SLOTS[a].x-SLOTS[b].x).slice(0,10))for(const k of ['mg','can','tes','rkt'])if(capOf(W,k)>0)consider(towerValue(si,k,1,SLOTS[i].x,SLOTS[i].y),TW[k].cost,{a:'build',s:i,k});
@@ -1126,7 +1126,7 @@ function botThink(dt,si){if(!W||W.over||W.nuke)return;botT[si]-=dt;if(botT[si]>0
     const isAA=b&&(b.cmd.a==='build'&&b.cmd.k==='rkt'||b.cmd.a==='replace'&&b.cmd.k==='rkt'||b.cmd.a==='up'&&(S.towers.find(t=>t.id===b.cmd.id)||{}).k==='rkt');
     if(isAA&&S.ore>=b.cost){botExec(si,b.cmd);return;}}}}
  /* rebuilds waiting for their pad: the money is set aside at the sale and spent once the delay is over */
- if(S.pend&&S.pend.length){S.pend=S.pend.filter(p=>{if(W.t<p.t)return true;S.ore+=p.c;if(!slotFree(S,p.s))return false;doCmd(si,{a:'build',s:p.s,k:p.k});const nt=S.towers.find(q=>q.s===p.s);if(nt)for(let l=1;l<p.lv;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});return false;});}
+ if(S.pend&&S.pend.length){S.pend=S.pend.filter(p=>{if(W.t<p.t)return true;S.ore+=p.c;if(!slotFree(S,p.s))return false;doCmd(si,{a:'build',s:p.s,k:p.k,any:p.any});const nt=S.towers.find(q=>q.s===p.s);if(nt)for(let l=1;l<p.lv;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});return false;});}
  if(botTitanFocus(si))return;
  const hold=botHold(si);if(hold>0){S.ore-=hold;try{botRest(si,S,t,hold);}finally{S.ore+=hold;}}else botRest(si,S,t,0);}
 /* campaign bot's anti-air savings: money for ~3 rocket towers and their upgrades that ordinary spending won't touch.
@@ -3133,9 +3133,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-1355</div>
+<div id="appVer">v2026.11.14-1420</div>
 <script>
-window.APP_VERSION='2026.11.14-1355';
+window.APP_VERSION='2026.11.14-1420';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
