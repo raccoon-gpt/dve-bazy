@@ -806,7 +806,7 @@ function doCmd(si,cmd){if(!W||W.over)return;if(W.nuke&&cmd&&cmd.a!=='pause')retu
  else if(a==='sell'){if(W.finale)return;const i=S.towers.findIndex(t=>t.id===cmd.id);if(i<0)return;const tw=S.towers[i];S.ore+=Math.round(tw.spent*huSellK(si));S.towers.splice(i,1);ev({e:'sold',s:si,x:tw.x,y:tw.y});}
  else if(a==='extup'){const f=cmd.f|0;if(f!==0||S.dep[f]<=0||!S.ext[f]||S.ext[f]>=EXT_MAXLV)return;const c=extUpCost(f);if(S.ore<c)return;S.ore-=c;S.ext[f]++;ev({e:'up',s:si,x:FIELDS[f].x,y:FIELDS[f].y});}
  else if(a==='ext'){const f=cmd.f|0;if(f!==0||S.dep[f]<=0||S.ext[f]||S.ore<EXT_COST)return;S.ore-=EXT_COST;S.ext[f]=1;ev({e:'built',s:si,c:FIELDS[f].c,r:FIELDS[f].r});}
- else if(a==='send'){const u=UN[cmd.k];if(!u)return;const c=unitCost(cmd.k,S.ua);if(S.ore<c||S.queue.filter(q=>q.indexOf(':')<0||q[0]==='p').length>=QUEUE_MAX)return;S.ore-=c;S.queue.push(cmd.k);}
+ else if(a==='send'){const u=UN[cmd.k];if(!u)return;const c=unitCost(cmd.k,S.ua);if(S.ore<c||S.queue.filter(q=>q.indexOf(':')<0||q[0]==='p').length>=QUEUE_MAX)return;if(!botPlaneOk(si,S,cmd.k))return;S.ore-=c;S.queue.push(cmd.k);}
  else if(a==='mine'){const d=+cmd.d,b=cmd.b>=1&&cmd.b<=NB&&d<dmOf(cmd.b)?cmd.b|0:0;if(!(S.mineCd<=0)||!(d>=EDGE_D+10&&d<=TOTAL-50))return;S.mineCd=huSupCd(si,'mine');ev({e:'mset',s:si});const p=at(d,b);S.mines.push({id:nextId++,d,b,x:p[0],y:p[1]});ev({e:'mineset',s:si,x:p[0]|0,y:p[1]|0});}
  else if(a==='rain'){if(!(S.rainCd<=0))return;S.rainCd=huSupCd(si,'rain');ev({e:'vrain',s:si});let last=0;for(let i=0,nR=huRainN(si);i<nR;i++){const d=EDGE_D+20+Math.random()*(TOTAL-EDGE_D-70);const p=at(d,Math.floor(Math.random()*(NB+1)));const T=0.55+i*0.14+Math.random()*0.1;last=Math.max(last,T);S.strikes.push({x:p[0],y:p[1],t:T});ev({e:'rainfall',s:si,x:p[0]|0,y:p[1]|0,T:+T.toFixed(2)});}S.confT=last+RAIN_CONF;}
  else if(a==='freeze'){if(!(S.frzCd<=0))return;S.frzCd=huSupCd(si,'freeze');S.frzT=huFrzT(si);ev({e:'freeze',s:si});}
@@ -835,15 +835,18 @@ const QCD=k=>k==='inf'?0.8:k==='tank'?1.45:1.2;
 const qKind=q=>q.indexOf(':')>0?q.slice(2):q;
 /* squads (looks only, both sides): a run of identical infantry, tanks or helicopters leaves in fives with a one-unit gap
    between squads; a single leftover never forms its own squad (6 = one squad, 7 = 5 + 2, 11 = 5 + 6).
-   Bot only: at most 10 planes in a row — the 11th waits until 8 s have passed since the previous plane. */
-const SQUAD={inf:1,tank:1,heli:1},BOT_PLANE_MAX=10,BOT_PLANE_GAP=8;
+   Bot only: it queues at most 10 planes, then at least 8 other units in a row before planes again (any plane in between
+   restarts the count of the others, so 9 planes / 1 soldier / 9 planes doesn't slip through). */
+const SQUAD={inf:1,tank:1,heli:1},BOT_PLANE_MAX=10,BOT_PLANE_OTHERS=8;
+function botPlaneOk(si,S,k){if(humanSide(si))return true;
+ if(k==='plane'){if((S.bpN|0)>=BOT_PLANE_MAX)return false;S.bpN=(S.bpN|0)+1;S.bpO=0;return true;}
+ S.bpO=(S.bpO|0)+1;if(S.bpO>=BOT_PLANE_OTHERS){S.bpN=0;S.bpO=0;}return true;}
 function spawnGate(si,S){const k=qKind(S.queue[0]);
- if(k==='plane'&&!humanSide(si)){if(W.t-(S.plT??-99)>=BOT_PLANE_GAP)S.plN=0;if((S.plN|0)>=BOT_PLANE_MAX){S.qcd=0.1;return false;}}
  if(SQUAD[k]&&S.sqK===k&&W.t-(S.sqT??-99)<QCD(k)*1.6&&S.sqN>0&&S.sqN%5===0&&!S.sqGap){let rem=0;for(const q of S.queue){if(qKind(q)!==k)break;rem++;}
   if(rem>=2){S.sqGap=true;S.qcd=QCD(k);return false;}}
  return true;}
 function spawnDone(si,S,k){S.sqGap=false;if(SQUAD[k]){if(S.sqK===k&&W.t-(S.sqT??-99)<QCD(k)*2.8)S.sqN=(S.sqN|0)+1;else{S.sqK=k;S.sqN=1;}}else{S.sqK=null;S.sqN=0;}S.sqT=W.t;
- if(k==='plane'){S.plN=(S.plN|0)+1;S.plT=W.t;}}
+}
 function simSide(si,dt){const S=W.sides[si],O=W.sides[1-si];
  for(const k in S.fcd)S.fcd[k]=Math.max(0,S.fcd[k]-dt);
  {const amt=Math.min(crystalInc(S)*dt,S.dep[0]);S.dep[0]-=amt;S.ore+=amt;}
@@ -3190,9 +3193,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-2054</div>
+<div id="appVer">v2026.11.14-2103</div>
 <script>
-window.APP_VERSION='2026.11.14-2054';
+window.APP_VERSION='2026.11.14-2103';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
