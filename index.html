@@ -1061,10 +1061,11 @@ const TWVS={tes:{inf:1.2,jeep:1.3,tank:1.1,heli:0,plane:0},mg:{inf:1,jeep:1,tank
 function towerValue(si,k,lv,x,y){const th=botThreat[si],tot=th.inf+th.jeep+th.tank+th.heli+th.plane,d=TW[k];const R=d.range*lvR(k,lv-1);let n=0;for(const p of ROAD_SAMPLES)if((p[0]-x)**2+(p[1]-y)**2<R*R)n++;const L=n*10;
  const dpsOf=u=>k==='tes'?TES_DMG[lv-1]*1.4:d.dmg*((k==='can'&&u==='tank')?CAN_LVM:(k==='mg'&&u==='inf')?MG_LVM:LVM)[lv-1]/(d.cd*LVC[lv-1]);let v=0;for(const u of ['inf','jeep','tank','heli','plane'])v+=th[u]/tot*dpsOf(u)*ARMOR[k][u]*TWVS[k][u]*L/UN[u].sp;return v;}
 function cumCost(k,L){let c=TW[k].cost;for(let l=1;l<L;l=nextLv(l))c+=upCost(k,l);return c;}
-function botSwapOk(si){if(!W.hu||si!==1)return false;const S=W.sides[si];if(S.swapN==null){if(!S.units.some(u=>u.k==='titan'&&u.o!==si&&!u.dead))return false;S.swapN=3;}return S.swapN>0;}
+/* campaign bot: once the player's Titan is on its land it may sell and rebuild any number of towers for the rest of the finale (full refund) */
+function botSwapOk(si){if(!W.hu||si!==1)return false;const S=W.sides[si];if(!S.swapOn){if(!S.units.some(u=>u.k==='titan'&&u.o!==si&&!u.dead))return false;S.swapOn=true;}return true;}
 function botExec(si,cmd){const S=W.sides[si];
  /* hard cap: while nobody attacks the bot, new towers stop at a small baseline whatever path asked for them */
- if(cmd.a==='build'&&botPress[si]<400&&!W.sides[1-si].titanOut&&W.t-(S.breachT??-99)>40&&S.towers.length>=Math.min(7,3+Math.floor(W.t/150)))return;if(cmd.a==='replace'&&W.finale&&!botSwapOk(si))return;if(cmd.a!=='replace'){doCmd(si,cmd);return;}const tw=S.towers.find(t=>t.id===cmd.id);if(!tw)return;const s=tw.s;if(W.finale){S.swapN--;const i=S.towers.indexOf(tw);S.ore+=tw.spent;S.towers.splice(i,1);ev({e:'sold',s:si,x:tw.x,y:tw.y});}else doCmd(si,{a:'sell',id:tw.id});doCmd(si,{a:'build',s,k:cmd.k});const nt=S.towers.find(t=>t.s===s);if(nt)for(let l=1;l<cmd.lv;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});}
+ if(cmd.a==='build'&&botPress[si]<400&&!W.sides[1-si].titanOut&&W.t-(S.breachT??-99)>40&&S.towers.length>=Math.min(7,3+Math.floor(W.t/150)))return;if(cmd.a==='replace'&&W.finale&&!botSwapOk(si))return;if(cmd.a!=='replace'){doCmd(si,cmd);return;}const tw=S.towers.find(t=>t.id===cmd.id);if(!tw)return;const s=tw.s;if(W.finale){const i=S.towers.indexOf(tw);S.ore+=tw.spent;S.towers.splice(i,1);ev({e:'sold',s:si,x:tw.x,y:tw.y});}else doCmd(si,{a:'sell',id:tw.id});doCmd(si,{a:'build',s,k:cmd.k});const nt=S.towers.find(t=>t.s===s);if(nt){nt.swT=W.t;for(let l=1;l<cmd.lv;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});}}
 function bestDefence(si,o){o=o||{};const S=W.sides[si];let best=null;const consider=(score,cost,cmd)=>{if(o.maxCost&&cost>o.maxCost)return;if(W.finale&&cmd.a==='replace'&&!botSwapOk(si))return;/* towers can't be sold in the finale (campaign bot: 3 swaps once the Titan is on its land) */if(o.buildOnly&&cmd.a!=='build')return;if(cmd.a==='build'&&cmd.k!=='rkt'&&padFloor>0&&freeAll-1<padFloor)return;const s=score/cost;if(!best||s>best.s)best={s,cost,cmd};};
  const freeNear=NEAR_SLOTS.filter(i=>slotFree(S,i)),freeFar=FAR_SLOTS.filter(i=>slotFree(S,i));
  /* campaign bot: always keeps 3–5 empty pads for rocket towers (built only when aircraft actually come) */
@@ -1073,7 +1074,7 @@ function bestDefence(si,o){o=o||{};const S=W.sides[si];let best=null;const consi
  for(const i of freeFar)consider(towerValue(si,'rkt',1,SLOTS[i].x,SLOTS[i].y),TW.rkt.cost,{a:'build',s:i,k:'rkt'});
  for(const tw of S.towers)if(tw.lv<Math.min(TW_MAXLV,capOf(W,tw.k))){const c=upCost(tw.k,tw.lv);consider(towerValue(si,tw.k,nextLv(tw.lv),tw.x,tw.y)-towerValue(si,tw.k,tw.lv,tw.x,tw.y),c,{a:'up',id:tw.id});}
  /* rebuild: selling refunds 100%, so swap a tower that no longer fits the threat for the best other kind the same money (plus a bit) can buy */
- const swap=W.finale&&botSwapOk(si),sk=swap?1:SELL_K,budget=S.ore*(swap?1:0.6);for(const tw of S.towers){const old=towerValue(si,tw.k,tw.lv,tw.x,tw.y);const far=SLOTS[tw.s].zone==='far';
+ const swap=W.finale&&botSwapOk(si),sk=swap?1:SELL_K,budget=S.ore*(swap?1:0.6);for(const tw of S.towers){if(swap&&W.t-(tw.swT??-99)<20)continue;const old=towerValue(si,tw.k,tw.lv,tw.x,tw.y);const far=SLOTS[tw.s].zone==='far';
   for(const k2 of far?['rkt']:['mg','can','tes','rkt']){if(k2===tw.k||capOf(W,k2)<1)continue;let L=0;for(let l=1;l<=Math.min(TW_MAXLV,capOf(W,k2));l=nextLv(l)){if(cumCost(k2,l)<=tw.spent*sk+budget)L=l;}if(!L)continue;
    const gain=towerValue(si,k2,L,tw.x,tw.y)-old;if(gain<=old*(swap?0.1:0.3)||gain<=0)continue;consider(gain,Math.max(40,cumCost(k2,L)-tw.spent*sk),{a:'replace',id:tw.id,k:k2,lv:L});}}
  return best;}
@@ -3070,9 +3071,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-0136</div>
+<div id="appVer">v2026.11.14-0208</div>
 <script>
-window.APP_VERSION='2026.11.14-0136';
+window.APP_VERSION='2026.11.14-0208';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
