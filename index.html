@@ -3057,11 +3057,12 @@ function voiceTitanLow(){if(!viewW||!viewW.sides)return;let T=null;for(const S o
 /* "buy units" reminder: after 5 s in which the player did nothing that is voiced (only voiced actions count: the first unit, the first mine, …) it queues like a priority line
    (so it waits for a line already playing); a new voiced action of the player before it starts cancels it.
    Never once the player's own Titan has left the base. The next one counts 5 s from the end of the previous one. */
-const REMIND_IDLE=5;
+const REMIND_IDLE=5,REMIND_FIRST=10;/* the first one waits 10 s after the first-unit line, the rest 5 s */
 function vAct(){VQ.act=vNow();if(VQ.rq){VQ.q=VQ.q.filter(k=>!/^remind/.test(k));if(!(VQ.cur&&VQ.cur.k&&/^remind/.test(VQ.cur.k)))VQ.rq=false;}}
 /* silent until the player's first unit purchase: the idle count starts from that line */
-function voiceRemind(M){if(!VQ.fout)return;if(M.titanOut||viewW.pause){if(VQ.rq&&!(VQ.cur&&/^remind/.test(VQ.cur.k||''))){VQ.q=VQ.q.filter(k=>!/^remind/.test(k));VQ.rq=false;}if(viewW.pause)VQ.act=Math.max(VQ.act,vNow()-REMIND_IDLE+1);return;}
- if(VQ.rq)return;if(vNow()-Math.max(VQ.act,VQ.remEnd)<REMIND_IDLE)return;VQ.rq=true;voiceGrp('remind');if(!VQ.q.some(k=>/^remind/.test(k))&&!(VQ.cur&&/^remind/.test(VQ.cur.k||'')))VQ.rq=false,VQ.act=vNow();}
+function voiceRemind(M){if(!VQ.fout)return;const busy=M.queue&&M.queue.length>0;/* units waiting in my queue: no reminder */
+ if(M.titanOut||viewW.pause||busy){if(VQ.rq&&!(VQ.cur&&/^remind/.test(VQ.cur.k||''))){VQ.q=VQ.q.filter(k=>!/^remind/.test(k));VQ.rq=false;}if(viewW.pause)VQ.act=Math.max(VQ.act,vNow()-REMIND_IDLE+1);return;}
+ if(VQ.rq)return;if(vNow()-Math.max(VQ.act,VQ.remEnd)<(VQ.remEnd?REMIND_IDLE:REMIND_FIRST))return;VQ.rq=true;voiceGrp('remind');if(!VQ.q.some(k=>/^remind/.test(k))&&!(VQ.cur&&/^remind/.test(VQ.cur.k||'')))VQ.rq=false,VQ.act=vNow();}
 function voiceNear(M){/* the very first enemy unit on my side of the river: once per game */
  if(!VQ.first&&M.units.some(u=>u.o!==me&&!u.dead)){VQ.first=true;voiceGrp('first');}
 const zone={mid:u=>u.d>=TOTAL*0.65&&u.d<=TOTAL*0.80,near:u=>u.d>=TOTAL-LOH_D};
@@ -3095,9 +3096,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-1204</div>
+<div id="appVer">v2026.11.14-1213</div>
 <script>
-window.APP_VERSION='2026.11.14-1204';
+window.APP_VERSION='2026.11.14-1213';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
