@@ -830,6 +830,20 @@ const humanSide=si=>!(typeof mode!=='undefined'&&mode==='solo'&&si===1);
 function titanBank(o,v){const S=W.sides[o];if(!S||!(v>0))return;/* campaign: the bot's Titan grows half as fast (×1 lost, ×2 breach) */if(W.hu&&o===1)v*=0.5;S.tb=(S.tb||0)+v;
  if(S.titanOut&&humanSide(o))for(const T of W.sides)for(const u of T.units)if(u.k==='titan'&&u.o===o&&!u.dead){u.hp+=v;u.mx+=v;}}
 function damageUnit(si,u,dmg){u.hp-=dmg;if(u.hp<=0&&!u.dead){u.dead=true;if(u.v)titanBank(u.o,u.v*TB_LOST);if(u.k==='titan'&&!W.over){W.over={w:1-u.o,why:'titan',ts:si,tx:uat(u,u.d)[0]|0,ty:uat(u,u.d)[1]|0,ta:+(headingRoad(u.d,u.b)+(u.o===si?Math.PI:0)).toFixed(2),tg:+(u.ga||0).toFixed(2)};ev({e:'boom',s:si,x:uat(u,u.d)[0]|0,y:uat(u,u.d)[1]|0,b:2});}const S=W.sides[si];const rw=UN[u.k].reward*ARMOR_RW[u.al||0];const gain=Math.round(rw*(S.cashK||1));S.ore+=gain;const p=uat(u,u.d);if(isAir(u))p[1]-=HELI_ALT*0.85;ev({e:'boom',s:si,x:p[0]|0,y:p[1]|0,b:u.k==='inf'?0:1});if(gain>0)ev({e:'kr',s:si,x:p[0]|0,y:p[1]|0,v:gain});if(W.hu&&u.pc>0){const rf=Math.round(u.pc*REFUND_K);W.sides[u.o].ore+=rf;ev({e:'rf',s:si,x:p[0]|0,y:p[1]|0,v:rf});}}}
+/* spawn spacing per unit (tanks a little wider so they don't ride nose-to-tail) */
+const QCD=k=>k==='inf'?0.8:k==='tank'?1.45:1.2;
+const qKind=q=>q.indexOf(':')>0?q.slice(2):q;
+/* squads (looks only, both sides): a run of identical infantry, tanks or helicopters leaves in fives with a one-unit gap
+   between squads; a single leftover never forms its own squad (6 = one squad, 7 = 5 + 2, 11 = 5 + 6).
+   Bot only: at most 10 planes in a row — the 11th waits until 8 s have passed since the previous plane. */
+const SQUAD={inf:1,tank:1,heli:1},BOT_PLANE_MAX=10,BOT_PLANE_GAP=8;
+function spawnGate(si,S){const k=qKind(S.queue[0]);
+ if(k==='plane'&&!humanSide(si)){if(W.t-(S.plT??-99)>=BOT_PLANE_GAP)S.plN=0;if((S.plN|0)>=BOT_PLANE_MAX){S.qcd=0.1;return false;}}
+ if(SQUAD[k]&&S.sqK===k&&W.t-(S.sqT??-99)<QCD(k)*1.6&&S.sqN>0&&S.sqN%5===0&&!S.sqGap){let rem=0;for(const q of S.queue){if(qKind(q)!==k)break;rem++;}
+  if(rem>=2){S.sqGap=true;S.qcd=QCD(k);return false;}}
+ return true;}
+function spawnDone(si,S,k){S.sqGap=false;if(SQUAD[k]){if(S.sqK===k&&W.t-(S.sqT??-99)<QCD(k)*2.8)S.sqN=(S.sqN|0)+1;else{S.sqK=k;S.sqN=1;}}else{S.sqK=null;S.sqN=0;}S.sqT=W.t;
+ if(k==='plane'){S.plN=(S.plN|0)+1;S.plT=W.t;}}
 function simSide(si,dt){const S=W.sides[si],O=W.sides[1-si];
  for(const k in S.fcd)S.fcd[k]=Math.max(0,S.fcd[k]-dt);
  {const amt=Math.min(crystalInc(S)*dt,S.dep[0]);S.dep[0]-=amt;S.ore+=amt;}
@@ -845,7 +859,7 @@ function simSide(si,dt){const S=W.sides[si],O=W.sides[1-si];
  for(let i=S.mines.length-1;i>=0;i--){const m=S.mines[i];/* triggered by where a unit actually is on the map: works on every road, branch, shortcut and shared stretch */if(!S.units.some(u=>{if(u.dead||u.o===si||isAir(u))return false;const q=uat(u,u.d);return (q[0]-m.x)**2+(q[1]-m.y)**2<MINE_TRIG*MINE_TRIG;}))continue;S.mines.splice(i,1);
   for(const u of S.units){if(u.dead||u.o===si)continue;const q=uat(u,u.d);if((q[0]-m.x)**2+(q[1]-m.y)**2<MINE_R*MINE_R)damageUnit(si,u,MINE_DMG*(u.k==='titan'&&HU(u.o,'tit')>=2?0.8:1));}ev({e:'mineboom',s:si,x:m.x|0,y:m.y|0});}
  // spawn queue onto opponent map
- S.qcd-=dt;if(S.queue.length&&S.qcd<=0){let k=S.queue.shift();const free=k[0]==='f',pre=k[0]==='p',paid=pre||k.indexOf(':')<0;if(k.indexOf(':')>0)k=k.slice(2);const al=free?Math.min(S.ua,FREE_MAX_UA):S.ua;const u=UN[k];S.units.push({id:nextId++,o:si,al,k,v:paid&&(!S.titanOut||pre)?unitCost(k,S.ua):0,pc:paid?unitCost(k,S.ua):0,d:TOTAL,b:NB?(S.brN=(S.brN|0)+1)%(NB+1):0,hp:u.hp*ARM_HP[al],mx:u.hp*ARM_HP[al],dm:1,cd:Math.random(),ga:0,ph:Math.random()*6});S.qcd=k==='inf'?0.8:1.2;}
+ S.qcd-=dt;if(S.queue.length&&S.qcd<=0&&spawnGate(si,S)){let k=S.queue.shift();const free=k[0]==='f',pre=k[0]==='p',paid=pre||k.indexOf(':')<0;if(k.indexOf(':')>0)k=k.slice(2);const al=free?Math.min(S.ua,FREE_MAX_UA):S.ua;const u=UN[k];S.units.push({id:nextId++,o:si,al,k,v:paid&&(!S.titanOut||pre)?unitCost(k,S.ua):0,pc:paid?unitCost(k,S.ua):0,d:TOTAL,b:NB?(S.brN=(S.brN|0)+1)%(NB+1):0,hp:u.hp*ARM_HP[al],mx:u.hp*ARM_HP[al],dm:1,cd:Math.random(),ga:0,ph:Math.random()*6});S.qcd=QCD(k);spawnDone(si,S,k);}
  // harvester on this map
  const hk=UH_K[Math.min(3,S.uh|0)]*(HU(si,'harv')>=2?1.2:1),hcK=huCargo(si);for(const h of S.hv){
   /* a tap stops a harvester for 5 s, then it drives on by itself */
@@ -2318,7 +2332,8 @@ else if(k==='heli'){ctx.translate(0,8);ctx.scale(0.62,0.62);heliShadow(ctx,0,0,-
 else if(k==='harv'){ctx.scale(0.42,0.42);harvester(ctx,0,0,-0.5,1,0,false,0,tm,0);}else if(k==='uc'){ctx.save();ctx.scale(0.36,0.36);harvester(ctx,-4,4,-0.5,1,0,false,0,tm,0);ctx.restore();RR(ctx,1,-13,15,11,3,'#F2C232',1.2,OL);T('×2',8.5,-7.5,8,'#1C2416','center',900);}
  else if(k==='uh'){ctx.save();ctx.scale(0.36,0.36);harvester(ctx,-4,4,-0.5,1,0,false,0,tm,0);ctx.restore();P(ctx,[[6,-14],[13,-6],[9,-6],[9,0],[3,0],[3,-6],[-1,-6]],'#7CD04A',1.2,OL);T('+30%',0,11,8,'#BFF09A','center',900);}
  else if(k==='ext'){ctx.scale(0.6,0.6);ctx.translate(0,9);ctx.scale(0.75,0.75);extractor(ctx,0,0,tm,0,1);}
- else if(k==='ua'){P(ctx,[[0,-10],[9,-6],[8,3],[0,10],[-8,3],[-9,-6]],'#9CC8F0',1.6,OL);P(ctx,[[0,-6],[5,-4],[4,2],[0,6]],'#4F8FD0');T('+',0,0.5,11,'#11161C','center',900);}
+ else if(k==='ua'){const lv=ICON_UA_LV;if(lv!=null&&lv>=UPG_MAX){P(ctx,[[0,-10],[9,-6],[8,3],[0,10],[-8,3],[-9,-6]],'#F2C232',1.6,OL);P(ctx,[[0,-6],[5,-4],[4,2],[0,6]],'#D9A21E');ctx.strokeStyle='#11161C';ctx.lineWidth=2.4;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(-4,0);ctx.lineTo(-1,3.5);ctx.lineTo(4.5,-3.5);ctx.stroke();}
+  else{P(ctx,[[0,-10],[9,-6],[8,3],[0,10],[-8,3],[-9,-6]],'#9CC8F0',1.6,OL);P(ctx,[[0,-6],[5,-4],[4,2],[0,6]],'#4F8FD0');const t=!lv?'+':UA_SHOW[lv-1];T(t,0,0.5,t.length>2?7:t.length>1?8.5:11,'#11161C','center',900);}}
  else if(k==='ud'){E(ctx,0,0,9,9,null,2,'#FF8A6A');E(ctx,0,0,4,4,'#FF6A4A');L(ctx,[[-12,0],[-6,0]],'#FF8A6A',2);L(ctx,[[6,0],[12,0]],'#FF8A6A',2);L(ctx,[[0,-12],[0,-6]],'#FF8A6A',2);L(ctx,[[0,6],[0,12]],'#FF8A6A',2);}
  else if(k==='up'){P(ctx,[[0,-9],[8,0],[3,0],[3,8],[-3,8],[-3,0],[-8,0]],'#7CD04A',1.4,OL);}else if(k==='sell'){crystal(ctx,0,7,15,6);}else if(k==='cancel'){L(ctx,[[-6,-6],[6,6]],'#FF8A7A',3.2);L(ctx,[[6,-6],[-6,6]],'#FF8A7A',3.2);}
  else if(k==='rep'){RR(ctx,-8,-8,16,16,3,'#E9EDF0',1.2,OL);L(ctx,[[-4,0],[4,0]],'#E53B2E',3);L(ctx,[[0,-4],[0,4]],'#E53B2E',3);}else if(k==='go'){P(ctx,[[-5,-8],[8,0],[-5,8]],'#7FD4FF',1.4,OL);}}
@@ -2334,6 +2349,9 @@ function drawMenu(){const lay=radialLayout();if(!lay)return;ctx.fillStyle='rgba(
  const S_=viewW.sides[me];const tip={refinery:(()=>{const l=S_.rl|0,ld=k=>Math.round(HARV_LOAD*1.5**k*(MAP.hload||1)),sp=k=>Math.round((UH_K[k]-1)*100);const left=Math.round((S_.dep||DEPOSIT)[0]),lt=left<=0?'кристалл пуст':'в кристалле '+(left>=1000?(left/1000).toFixed(1)+'к':left);return l<RUP_MAX?lt+' · ур.'+(l+1)+': +1 харвестер · скорость +'+sp(l+1)+'% · кристалл +'+CRY_INC*(l+2)+'/с · груз '+ld(l)+' → '+ld(l+1):lt+' · харвестеров '+S_.hv.length+' из '+HARV_MAXN+' · груз '+ld(l);})(),cell:menu.zone==='far'?'Вдали от дороги — только ракеты':'Место у дороги',tower:towerTip(),field:menu.kind!=='field'?'':(()=>{const f=menu.f,left=Math.round((S_.dep||DEPOSIT)[f]),lv=S_.ext[f],inc=FIELDS[f].inc;if(left<=0)return 'Поле опустело';const boost=f===0&&(S_.dep||[1,1])[1]<=0;if(!lv)return 'Добывающая вышка: +'+inc+'/с, окупится за '+Math.round(EXT_COST/inc)+' с · осталось '+left;return 'Вышка ур.'+lv+': +'+inc*lv+'/с'+(lv<EXT_MAXLV?'  →  ур.'+(lv+1)+': +'+inc*(lv+1)+'/с · окупится за 60 с':'');})(),base_:'Отправить войска к сопернику',harv:'Харвестер'}[menu.kind];if(tip)hint(tip,12);}
 let barFlash=-9;
 const BAR={x:8,y:VH-62,b:46,gap:6};
+/* armour button, looks only (real values stay ARM_HP): rounded multipliers — the badge shows the current one (×1, ×1.5, ×2, ×3, ×4),
+   the shield the previous one ('+' at the start); at max the badge goes and the shield turns yellow with a tick */
+const UA_SHOW=['1','1.5','2','3','4','5'];let ICON_UA_LV=null;
 function barItems(){const S=viewW.sides[me];const uc=k=>unitCost(k,S.ua);return[{k:'inf',lab:''+uc('inf'),dis:S.ore<uc('inf'),cmd:{a:'send',k:'inf'}},{k:'jeep',lab:''+uc('jeep'),dis:S.ore<uc('jeep'),cmd:{a:'send',k:'jeep'}},{k:'tank',lab:''+uc('tank'),dis:S.ore<uc('tank'),cmd:{a:'send',k:'tank'}},{k:'heli',lab:''+uc('heli'),dis:S.ore<uc('heli'),cmd:{a:'send',k:'heli'}},{k:'plane',lab:''+uc('plane'),dis:S.ore<uc('plane'),cmd:{a:'send',k:'plane'}},{k:'ua',lab:S.ua>=UPG_MAX?'макс.':S.ua>=capOf(viewW,'ua')?'закрыто':(UPG_COSTS[S.ua]>=1000?UPG_COSTS[S.ua]/1000+'к':''+UPG_COSTS[S.ua]),dis:S.ua>=UPG_MAX||S.ua>=capOf(viewW,'ua')||S.ore<UPG_COSTS[S.ua],lock:S.ua<UPG_MAX&&S.ua>=capOf(viewW,'ua'),cmd:{a:'ua'},lv:S.ua}];}
 function barRects(){return barItems().map((it,i)=>({it,x:BAR.x+8+i*(BAR.b+BAR.gap),y:BAR.y+2,w:BAR.b,h:BAR.b}));}
 const BAR_END=BAR.x+16+6*(46+6)-6;
@@ -2352,9 +2370,9 @@ function drawBar(t){const R=barRects();const fl=Math.max(0,1-(now()-barFlash)/0.
  RR(ctx,BAR.x,BAR.y-4,BAR_END-BAR.x,BAR.b+12,12,'rgba(20,28,18,0.88)',2,fl>0?'rgba(242,194,50,'+fl+')':'#0C120B');
  const S=viewW.sides[me];const qn=S.qn??(S.queue?S.queue.length:0);
  for(const {it,x,y,w,h} of R){const pr=pressK===it.k&&now()-pressT<0.15;RR(ctx,x,y+2,w,h,10,'rgba(0,0,0,0.35)');RR(ctx,x,y+(pr?2:0),w,h,10,it.dis?'#3A3F45':'#2B3440',2,'#11161C');RR(ctx,x+3,y+3+(pr?2:0),w-6,h*0.45,8,it.dis?'rgba(255,255,255,0.04)':'rgba(255,255,255,0.08)');
-  ctx.save();ctx.translate(x+w/2,y+h/2-6+(pr?2:0));if(it.dis)ctx.globalAlpha=0.45;ctx.scale(1.05,1.05);icon(it.k);ctx.restore();if(it.lock)drawLock(x+w/2,y+h/2-6,1.15);
+  ctx.save();ctx.translate(x+w/2,y+h/2-6+(pr?2:0));const uaMax=it.k==='ua'&&it.lv>=UPG_MAX;if(it.dis&&!uaMax)ctx.globalAlpha=0.45;ctx.scale(1.05,1.05);ICON_UA_LV=it.k==='ua'?it.lv:null;icon(it.k);ICON_UA_LV=null;ctx.restore();if(it.lock)drawLock(x+w/2,y+h/2-6,1.15);
   ctx.font='800 10px '+FONT;const lw=ctx.measureText(it.lab).width+10;RR(ctx,x+w/2-lw/2,y+h-15,lw,13,6,'#11161C');T(it.lab,x+w/2,y+h-8.5,10,it.dis?'#9AA0A6':'#7FD4FF','center',800);
-  if(it.k==='ua'&&it.lv>0){RR(ctx,x+w-17,y-5,20,13,6,'#F2C232',1.2,'#11161C');T('×'+ARM_HP[it.lv],x+w-7,y+1.5,8,'#1C2416','center',900);}}
+  if(it.k==='ua'&&it.lv<UPG_MAX){const bt='×'+UA_SHOW[it.lv];ctx.font='900 8px '+FONT;const bw=Math.max(20,ctx.measureText(bt).width+8);RR(ctx,x+w+3-bw,y-5,bw,13,6,'#F2C232',1.2,'#11161C');T(bt,x+w+3-bw/2,y+1.5,8,'#1C2416','center',900);}}
  if(qn>0){const x=BAR.x+8+2*(BAR.b+BAR.gap)+BAR.b/2;RR(ctx,BAR.x+8,BAR.y-22,3*(BAR.b+BAR.gap)-BAR.gap,16,7,'rgba(20,28,18,0.88)');T('в очереди: '+qn,BAR.x+8+(3*(BAR.b+BAR.gap)-BAR.gap)/2,BAR.y-14,10,'#fff','center',700);}}
 let pressK=null,pressT=-9,placing=false;
 function abilRects(){return[{k:'mine',x:VW-8-3*56+6,y:VH-62+2,w:48,h:46},{k:'freeze',x:VW-8-2*56+6,y:VH-62+2,w:48,h:46},{k:'rain',x:VW-8-56+6,y:VH-62+2,w:48,h:46}];}
@@ -3172,9 +3190,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.14-1613</div>
+<div id="appVer">v2026.11.14-2054</div>
 <script>
-window.APP_VERSION='2026.11.14-1613';
+window.APP_VERSION='2026.11.14-2054';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
