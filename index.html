@@ -781,7 +781,7 @@ const huHarvCost=si=>HU(si,'harv')>=5?Math.round(HARV_COST2*0.8):HARV_COST2;
 const harvCap=S=>(S.rl|0)>=RUP_MAX?HARV_MAXN:(S.rl|0)+1;
 const huFreeHarvT=si=>HU(si,'harv')>=5?10:FREE_HARV_T;
 const huCargo=si=>HU(si,'harv')>=3?1.1:1;
-const huSellK=si=>HU(si,'tow')>=3?1:SELL_K;
+const huSellK=si=>W&&W.hu&&si===1?1:HU(si,'tow')>=3?1:SELL_K;/* campaign bot always sells at full price */
 const huCrit=si=>HU(si,'tow')>=1&&Math.random()<0.3?2:1;
 const huSplashK=si=>HU(si,'tow')>=5?0.9:TW.can.splashK;
 /* rockets of the upgraded towers also hit ground units that are frozen or slowed by a radar */
@@ -1125,7 +1125,7 @@ function botTitanFocus(si){const S=W.sides[si];const reach=titanReach(si);if(!re
   for(const i of [...NEAR_SLOTS,...FAR_SLOTS]){if(!slotFree(S,i)||padBusy(S,i)||!reach(SLOTS[i].x,SLOTS[i].y,maxL))continue;const L=bestL(S.ore);if(!L)break;if(!reach(SLOTS[i].x,SLOTS[i].y,L))continue;
    doCmd(si,{a:'build',s:i,k:'can',any:1});const nt=S.towers.find(q=>q.s===i);if(nt)for(let l=1;l<L;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});done=true;break;}
   if(!done&&swapOk)for(const tw of S.towers){if(!(tw.k==='mg'||tw.k==='rkt'&&(aa-rdps(tw))*AA_T>=airHp)||!reach(tw.x,tw.y,maxL))continue;
-   const back=W.finale?tw.spent:Math.round(tw.spent*SELL_K),L=bestL(S.ore+back);if(!L||!reach(tw.x,tw.y,L))continue;if(tw.k==='rkt')aa-=rdps(tw);botExec(si,{a:'replace',id:tw.id,k:'can',lv:L,here:1});done=true;break;}
+   const back=W.finale?tw.spent:Math.round(tw.spent*huSellK(si)),L=bestL(S.ore+back);if(!L||!reach(tw.x,tw.y,L))continue;if(tw.k==='rkt')aa-=rdps(tw);botExec(si,{a:'replace',id:tw.id,k:'can',lv:L,here:1});done=true;break;}
   if(!done)for(const tw of S.towers){if(tw.k!=='can'||tw.lv>=maxL||!reach(tw.x,tw.y,maxL))continue;const c=upCost('can',tw.lv);if(S.ore<c)continue;doCmd(si,{a:'up',id:tw.id});done=true;break;}
   if(!done)break;n++;}
  return n>0;}
@@ -1157,10 +1157,15 @@ function botWaveFocus(si){const S=W.sides[si];
    exceed the aircraft's total health (25 s was far too optimistic — a plane crosses the field much faster) */
 /* only aircraft on the way and no money for rockets: ground towers (machine guns, cannons, radars) are useless right now —
    sell the cheapest of them until a rocket tower is affordable. Never while any enemy ground unit or Titan is out. */
+/* aircraft on the way and no money for rockets: sell ground towers (machine guns, cannons, radars), the least useful first,
+   until a rocket tower is affordable — but keep enough of them to kill the enemy ground units already out (Titan aside:
+   cannons that reach it are never sold, botTitanFocus deals with it). */
 function sellForAA(si,cost){const S=W.sides[si];if(W.finale)return false;
- if([...S.units,...W.sides[1-si].units].some(u=>u.o!==si&&!u.dead&&!isAir(u)))return false;
- const c=S.towers.filter(t=>t.k==='mg'||t.k==='can'||t.k==='tes').sort((a,b)=>a.spent-b.spent);let sold=false;
- for(const tw of c){if(S.ore>=cost)break;const o=S.ore;doCmd(si,{a:'sell',id:tw.id});if(S.ore>o){sold=true;padHold(si,tw.s);}}
+ const gr=[...S.units,...W.sides[1-si].units].filter(u=>u.o!==si&&!u.dead&&!isAir(u)&&u.k!=='titan'),gHp=gr.reduce((a,u)=>a+u.hp,0);
+ const tr=titanReach(si);const dps=tw=>{if(!gHp)return 0;let v=0;for(const u of gr)v+=u.hp/gHp*twDps(tw.k,tw.lv,u.k,Math.min(5,gr.length));return v;};
+ const c=S.towers.filter(t=>(t.k==='mg'||t.k==='can'||t.k==='tes')&&!(tr&&t.k==='can'&&tr(t.x,t.y,t.lv))).map(t=>({t,d:dps(t)})).sort((a,b)=>a.d-b.d||a.t.spent-b.t.spent);
+ let keep=c.reduce((a,x)=>a+x.d,0),sold=false;
+ for(const x of c){if(S.ore>=cost)break;if(gHp&&(keep-x.d)*WAVE_T<gHp*1.5)continue;const o=S.ore;doCmd(si,{a:'sell',id:x.t.id});if(S.ore>o){sold=true;keep-=x.d;padHold(si,x.t.s);}}
  return sold&&S.ore>=cost;}
 const AA_T=3;
 function botSwapOk(si){return !!W.hu&&si===1;}
@@ -1187,7 +1192,7 @@ function bestDefence(si,o){o=o||{};const S=W.sides[si];let best=null;let aaNow=0
  const tr=titanReach(si);/* cannons that reach the enemy Titan are kept for it */
  /* swapping only once the pads are full: with free pads a new tower is always better than selling one at a loss
     (before, a rich bot kept selling and rebuilding back and forth instead of building) */
- const swap=W.finale&&botSwapOk(si),sk=swap?1:SELL_K,budget=S.ore*(swap?1:0.6);if(!freeNear.length)for(const tw of S.towers){if(tr&&tw.k==='can'&&tr(tw.x,tw.y,tw.lv))continue;const old=towerValue(si,tw.k,tw.lv,tw.x,tw.y);const far=SLOTS[tw.s].zone==='far';
+ const swap=W.finale&&botSwapOk(si),sk=swap?1:huSellK(si),budget=S.ore*(swap?1:0.6);if(!freeNear.length)for(const tw of S.towers){if(tr&&tw.k==='can'&&tr(tw.x,tw.y,tw.lv))continue;const old=towerValue(si,tw.k,tw.lv,tw.x,tw.y);const far=SLOTS[tw.s].zone==='far';
   for(const k2 of far?['rkt']:['mg','can','tes','rkt']){if(k2===tw.k||capOf(W,k2)<1)continue;let L=0;for(let l=1;l<=Math.min(TW_MAXLV,capOf(W,k2));l=nextLv(l)){if(cumCost(k2,l)<=tw.spent*sk+budget)L=l;}if(!L)continue;
    const gain=towerValue(si,k2,L,tw.x,tw.y)-old;if(gain<=old*(swap?0.1:0.3)||gain<=0)continue;consider(gain,Math.max(40,cumCost(k2,L)-tw.spent*sk),{a:'replace',id:tw.id,k:k2,lv:L});}}
  return best;}
@@ -3253,9 +3258,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.15-1930</div>
+<div id="appVer">v2026.11.15-1937</div>
 <script>
-window.APP_VERSION='2026.11.15-1930';
+window.APP_VERSION='2026.11.15-1937';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
