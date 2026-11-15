@@ -816,7 +816,7 @@ function doCmd(si,cmd){if(!W||W.over)return;if(W.nuke&&cmd&&cmd.a!=='pause')retu
  else if(a==='rain'){if(!(S.rainCd<=0))return;S.rainCd=huSupCd(si,'rain');ev({e:'vrain',s:si});let last=0;for(let i=0,nR=huRainN(si);i<nR;i++){const d=EDGE_D+20+Math.random()*(TOTAL-EDGE_D-70);const p=at(d,Math.floor(Math.random()*(NB+1)));const T=0.55+i*0.14+Math.random()*0.1;last=Math.max(last,T);S.strikes.push({x:p[0],y:p[1],t:T});ev({e:'rainfall',s:si,x:p[0]|0,y:p[1]|0,T:+T.toFixed(2)});}S.confT=last+RAIN_CONF;}
  else if(a==='freeze'){if(!(S.frzCd<=0))return;S.frzCd=huSupCd(si,'freeze');S.frzT=huFrzT(si);ev({e:'freeze',s:si});}
  else if(a==='ua'){if(S.ua>=UPG_MAX||S.ua>=capOf(W,'ua')||S.ore<uaCost(S))return;S.ore-=uaCost(S);S.ua=nextLv(S.ua);S.uaBuyT=W.t;ev({e:'up',s:si});if(S.ua>=UPG_MAX)ev({e:'vbig',s:si});}
- else if(a==='rup'){const l=S.rl|0;if(l>=RUP_MAX||S.ore<RUP_COST[l]||S.hv.length<harvCap(S)&&S.dep[1]>0)return;/* lost harvesters are replaced before the next level */S.ore-=RUP_COST[l];S.rl=l+1;S.uh=S.rl;S.uc=S.rl;ev({e:'up',s:si});if(S.rl>=RUP_MAX)ev({e:'vbig',s:si});
+ else if(a==='rup'){const l=S.rl|0;if(l>=RUP_MAX||!(S.dep[1]>0)||S.ore<RUP_COST[l]||S.hv.length<harvCap(S)&&S.dep[1]>0)return;/* lost harvesters are replaced before the next level */S.ore-=RUP_COST[l];S.rl=l+1;S.uh=S.rl;S.uc=S.rl;ev({e:'up',s:si});if(S.rl>=RUP_MAX)ev({e:'vbig',s:si});
   if(S.hv.length<HARV_MAXN&&S.dep[1]>0){const h=newHarv();h.d=HTOT;h.dir=-1;h.load=0;h.wait=0.5;S.hv.push(h);}}
  else if(a==='harv'){if(S.hv.length>=harvCap(S)||S.ore<huHarvCost(si)||!(S.dep[1]>0))return;S.ore-=huHarvCost(si);const h=newHarv();h.d=HTOT;h.dir=-1;h.load=0;h.wait=0.5;S.hv.push(h);}
  else if(a==='fsend'){const k=cmd.k,f=FREE_SQ[k];if(!f||S.fcd[k]>0||campNoFree())return;S.fcd[k]=huFreeCd(si,k);for(let i=0,nF=huFreeN(si,k);i<nF;i++)S.queue.push('g:'+k);ev({e:'fsq',s:si});}
@@ -2337,7 +2337,7 @@ function radialItems(){if(!menu)return[];const S=viewW.sides[me];
  if(menu.kind==='field'){const lv=S.ext[menu.f];if(!lv)return[{k:'ext',lab:''+EXT_COST,dis:S.ore<EXT_COST,cmd:{a:'ext',f:menu.f}}];const c=extUpCost(menu.f);return[{k:'up',lab:lv>=EXT_MAXLV?'макс.':''+c,dis:lv>=EXT_MAXLV||S.ore<c,cmd:{a:'extup',f:menu.f}}];}
 
  if(menu.kind==='factory'){const busy=S.nkT>0,cd=S.nkCd||0,empty=((viewW.sides[1-me].dep||[1,1])[1]<=0);return[{k:'nuke',big:1,lab:busy?'пуск '+Math.ceil(S.nkT):empty?'рудник пуст':cd>0?Math.ceil(cd)+' с':''+NUKE_COST,dis:busy||empty||cd>0||S.ore<NUKE_COST,cmd:{a:'nukebuy'}}];}
- if(menu.kind==='refinery'){const l=S.rl|0,n=S.hv.length;if(l<RUP_MAX&&n<harvCap(S)&&(S.dep||[1,1])[1]>0)return[{k:'harv',big:1,lab:''+huHarvCost(me),dis:S.ore<huHarvCost(me),cmd:{a:'harv'}}];if(l<RUP_MAX)return[{k:'up',big:1,lab:''+RUP_COST[l],dis:S.ore<RUP_COST[l],cmd:{a:'rup'}}];
+ if(menu.kind==='refinery'){const l=S.rl|0,n=S.hv.length;if(!((S.dep||[1,1])[1]>0))return[];/* rich mine worked out: nothing to buy here any more */if(l<RUP_MAX&&n<harvCap(S)&&(S.dep||[1,1])[1]>0)return[{k:'harv',big:1,lab:''+huHarvCost(me),dis:S.ore<huHarvCost(me),cmd:{a:'harv'}}];if(l<RUP_MAX)return[{k:'up',big:1,lab:''+RUP_COST[l],dis:S.ore<RUP_COST[l],cmd:{a:'rup'}}];
   const empty=(S.dep||[1,1])[1]<=0;return[{k:'harv',big:1,lab:empty?'рудник пуст':n>=harvCap(S)?n+' из '+HARV_MAXN:''+huHarvCost(me),dis:empty||n>=harvCap(S)||S.ore<huHarvCost(me),cmd:{a:'harv'}}];}
  if(menu.kind==='harv'){return[{k:'rep',lab:'Ремонт',dis:false,cmd:{a:'hrep',id:menu.id},close:true},{k:'go',lab:'Дальше',dis:false,cmd:{a:'hgo',id:menu.id},close:true}];}
  return[];}
@@ -2395,7 +2395,7 @@ function drawMenu(){const lay=radialLayout();if(!lay)return;ctx.fillStyle='rgba(
   if(it.cancel&&PEND_SELL){const k=Math.max(0,Math.min(1,(PEND_SELL.at-now())/SELL_WAIT));ctx.beginPath();ctx.arc(x,y,20,-Math.PI/2,-Math.PI/2+6.283*k);ctx.strokeStyle='#FF6A4A';ctx.lineWidth=3;ctx.stroke();}
   ctx.save();ctx.translate(x,y);if(it.dis)ctx.globalAlpha=0.45;icon(it.k);ctx.restore();if(it.lock)drawLock(x+11,y-10,1);if(!it.lab)continue;ctx.font='800 10px '+FONT;const w=ctx.measureText(it.lab).width+12;RR(ctx,x-w/2,y+15,w,15,7,'#11161C');T(it.lab,x,y+22.5,10,it.cancel?'#FFB4A6':it.dis?'#B0B4B8':'#7FD4FF','center',800);}
  if(!lay.pos.some(p=>p.it.big))E(ctx,lay.c[0],lay.c[1],7,7,'#F2C232',2,OL);
- const S_=viewW.sides[me];const tip={refinery:(()=>{const l=S_.rl|0,ld=k=>Math.round(HARV_LOAD*1.5**k*(MAP.hload||1)),sp=k=>Math.round((UH_K[k]-1)*100);const left=Math.round((S_.dep||DEPOSIT)[0]),lt=left<=0?'кристалл пуст':'в кристалле '+(left>=1000?(left/1000).toFixed(1)+'к':left);return l<RUP_MAX?lt+' · ур.'+(l+1)+': +1 харвестер · скорость +'+sp(l+1)+'% · кристалл +'+CRY_INC*(l+2)+'/с · груз '+ld(l)+' → '+ld(l+1):lt+' · харвестеров '+S_.hv.length+' из '+HARV_MAXN+' · груз '+ld(l);})(),cell:menu.zone==='far'?'Вдали от дороги — только ракеты':'Место у дороги',tower:towerTip(),field:menu.kind!=='field'?'':(()=>{const f=menu.f,left=Math.round((S_.dep||DEPOSIT)[f]),lv=S_.ext[f],inc=FIELDS[f].inc;if(left<=0)return 'Поле опустело';const boost=f===0&&(S_.dep||[1,1])[1]<=0;if(!lv)return 'Добывающая вышка: +'+inc+'/с, окупится за '+Math.round(EXT_COST/inc)+' с · осталось '+left;return 'Вышка ур.'+lv+': +'+inc*lv+'/с'+(lv<EXT_MAXLV?'  →  ур.'+(lv+1)+': +'+inc*(lv+1)+'/с · окупится за 60 с':'');})(),base_:'Отправить войска к сопернику',harv:'Харвестер'}[menu.kind];if(tip)hint(tip,12);}
+ const S_=viewW.sides[me];const tip={refinery:(()=>{const l=S_.rl|0,ld=k=>Math.round(HARV_LOAD*1.5**k*(MAP.hload||1)),sp=k=>Math.round((UH_K[k]-1)*100);const left=Math.round((S_.dep||DEPOSIT)[0]),lt=left<=0?'кристалл пуст':'в кристалле '+(left>=1000?(left/1000).toFixed(1)+'к':left);if(!((S_.dep||DEPOSIT)[1]>0))return lt+' · основной рудник пуст';return l<RUP_MAX?lt+' · ур.'+(l+1)+': +1 харвестер · скорость +'+sp(l+1)+'% · кристалл +'+CRY_INC*(l+2)+'/с · груз '+ld(l)+' → '+ld(l+1):lt+' · харвестеров '+S_.hv.length+' из '+HARV_MAXN+' · груз '+ld(l);})(),cell:menu.zone==='far'?'Вдали от дороги — только ракеты':'Место у дороги',tower:towerTip(),field:menu.kind!=='field'?'':(()=>{const f=menu.f,left=Math.round((S_.dep||DEPOSIT)[f]),lv=S_.ext[f],inc=FIELDS[f].inc;if(left<=0)return 'Поле опустело';const boost=f===0&&(S_.dep||[1,1])[1]<=0;if(!lv)return 'Добывающая вышка: +'+inc+'/с, окупится за '+Math.round(EXT_COST/inc)+' с · осталось '+left;return 'Вышка ур.'+lv+': +'+inc*lv+'/с'+(lv<EXT_MAXLV?'  →  ур.'+(lv+1)+': +'+inc*(lv+1)+'/с · окупится за 60 с':'');})(),base_:'Отправить войска к сопернику',harv:'Харвестер'}[menu.kind];if(tip)hint(tip,12);}
 let barFlash=-9;
 const BAR={x:8,y:VH-62,b:46,gap:6};
 /* armour button, looks only (real values stay ARM_HP): rounded multipliers — the badge shows the current one (×1, ×1.5, ×2, ×3, ×4),
@@ -3258,9 +3258,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.15-1937</div>
+<div id="appVer">v2026.11.15-2023</div>
 <script>
-window.APP_VERSION='2026.11.15-1937';
+window.APP_VERSION='2026.11.15-2023';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
