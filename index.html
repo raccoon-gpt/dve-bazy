@@ -813,7 +813,7 @@ function doCmd(si,cmd){if(!W||W.over)return;if(W.nuke&&cmd&&cmd.a!=='pause')retu
  else if(a==='mine'){const d=+cmd.d,b=cmd.b>=1&&cmd.b<=NB&&d<dmOf(cmd.b)?cmd.b|0:0;if(!(S.mineCd<=0)||!(d>=EDGE_D+10&&d<=TOTAL-50))return;S.mineCd=huSupCd(si,'mine');ev({e:'mset',s:si});const p=at(d,b);S.mines.push({id:nextId++,d,b,x:p[0],y:p[1]});ev({e:'mineset',s:si,x:p[0]|0,y:p[1]|0});}
  else if(a==='rain'){if(!(S.rainCd<=0))return;S.rainCd=huSupCd(si,'rain');ev({e:'vrain',s:si});let last=0;for(let i=0,nR=huRainN(si);i<nR;i++){const d=EDGE_D+20+Math.random()*(TOTAL-EDGE_D-70);const p=at(d,Math.floor(Math.random()*(NB+1)));const T=0.55+i*0.14+Math.random()*0.1;last=Math.max(last,T);S.strikes.push({x:p[0],y:p[1],t:T});ev({e:'rainfall',s:si,x:p[0]|0,y:p[1]|0,T:+T.toFixed(2)});}S.confT=last+RAIN_CONF;}
  else if(a==='freeze'){if(!(S.frzCd<=0))return;S.frzCd=huSupCd(si,'freeze');S.frzT=huFrzT(si);ev({e:'freeze',s:si});}
- else if(a==='ua'){if(S.ua>=UPG_MAX||S.ua>=capOf(W,'ua')||S.ore<uaCost(S))return;S.ore-=uaCost(S);S.ua=nextLv(S.ua);ev({e:'up',s:si});if(S.ua>=UPG_MAX)ev({e:'vbig',s:si});}
+ else if(a==='ua'){if(S.ua>=UPG_MAX||S.ua>=capOf(W,'ua')||S.ore<uaCost(S))return;S.ore-=uaCost(S);S.ua=nextLv(S.ua);S.uaBuyT=W.t;ev({e:'up',s:si});if(S.ua>=UPG_MAX)ev({e:'vbig',s:si});}
  else if(a==='rup'){const l=S.rl|0;if(l>=RUP_MAX||S.ore<RUP_COST[l])return;S.ore-=RUP_COST[l];S.rl=l+1;S.uh=S.rl;S.uc=S.rl;ev({e:'up',s:si});if(S.rl>=RUP_MAX)ev({e:'vbig',s:si});
   if(S.hv.length<HARV_MAXN&&S.dep[1]>0){const h=newHarv();h.d=HTOT;h.dir=-1;h.load=0;h.wait=0.5;S.hv.push(h);}}
  else if(a==='harv'){if((S.rl|0)<RUP_MAX||S.hv.length>=HARV_MAXN||S.ore<huHarvCost(si)||!(S.dep[1]>0))return;S.ore-=huHarvCost(si);const h=newHarv();h.d=HTOT;h.dir=-1;h.load=0;h.wait=0.5;S.hv.push(h);}
@@ -1078,7 +1078,11 @@ function botSuper(si){const S=W.sides[si],O=W.sides[1-si];if(W.over||W.nuke)retu
  const past=foes.some(u=>u.d>EDGE_D+(TOTAL-EDGE_D)/3);
  if(past&&S.frzCd<=0&&!(S.frzT>0)&&(titan&&foes.find(u=>u.k==='titan').d>EDGE_D+(TOTAL-EDGE_D)*0.3||hp>=1000&&deep>=2||foes.some(u=>u.d>TOTAL-(TOTAL-EDGE_D)*0.3)&&hp>=500)){doCmd(si,{a:'freeze'});if(S.frzCd>0)S.frzCd=BOT_FRZ_CD*(W.botCdK||1);}
  if(past&&S.rainCd<=0&&(titan||foes.length>=5||hp>=1800)){doCmd(si,{a:'rain'});if(S.rainCd>0)S.rainCd=BOT_RAIN_CD*(W.botCdK||1);}
- if(W.diff!=='easy'&&!W.finale&&S.nkCd<=0&&!(S.nkT>0)&&S.ore>=NUKE_COST+1200&&O.dep[1]>=8000&&W.t>150&&(S.nkUsed||0)<3&&Math.random()<0.25){doCmd(si,{a:'nukebuy'});if(S.nkT>0)S.nkUsed=(S.nkUsed||0)+1;}}
+ if(W.diff!=='easy'&&!W.finale&&S.nkCd<=0&&!(S.nkT>0)&&S.ore>=NUKE_COST+1200&&O.dep[1]>=8000&&W.t>150&&(S.nkUsed||0)<3&&Math.random()<0.25){doCmd(si,{a:'nukebuy'});if(S.nkT>0){S.nkUsed=(S.nkUsed||0)+1;if(W.hu)S.nkCd=BOT_NUKE_CD;}}}
+/* campaign bot: its ballistic missile recharges 3× longer than the player's; armour goes up one step at a time,
+   at least a minute apart, so the money keeps flowing into units instead of one big armour splurge */
+const BOT_NUKE_CD=180,BOT_UA_GAP=60;
+const uaGapOk=S=>!W.hu||W.t-(S.uaBuyT??-999)>=BOT_UA_GAP;
 const botT=[0,0],botGoal=[null,null],botPlan=[null,null];
 /* the bot remembers what the opponent sends (by hit points) and builds/upgrades whatever kills THAT best per crystal */
 const botSeen=[{},{}],botThreat=[{inf:1,jeep:1,tank:1,heli:0.3,plane:0.3},{inf:1,jeep:1,tank:1,heli:0.3,plane:0.3}];
@@ -1232,9 +1236,9 @@ function botRest(si,S,t,hold){
   if(botNow[si]&&(S.towers.length<wantT||threat>=4)&&Math.random()<(calm?0.3:0.55))botGoal[si]='tower';
     else if((S.rl|0)<RUP_MAX&&S.dep[1]>3000&&t>[0,50,130][S.rl|0])botGoal[si]='rup';
     else if((S.rl|0)>=RUP_MAX&&S.hv.length<wantHv&&S.dep[1]>3000)botGoal[si]='harv';
-  else if(S.ua<wantUa&&Math.random()<0.55)botGoal[si]='ua';
-  else if(S.ua===4&&S.ua<capOf(W,'ua')&&S.ore>=uaCost(S)*0.8)botGoal[si]='ua';
-  else{const plan=bestWave(si,Math.max(S.ore,700));if(plan){botGoal[si]='attack';botPlan[si]=plan;}else if(S.ua<Math.min(UPG_MAX,capOf(W,'ua')))botGoal[si]='ua';else if(botNow[si]&&botPress[si]>=400)botGoal[si]='tower';else{botGoal[si]='mass';botPlan[si]=massWave(si);}}}
+  else if(S.ua<wantUa&&uaGapOk(S)&&Math.random()<0.55)botGoal[si]='ua';
+  else if(S.ua===4&&S.ua<capOf(W,'ua')&&uaGapOk(S)&&S.ore>=uaCost(S)*0.8)botGoal[si]='ua';
+  else{const plan=bestWave(si,Math.max(S.ore,700));if(plan){botGoal[si]='attack';botPlan[si]=plan;}else if(S.ua<Math.min(UPG_MAX,capOf(W,'ua'))&&uaGapOk(S))botGoal[si]='ua';else if(botNow[si]&&botPress[si]>=400)botGoal[si]='tower';else{botGoal[si]='mass';botPlan[si]=massWave(si);}}}
  const g=botGoal[si];const cost={uc:UC_COST,extup0:extUpCost(0),extup1:extUpCost(1),attack:botPlan[si]?botPlan[si].cost:200,mass:botPlan[si]?botPlan[si].cost:2000,tower:(bestDefence(si)||{cost:140}).cost,harv:HARV_COST2,rup:RUP_COST[Math.min(2,S.rl|0)],ext1:EXT_COST,uh:UH_COST,ua:uaCost(S)}[g];
  /* the anti-air savings never block the economy: refinery upgrades and harvesters may use them */
  const eco=(g==='rup'||g==='harv')?hold:0;
@@ -3223,9 +3227,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.15-1643</div>
+<div id="appVer">v2026.11.15-1704</div>
 <script>
-window.APP_VERSION='2026.11.15-1643';
+window.APP_VERSION='2026.11.15-1704';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
