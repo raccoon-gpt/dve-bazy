@@ -1151,8 +1151,14 @@ function botWaveFocus(si){const S=W.sides[si];
    for(const k of ['mg','can','tes','rkt']){if(capOf(W,k)<1||sl.zone==='far'&&!TW[k].far)continue;const mx=Math.min(TW_MAXLV,capOf(W,k));
     for(let L=1;L<=mx;L=nextLv(L)){const c=cumCost(k,L);if(c>S.ore*0.6)break;con(eff(k,L,sl.x,sl.y),c,()=>{doCmd(si,{a:'build',s:i,k});const nt=S.towers.find(q=>q.s===i);if(nt)for(let l=1;l<L;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});});}}}
   for(const tw of S.towers){if(tw.lv>=Math.min(TW_MAXLV,capOf(W,tw.k)))continue;const L2=nextLv(tw.lv),c=upCost(tw.k,tw.lv);con(eff(tw.k,L2,tw.x,tw.y)-eff(tw.k,tw.lv,tw.x,tw.y),c,()=>doCmd(si,{a:'up',id:tw.id}));}
-  if(!best)break;const o0=S.ore;best.f();if(S.ore===o0)break;n++;}
+  if(!best){if(sellForGround(si)){n++;it--;continue;}break;}const o0=S.ore;best.f();if(S.ore===o0)break;n++;}
  return n>0;}
+/* a ground wave the towers can't stop and no money: rocket towers do nothing against it — sell them (the one least
+   needed first) as long as the remaining rockets still hold any enemy aircraft out, then build against the wave */
+function sellForGround(si){const S=W.sides[si];if(W.finale)return false;
+ const air=[...S.units,...W.sides[1-si].units].filter(u=>u.o!==si&&!u.dead&&isAir(u)),airHp=air.reduce((a,u)=>a+u.hp,0),rd=tw=>TW.rkt.dmg*LVM[tw.lv-1]/(TW.rkt.cd*LVC[tw.lv-1]);
+ let aa=0;const R=S.towers.filter(t=>t.k==='rkt');for(const t of R)aa+=rd(t);R.sort((a,b)=>rd(a)-rd(b));
+ for(const t of R){if(airHp&&(aa-rd(t))*AA_T<airHp)continue;const o=S.ore;doCmd(si,{a:'sell',id:t.id});if(S.ore>o){padHold(si,t.s);return true;}}return false;}
 /* seconds the enemy aircraft are assumed to stay under the bot's rockets: the bot wants its rocket damage over that time to
    exceed the aircraft's total health (25 s was far too optimistic — a plane crosses the field much faster) */
 /* only aircraft on the way and no money for rockets: ground towers (machine guns, cannons, radars) are useless right now —
@@ -3258,9 +3264,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.15-2023</div>
+<div id="appVer">v2026.11.15-2035</div>
 <script>
-window.APP_VERSION='2026.11.15-2023';
+window.APP_VERSION='2026.11.15-2035';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
