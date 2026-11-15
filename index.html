@@ -1155,6 +1155,13 @@ function botWaveFocus(si){const S=W.sides[si];
  return n>0;}
 /* seconds the enemy aircraft are assumed to stay under the bot's rockets: the bot wants its rocket damage over that time to
    exceed the aircraft's total health (25 s was far too optimistic — a plane crosses the field much faster) */
+/* only aircraft on the way and no money for rockets: ground towers (machine guns, cannons, radars) are useless right now —
+   sell the cheapest of them until a rocket tower is affordable. Never while any enemy ground unit or Titan is out. */
+function sellForAA(si,cost){const S=W.sides[si];if(W.finale)return false;
+ if([...S.units,...W.sides[1-si].units].some(u=>u.o!==si&&!u.dead&&!isAir(u)))return false;
+ const c=S.towers.filter(t=>t.k==='mg'||t.k==='can'||t.k==='tes').sort((a,b)=>a.spent-b.spent);let sold=false;
+ for(const tw of c){if(S.ore>=cost)break;const o=S.ore;doCmd(si,{a:'sell',id:tw.id});if(S.ore>o){sold=true;padHold(si,tw.s);}}
+ return sold&&S.ore>=cost;}
 const AA_T=3;
 function botSwapOk(si){return !!W.hu&&si===1;}
 function botExec(si,cmd){const S=W.sides[si];
@@ -1209,6 +1216,7 @@ function botThink(dt,si){if(!W||W.over||W.nuke)return;botT[si]-=dt;if(botT[si]>0
    let acted=false;for(let it=0;it<3;it++){let aa=0;for(const tw of S.towers)if(tw.k==='rkt')aa+=TW.rkt.dmg*LVM[tw.lv-1]/(TW.rkt.cd*LVC[tw.lv-1]);
    if(aa*AA_T>=airHp)break;botOv[si]={inf:0.05,jeep:0.05,tank:0.05,heli:1,plane:1};let b=null;try{b=bestDefence(si);}finally{botOv[si]=null;}
     const isAA=b&&(b.cmd.a==='build'&&b.cmd.k==='rkt'||b.cmd.a==='replace'&&b.cmd.k==='rkt'||b.cmd.a==='up'&&(S.towers.find(t=>t.id===b.cmd.id)||{}).k==='rkt');
+    if(isAA&&S.ore<b.cost&&sellForAA(si,b.cost)){acted=true;it--;continue;}
     if(!(isAA&&S.ore>=b.cost))break;const n0=S.towers.length,o0=S.ore;botExec(si,b.cmd);acted=true;if(S.ore===o0&&S.towers.length===n0)break;}
    if(acted)return;}}
  /* rebuilds waiting for their pad: the money is set aside at the sale and spent once the delay is over */
@@ -3245,9 +3253,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.15-1905</div>
+<div id="appVer">v2026.11.15-1930</div>
 <script>
-window.APP_VERSION='2026.11.15-1905';
+window.APP_VERSION='2026.11.15-1930';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
