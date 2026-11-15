@@ -2665,8 +2665,8 @@ let CAMP_RUN=null,CAMP_PREV=null,CAMP_SEL=null,CAMP_T0=0;
 function campStart(i){const d=CAMP_DIFF;if(CAMP_PREV==null)CAMP_PREV=MAPI;MAPS[CAMP_I]=campMap(i);setupMap(CAMP_I);bgCache=null;viewW=null;
  const keep=diff;diff=d;soloGo();diff=keep;CAMP_RUN={i,diff:d};W.caps=campCaps(i+1);W.hu={...CAMP_P.up};for(const k in FREE_SQ)W.sides[0].fcd[k]=huFreeCd(0,k);
  /* later bases fight harder: a little more income for the bot, free waves a little more often.
-    Harvester load and kill rewards are the same as the player's. */
- const B=W.sides[1],k=1+0.01*i;B.incK*=k;B.cashK=1;B.hload=HARV_LOAD;
+ */
+ const B=W.sides[1],k=1+0.01*i;B.incK*=k;B.cashK=k;B.hload=HARV_LOAD*k;/* harvester load and kill rewards start equal to the player's and grow +1% per level */
  /* a level may set its own mine sizes (both sides) */
 /* campaign Titans start at 1000 health on every level; the bot's gets +600 per level (level 1: +0).
     Bot's super-weapon cooldowns shrink 2% per level (ballistic missile unchanged). */
@@ -3220,9 +3220,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.15-1530</div>
+<div id="appVer">v2026.11.15-1557</div>
 <script>
-window.APP_VERSION='2026.11.15-1530';
+window.APP_VERSION='2026.11.15-1557';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
