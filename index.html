@@ -742,7 +742,7 @@ function hat(d){d=Math.max(0,Math.min(HTOT,d));let i=1;while(i<hl.length-1&&hl[i
 
 /* ---------------- rules ---------------- */
 const TW={mg:{name:'Пулемёт',cost:200,range:100,cd:0.15,dmg:15,far:false},can:{name:'Пушка',cost:300,range:125,cd:1.6,dmg:60,far:false,splash:42,splashK:0.6},tes:{name:'Радар',cost:600,range:110,cd:1,dmg:100,far:false,chain:2,slow:0.3,hop:90},rkt:{name:'Ракеты',cost:500,range:200,cd:2.6,dmg:70,far:true,splash:34}};
-const FREE_SQ={inf:{cd:10,n:5},jeep:{cd:20,n:5},tank:{cd:50,n:5},heli:{cd:30,n:5}},SAFE_BOOST=3,HARV_REFUND=500,TITAN_STOP=150,TITAN_RESPAWN=20,DEPOSIT=[25000,40000],BURN_T=11,BURN_R=50,BURN_DPS=190,QUEUE_MAX=30,FREE_MAX_UA=2,MINE_CD=60,MINE_R=300,MINE_DMG=3200,RAIN_CD=30,RAIN_N=10,RAIN_DMG=2250,RAIN_R=50,RAIN_CONF=5,FRZ_TW=3,FF_DMG={inf:12,jeep:25,tank:80,titan:300,heli:20,plane:0},FF_CD={inf:0.6,jeep:0.5,tank:1.4,titan:1.4,heli:0.5,plane:1},MINE_TRIG=18,FRZ_CD=40,FRZ_T=7,SHELL_SPEED=200,SHELL_LEAD=30,SHELL_DIRECT=15,TW_MAXLV=5,LVM=[1,1.4,1.9,2.6,3.4],CAN_LVM=[1,2,200/60,2.6,6],MG_LVM=[1,2.1,3.3,2.6,5],LVR=[1,1.08,1.16,1.24,1.32],LVC=[1,0.88,0.77,0.68,0.6]; // per level: damage, range, reload time
+const FREE_SQ={inf:{cd:10,n:5},jeep:{cd:20,n:5},tank:{cd:50,n:5},heli:{cd:30,n:5}},SAFE_BOOST=5,HARV_REFUND=500,TITAN_STOP=150,TITAN_RESPAWN=20,DEPOSIT=[25000,40000],BURN_T=11,BURN_R=50,BURN_DPS=190,QUEUE_MAX=30,FREE_MAX_UA=2,MINE_CD=60,MINE_R=300,MINE_DMG=3200,RAIN_CD=30,RAIN_N=10,RAIN_DMG=2250,RAIN_R=50,RAIN_CONF=5,FRZ_TW=3,FF_DMG={inf:12,jeep:25,tank:80,titan:300,heli:20,plane:0},FF_CD={inf:0.6,jeep:0.5,tank:1.4,titan:1.4,heli:0.5,plane:1},MINE_TRIG=18,FRZ_CD=40,FRZ_T=7,SHELL_SPEED=200,SHELL_LEAD=30,SHELL_DIRECT=15,TW_MAXLV=5,LVM=[1,1.4,1.9,2.6,3.4],CAN_LVM=[1,2,200/60,2.6,6],MG_LVM=[1,2.1,3.3,2.6,5],LVR=[1,1.08,1.16,1.24,1.32],LVC=[1,0.88,0.77,0.68,0.6]; // per level: damage, range, reload time
 const UN={titan:{name:'Титан',cost:0,hp:100000,sp:30,reward:0,lives:0},inf:{name:'Пехота',cost:60,hp:209,sp:40,reward:10,lives:1},jeep:{name:'Джип',cost:105,hp:376,sp:70,reward:18,lives:1},tank:{name:'Танк',cost:270,hp:300,sp:30,reward:45,lives:3},heli:{name:'Вертолёт',cost:165,hp:100,sp:50,reward:25,lives:1,air:true},plane:{name:'Самолёт',cost:300,hp:72,sp:70,reward:22,lives:1,air:true}};
 const TES_DMG=[50,60,70,80,90],TES_SLOW=[0.3,0.36,0.42,0.48,0.55],TES_R=[1,1.15,1.3,1.45,1.6],TES_UP=[0,1350,2400,3900,6000];
 /* cost to upgrade a tower from level lv to lv+1 (the radar is much pricier: its top level is devastating) */
@@ -788,9 +788,9 @@ function newHarv(){return{id:nextId++,alive:true,d:0,dir:-1,load:0,cargo:0,wait:
 function newWorld(){nextId=1000;return{t:0,sides:[newSide(),newSide()],over:null,pause:false,speed:1}}
 /* unit price grows with armour level: a max-armour tank costs 500 */
 function unitCost(k,ua){return Math.round(UN[k].cost*(1+(ua||0)*(500/180-1)/5)/5)*5;}
-/* the crystal inside the refinery gives a steady income from the start: 5/s, +5 per refinery level, ×3 once the rich field is empty; it holds 25 000 */
-/* once the rich mine is worked out the refinery crystal speeds up: ×3 for the bot, ×9 for a player */
-const SAFE_BOOST_P=9;
+/* the crystal inside the refinery gives a steady income from the start: 5/s, +5 per refinery level, ×5 once the rich field is empty; it holds 25 000 */
+/* once the rich mine is worked out the refinery crystal speeds up ×5 (bot and player alike) */
+const SAFE_BOOST_P=5;
 function crystalInc(S){const d=S.dep||[1,1];if(!(d[0]>0))return 0;let k=1;
  if(d[1]<=0){let si=typeof W!=='undefined'&&W?W.sides.indexOf(S):-1;if(si<0&&typeof viewW!=='undefined'&&viewW)si=viewW.sides.indexOf(S);k=si>=0&&humanSide(si)?SAFE_BOOST_P:SAFE_BOOST;}
  return CRY_INC*(1+(S.rl|0))*(S.incK||1)*k;}
@@ -816,7 +816,7 @@ function doCmd(si,cmd){if(!W||W.over)return;if(W.nuke&&cmd&&cmd.a!=='pause')retu
  else if(a==='ua'){if(S.ua>=UPG_MAX||S.ua>=capOf(W,'ua')||S.ore<uaCost(S))return;S.ore-=uaCost(S);S.ua=nextLv(S.ua);ev({e:'up',s:si});if(S.ua>=UPG_MAX)ev({e:'vbig',s:si});}
  else if(a==='rup'){const l=S.rl|0;if(l>=RUP_MAX||S.ore<RUP_COST[l])return;S.ore-=RUP_COST[l];S.rl=l+1;S.uh=S.rl;S.uc=S.rl;ev({e:'up',s:si});if(S.rl>=RUP_MAX)ev({e:'vbig',s:si});
   if(S.hv.length<HARV_MAXN&&S.dep[1]>0){const h=newHarv();h.d=HTOT;h.dir=-1;h.load=0;h.wait=0.5;S.hv.push(h);}}
- else if(a==='harv'){if((S.rl|0)<RUP_MAX||S.hv.length>=HARV_MAXN||S.ore<huHarvCost(si))return;S.ore-=huHarvCost(si);const h=newHarv();h.d=HTOT;h.dir=-1;h.load=0;h.wait=0.5;S.hv.push(h);}
+ else if(a==='harv'){if((S.rl|0)<RUP_MAX||S.hv.length>=HARV_MAXN||S.ore<huHarvCost(si)||!(S.dep[1]>0))return;S.ore-=huHarvCost(si);const h=newHarv();h.d=HTOT;h.dir=-1;h.load=0;h.wait=0.5;S.hv.push(h);}
  else if(a==='fsend'){const k=cmd.k,f=FREE_SQ[k];if(!f||S.fcd[k]>0||campNoFree())return;S.fcd[k]=huFreeCd(si,k);for(let i=0,nF=huFreeN(si,k);i<nF;i++)S.queue.push('g:'+k);ev({e:'fsq',s:si});}
  else if(a==='uc'){if(S.uc>=UC_MAX||S.ore<UC_COST)return;S.ore-=UC_COST;S.uc++;ev({e:'up',s:si});}
  else if(a==='uh'){if(S.uh>=UH_MAX||S.ore<UH_COST)return;S.ore-=UH_COST;S.uh++;}
@@ -856,7 +856,10 @@ function simSide(si,dt){const S=W.sides[si],O=W.sides[1-si];
  /* rich field empty: harvesters are recalled — each refunds 500 plus whatever it was carrying */
  if(S.dep[1]<=0&&S.hv.length){let sum=0;for(const h of S.hv){const p=hat(h.d);sum+=HARV_REFUND+(h.cargo||0);ev({e:'sold',s:si,x:p[0]|0,y:p[1]|0});}S.ore+=sum;S.hv.length=0;ev({e:'cash',s:si,v:Math.round(sum)});}
  /* both fields dry: this side's Titan rolls out (and again 20 s after it is destroyed); selling is off for everyone from then on */
- if(S.dep[0]<=0&&S.dep[1]<=0){W.finale=true;if(!S.titanOut){S.titanCd-=dt;if(S.titanCd<=0){spawnTitan(si);}}}S.mineCd=Math.max(0,S.mineCd-dt);
+ /* one side has run both mines dry: the other side's mines are closed at once — what is left in them is lost,
+    its harvesters vanish with their cargo (nothing reaches the treasury) */
+ if(S.dep[0]<=0&&S.dep[1]<=0){const O=W.sides[1-si];if(O.dep[0]>0||O.dep[1]>0||O.hv.length){O.dep[0]=0;O.dep[1]=0;for(const h of O.hv){const q=hat(h.d);ev({e:'boom',s:1-si,x:q[0]|0,y:q[1]|0,b:1});}O.hv.length=0;ev({e:'minesgone',s:1-si});}
+  W.finale=true;if(!S.titanOut){S.titanCd-=dt;if(S.titanCd<=0){spawnTitan(si);}}}S.mineCd=Math.max(0,S.mineCd-dt);
  // missile: 10 s countdown on the base, then launch at the opponent's rich crystal field (waits if another strike is on screen)
  if(S.nkT>0){const c0=Math.ceil(S.nkT);S.nkT-=dt;if(S.nkT<=0){if(W.nuke)S.nkT=0.05;else{S.nkT=0;const F=FIELDS[1];W.nuke={t:0,s:si,tg:1-si,x:F.x|0,y:(F.y+10)|0};ev({e:'nkl',s:si});}}else if(Math.ceil(S.nkT)<c0)ev({e:'nkc',s:si,n:Math.ceil(S.nkT)});}
  if(S.nkCd>0)S.nkCd=Math.max(0,S.nkCd-dt);if(S.blockT>0)S.blockT=Math.max(0,S.blockT-dt);S.frzCd=Math.max(0,S.frzCd-dt);S.frzT=Math.max(0,S.frzT-dt);S.rainCd=Math.max(0,S.rainCd-dt);S.confT=Math.max(0,S.confT-dt);
@@ -942,7 +945,7 @@ function lvR(k,i){return (k==='tes'?TES_R:LVR)[i];}
 function hurtHarv(si,h,d){const S=W.sides[si];if(!h||!h.alive)return;{const q=hat(h.d);if(underXBridge(q[0],q[1],XBR_SAFE))return;}h.hp-=d*(HU(si,'harv')>=1?1/1.2:1);S.hurtT=W.t;if(h.hp<=0){h.alive=false;S.hv.splice(S.hv.indexOf(h),1);const p=hat(h.d);ev({e:'boom',s:si,x:p[0]|0,y:p[1]|0,b:2});ev({e:'hvdie',s:si});harvBounty(si,h,p);}}
 /* a destroyed enemy harvester pays its killer: 500 empty, 800 with any cargo (all modes) */
 const HV_BOUNTY=[500,800];
-function harvBounty(si,h,p){const v=HV_BOUNTY[(h.cargo||0)>0?1:0];W.sides[1-si].ore+=v;ev({e:'rf',s:si,x:p[0]|0,y:p[1]|0,v});}
+function harvBounty(si,h,p){const v=HV_BOUNTY[(h.cargo||0)>0?1:0];W.sides[1-si].ore+=v;ev({e:'rf',s:si,x:p[0]|0,y:p[1]|0,v,hb:1});}
 const FREE_WAVE_EVERY=30;
 function freeWave(dt){const S=W.sides[1];W.fwT=(W.fwT??18)-dt;if(W.fwT>0)return;const D=DIFF[W.diff||'normal'];W.fwT=D.wave*(W.waveK||1)*(0.8+Math.random()*0.4);
  const t=W.t,n=Math.max(1,Math.round(Math.min(6,2+Math.floor(t/90))*D.waveN));for(let i=0;i<n&&S.queue.length<QUEUE_MAX+10;i++){const r=Math.random();S.queue.push('f:'+(t<120?'inf':t<300?(r<0.6?'inf':'jeep'):(r<0.4?'inf':r<0.7?'jeep':r<0.88?'tank':'heli')));}}
@@ -1298,7 +1301,7 @@ function addFx(e){const s=e.s;if(s!==0&&s!==1)return;const fx=FX[s];try{auEvent(
  else if(e.e==='rainfall'){fx.push({k:'fall',x:e.x,y:e.y,life:e.T,max:e.T,ox:(Math.random()-0.5)*120});}
  else if(e.e==='ff'){const p=muzzlePos(s,e.u);if(!p)return;fx.push({k:'etr',x1:p[0],y1:p[1],x2:e.x+(Math.random()-0.5)*8,y2:e.y+(Math.random()-0.5)*8,life:0.07,max:0.07,big:e.k});fx.push({k:'hit',x:e.x,y:e.y,life:0.2,max:0.2});}
  else if(e.e==='freeze'){fx.push({k:'frost',life:FRZ_T,max:FRZ_T});for(let i=0;i<40;i++)fx.push({k:'flake',x:Math.random()*VW,y:Math.random()*VH,vy:12+Math.random()*20,life:1.5+Math.random()*1.5,max:3});}
- else if(e.e==='kr'){fx.push({k:'kr',x:e.x,y:e.y,v:e.v,life:1.1,max:1.1});}else if(e.e==='rf'){fx.push({k:'rf',x:e.x,y:e.y,v:e.v,life:1.2,max:1.2});}else if(e.e==='crit'){fx.push({k:'crit',x:e.x,y:e.y,life:0.8,max:0.8});}
+ else if(e.e==='kr'){fx.push({k:'kr',x:e.x,y:e.y,v:e.v,life:1.1,max:1.1});}else if(e.e==='rf'){fx.push(e.hb?{k:'rf',hb:1,x:e.x,y:e.y,v:e.v,life:1.8,max:1.8}:{k:'rf',x:e.x,y:e.y,v:e.v,life:1.2,max:1.2});}else if(e.e==='crit'){fx.push({k:'crit',x:e.x,y:e.y,life:0.8,max:0.8});}
  else if(e.e==='built'){fx.push({k:'ring',x:e.x??cx_(e.c),y:e.y??cy_(e.r),life:0.5,max:0.5});}
  else if(e.e==='sold'){fx.push({k:'ring',x:e.x,y:e.y,life:0.5,max:0.5});}
  else if(e.e==='cash'){fx.push({k:'cash',v:e.v,life:1.4,max:1.4});}
@@ -2273,7 +2276,7 @@ function drawMap(si,t){const S=viewW.sides[si];const owner=si,tmMine=tmOf(owner)
   else if(f.k==='mz'){const k=1-f.life/f.max;ctx.save();ctx.translate(f.x,f.y);ctx.rotate(f.a);ctx.globalAlpha=1-k;for(const sd of [-1,1])E(ctx,4,sd*(8+k*14)*f.m,(6+k*8)*f.m,(4+k*5)*f.m,'rgba(230,225,215,0.8)');ctx.restore();}
   else if(f.k==='boom')drawBlast(f);
   else if(f.k==='crit'){const k=1-f.life/f.max;ctx.globalAlpha=Math.min(1,2-2*k);T('×2',f.x,f.y-16-k*16,11,'#FFB03A','center',900);ctx.globalAlpha=1;}
-  else if(f.k==='rf'&&si!==me){const k=1-f.life/f.max;ctx.globalAlpha=Math.min(1,2-2*k);crystal(ctx,f.x-8,f.y-14-k*22,10,4);T('+'+f.v,f.x-1,f.y-18-k*22,12,'#9FF0A8','left',900);ctx.globalAlpha=1;}
+  else if(f.k==='rf'&&si!==me&&!f.hb){const k=1-f.life/f.max;ctx.globalAlpha=Math.min(1,2-2*k);crystal(ctx,f.x-8,f.y-14-k*22,10,4);T('+'+f.v,f.x-1,f.y-18-k*22,12,'#9FF0A8','left',900);ctx.globalAlpha=1;}
   else if(f.k==='kr'&&si===me){const k=1-f.life/f.max;ctx.globalAlpha=Math.min(1,2-2*k);crystal(ctx,f.x-8,f.y-14-k*22,10,4);T('+'+f.v,f.x-1,f.y-18-k*22,12,'#BFE9FF','left',900);ctx.globalAlpha=1;}
   else if(f.k==='hit')drawSpark(f);
   else if(f.k==='fw'){drawFirework(f);}
@@ -2283,6 +2286,8 @@ function drawMap(si,t){const S=viewW.sides[si];const owner=si,tmMine=tmOf(owner)
   else if(f.k==='snowbit'){const k=1-f.life/f.max;E(ctx,f.x+f.vx*k,f.y+f.vy*k+k*k*14,2*(1-k)+0.6,2*(1-k)+0.6,'rgba(235,248,255,'+(1-k)+')');}
   else if(f.k==='ring'){const k=1-f.life/f.max;ctx.strokeStyle='rgba(255,230,120,'+(1-k)+')';ctx.lineWidth=3;ctx.beginPath();ctx.arc(f.x,f.y,10+k*26,0,6.3);ctx.stroke();}
   else if(f.k==='cash'&&si===me){const k=1-f.life/f.max,e=HWAY[HWAY.length-1],x=e[0]-10,y=e[1]-34-k*22;ctx.globalAlpha=Math.min(1,2.5-2.5*k);ctx.font='900 14px '+FONT;const w=ctx.measureText('+'+f.v).width+30;RR(ctx,x-w/2,y-11,w,22,11,'rgba(20,28,18,0.85)',1.5,'#5CB8FF');crystal(ctx,x-w/2+11,y+6,12,4.5);T('+'+f.v,x-w/2+20,y+0.5,14,'#BFE9FF','left',900);ctx.globalAlpha=1;}}
+ /* bounty for an enemy harvester: the same plate as an unload, drawn over every blast */
+ if(si!==me)for(const f of FX[si])if(f.k==='rf'&&f.hb){const k=1-f.life/f.max;ctx.save();ctx.translate(f.x,f.y-26-k*22);const fl=FLIP;if(fl)ctx.scale(-1,1);FLIP=false;ctx.globalAlpha=Math.min(1,2.5-2.5*k);ctx.font='900 14px '+FONT;const w=ctx.measureText('+'+f.v).width+30;RR(ctx,-w/2,-11,w,22,11,'rgba(20,28,18,0.85)',1.5,'#5CB8FF');crystal(ctx,-w/2+11,6,12,4.5);T('+'+f.v,-w/2+20,0.5,14,'#BFE9FF','left',900);FLIP=fl;ctx.restore();}
 }
 function towerTip(){const S=viewW.sides[me];const tw=menu&&S.towers.find(t=>t.id===menu.id);if(!tw)return'';const d=TW[tw.k],i=tw.lv-1;
  if(tw.k==='tes'){const s2=j=>'ток '+TES_DMG[j]+' ×5 целей · замедл. '+Math.round(TES_SLOW[j]*100)+'% · радиус '+Math.round(d.range*lvR(tw.k,j));return d.name+' ур.'+showLv(tw.lv)+': '+s2(i)+(tw.lv<Math.min(TW_MAXLV,capOf(viewW,tw.k))?'  →  ур.'+showLv(nextLv(tw.lv))+': '+s2(nextLv(tw.lv)-1):'');}
@@ -3213,9 +3218,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.15-1441</div>
+<div id="appVer">v2026.11.15-1526</div>
 <script>
-window.APP_VERSION='2026.11.15-1441';
+window.APP_VERSION='2026.11.15-1526';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
