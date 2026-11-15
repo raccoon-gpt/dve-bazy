@@ -1145,12 +1145,14 @@ function botWaveFocus(si){const S=W.sides[si];
  const eff=(k,L,x,y)=>{const R=TW[k].range*lvR(k,L-1);const hit=[];foes.forEach((u,i)=>{if(paths[i].some(p=>(p[0]-x)**2+(p[1]-y)**2<R*R))hit.push(u);});if(!hit.length)return 0;
   const hp=hit.reduce((a,u)=>a+u.hp,0);let v=0;for(const u of hit)v+=u.hp/hp*twDps(k,L,u.k,hit.length);return v*Math.min(1,hp/hpTot*foes.length/hit.length);};
  const have=()=>S.towers.reduce((a,tw)=>a+eff(tw.k,tw.lv,tw.x,tw.y),0);
+ /* a radar also slows the units it reaches, so every other tower gets more time on them: count part of that as its value */
+ const effT=(k,L,x,y)=>{const v=eff(k,L,x,y);if(k!=='tes'||v<=0)return v;let o=0;for(const tw of S.towers)if(tw.k!=='tes')o+=eff(tw.k,tw.lv,tw.x,tw.y);return v+o*TES_SLOW[L-1]*0.6;};
  let n=0;
  for(let it=0;it<3;it++){if(have()*WAVE_T>=hpTot)break;let best=null;const con=(sc,c,f)=>{if(c>S.ore||sc<=0)return;if(!best||sc/c>best.s)best={s:sc/c,f};};
   for(const i of [...NEAR_SLOTS,...FAR_SLOTS]){if(!slotFree(S,i)||padBusy(S,i))continue;const sl=SLOTS[i];
    for(const k of ['mg','can','tes','rkt']){if(capOf(W,k)<1||sl.zone==='far'&&!TW[k].far)continue;const mx=Math.min(TW_MAXLV,capOf(W,k));
-    for(let L=1;L<=mx;L=nextLv(L)){const c=cumCost(k,L);if(c>S.ore*0.6)break;con(eff(k,L,sl.x,sl.y),c,()=>{doCmd(si,{a:'build',s:i,k});const nt=S.towers.find(q=>q.s===i);if(nt)for(let l=1;l<L;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});});}}}
-  for(const tw of S.towers){if(tw.lv>=Math.min(TW_MAXLV,capOf(W,tw.k)))continue;const L2=nextLv(tw.lv),c=upCost(tw.k,tw.lv);con(eff(tw.k,L2,tw.x,tw.y)-eff(tw.k,tw.lv,tw.x,tw.y),c,()=>doCmd(si,{a:'up',id:tw.id}));}
+    for(let L=1;L<=mx;L=nextLv(L)){const c=cumCost(k,L);if(c>S.ore*0.6)break;con(effT(k,L,sl.x,sl.y),c,()=>{doCmd(si,{a:'build',s:i,k});const nt=S.towers.find(q=>q.s===i);if(nt)for(let l=1;l<L;l=nextLv(l))doCmd(si,{a:'up',id:nt.id});});}}}
+  for(const tw of S.towers){if(tw.lv>=Math.min(TW_MAXLV,capOf(W,tw.k)))continue;const L2=nextLv(tw.lv),c=upCost(tw.k,tw.lv);con(effT(tw.k,L2,tw.x,tw.y)-effT(tw.k,tw.lv,tw.x,tw.y),c,()=>doCmd(si,{a:'up',id:tw.id}));}
   if(!best){if(sellForGround(si)){n++;it--;continue;}break;}const o0=S.ore;best.f();if(S.ore===o0)break;n++;}
  return n>0;}
 /* a ground wave the towers can't stop and no money: rocket towers do nothing against it — sell them (the one least
@@ -3264,9 +3266,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.15-2035</div>
+<div id="appVer">v2026.11.15-2038</div>
 <script>
-window.APP_VERSION='2026.11.15-2035';
+window.APP_VERSION='2026.11.15-2038';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
