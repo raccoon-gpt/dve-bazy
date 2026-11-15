@@ -1224,19 +1224,25 @@ function botRest(si,S,t,hold){
  if(S.towers.length<2&&botNow[si]){const b=bestDefence(si,{buildOnly:true,maxCost:Math.max(TW.mg.cost,S.ore)});if(b&&S.ore>=b.cost)botExec(si,b.cmd);if(S.ore<TW.mg.cost||S.towers.length<1)return;}
  /* campaign with a refund of 100%+: a lost unit pays back more than it cost and feeds the Titan, so the bot keeps a steady stream
     of units on the road (a share of its spare money, a limited number in flight) instead of attacking only when it can break through */
- if(W.hu&&REFUND_K>=1&&!W.finale&&t>20&&S.queue.filter(q=>q.indexOf(':')<0).length===0){const fly=[...S.units,...W.sides[1-si].units].filter(u=>u.o===si&&!u.dead&&u.pc>0).length,cap=Math.min(10,3+Math.floor(t/60));
-  if(fly<cap){const p=massWave(si);if(p){let k=p.k,uc=unitCost(k,S.ua);if(S.ore*0.25<uc){k='inf';uc=unitCost(k,S.ua);}const n=Math.min(cap-fly,8,Math.max(Math.floor(S.ore*0.25/uc),S.ore>=uc*3?1:0));for(let i=0;i<n;i++)doCmd(si,{a:'send',k});}}}
+ if(W.hu&&REFUND_K>=1&&!W.finale&&t>20&&S.queue.filter(q=>q.indexOf(':')<0).length===0){const fly=[...S.units,...W.sides[1-si].units].filter(u=>u.o===si&&!u.dead&&u.pc>0).length,cap=Math.min(20,5+Math.floor(t/30));
+  /* units come back at full price, so they are a loan, not a cost: half of the money that isn't earmarked for the
+     refinery / a harvester goes into the stream */
+  const eco=botGoal[si]==='rup'?RUP_COST[Math.min(2,S.rl|0)]:botGoal[si]==='harv'?HARV_COST2:0,free=Math.max(0,S.ore-eco);
+  if(fly<cap){const p=massWave(si);if(p){let k=p.k,uc=unitCost(k,S.ua);if(free*0.5<uc){k='inf';uc=unitCost(k,S.ua);}const n=Math.min(cap-fly,12,Math.max(Math.floor(free*0.5/uc),free>=uc*3?1:0));for(let i=0;i<n;i++)doCmd(si,{a:'send',k});}}}
  // then save up for one goal at a time
  if(!botGoal[si]){
   /* priorities: defence → economy that pays back fast → armour on schedule → attacks with what is left.
      (before: an attack "looked possible" almost always, so it kept buying unarmoured waves and never invested) */
   const O=W.sides[1-si];const threat=O.units.filter(u=>u.o!==si).length+S.units.filter(u=>u.o!==si).length;
   const press=botPress[si],calm=press<400&&t-(S.breachT??-99)>40;const wantT=Math.min(14,2+Math.floor(t/150)+Math.floor(press/700)+(t-(S.breachT??-99)<20?2:0));
-  const wantHv=Math.min(HARV_MAXN,1+Math.floor(t/70)),wantUa=Math.min(capOf(W,'ua'),(calm?[45,120,220,340,480]:[60,150,270,420,600]).filter(x=>t>x*(S.uaT||1)).length);/* never aim past the level's armour cap: an unreachable goal used to freeze all spending */
+  /* campaign: the economy as a good player runs it — refinery levels and harvesters (all 5, and replacements) as soon as
+     they're affordable, no schedule; armour only once 3 harvesters work */
+  const ecoRush=!!W.hu;
+  const wantHv=ecoRush?HARV_MAXN:Math.min(HARV_MAXN,1+Math.floor(t/70)),wantUa=Math.min(capOf(W,'ua'),(calm?[45,120,220,340,480]:[60,150,270,420,600]).filter(x=>t>x*(S.uaT||1)).length);/* never aim past the level's armour cap: an unreachable goal used to freeze all spending */
   if(botNow[si]&&(S.towers.length<wantT||threat>=4)&&Math.random()<(calm?0.3:0.55))botGoal[si]='tower';
-    else if((S.rl|0)<RUP_MAX&&S.dep[1]>3000&&t>[0,50,130][S.rl|0])botGoal[si]='rup';
+    else if((S.rl|0)<RUP_MAX&&S.dep[1]>3000&&(ecoRush||t>[0,50,130][S.rl|0]))botGoal[si]='rup';
     else if((S.rl|0)>=RUP_MAX&&S.hv.length<wantHv&&S.dep[1]>3000)botGoal[si]='harv';
-  else if(S.ua<wantUa&&uaGapOk(S)&&Math.random()<0.55)botGoal[si]='ua';
+  else if(S.ua<wantUa&&uaGapOk(S)&&(!ecoRush||S.hv.length>=3||!(S.dep[1]>3000))&&Math.random()<0.55)botGoal[si]='ua';
   else if(S.ua===4&&S.ua<capOf(W,'ua')&&uaGapOk(S)&&S.ore>=uaCost(S)*0.8)botGoal[si]='ua';
   else{const plan=bestWave(si,Math.max(S.ore,700));if(plan){botGoal[si]='attack';botPlan[si]=plan;}else if(S.ua<Math.min(UPG_MAX,capOf(W,'ua'))&&uaGapOk(S))botGoal[si]='ua';else if(botNow[si]&&botPress[si]>=400)botGoal[si]='tower';else{botGoal[si]='mass';botPlan[si]=massWave(si);}}}
  const g=botGoal[si];const cost={uc:UC_COST,extup0:extUpCost(0),extup1:extUpCost(1),attack:botPlan[si]?botPlan[si].cost:200,mass:botPlan[si]?botPlan[si].cost:2000,tower:(bestDefence(si)||{cost:140}).cost,harv:HARV_COST2,rup:RUP_COST[Math.min(2,S.rl|0)],ext1:EXT_COST,uh:UH_COST,ua:uaCost(S)}[g];
@@ -3227,9 +3233,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.15-1704</div>
+<div id="appVer">v2026.11.15-1731</div>
 <script>
-window.APP_VERSION='2026.11.15-1704';
+window.APP_VERSION='2026.11.15-1731';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
