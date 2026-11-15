@@ -2633,8 +2633,9 @@ const CAMP_I=11,CAMP_DIFF='normal';
 /* stars from the base health left on a win: 18–20 → 3, 10–17 → 2, less → 1 */
 const campStars=l=>l>=18?3:l>=10?2:1;
 /* levels: random editor maps (fixed seeds) in the region's theme; a level with `code` uses a hand-made map */
+const CAMP_DEP=[10000,25000];
 const CAMP=[
- {n:'Тихий луг',th:'grass',seed:101,dep:[15000,30000],titan:1000,code:'DB1:eyJ2Ijo0LCJuIjoiMSIsInQiOiJncmFzcyIsImZhIjpbMSw2XSwicmUiOls0LDZdLCJmMCI6bnVsbCwiZjEiOlsxMiw2XSwicmQiOltbMSw2XSxbMSw1XSxbMSw0XSxbMSwzXSxbMSwyXSxbMiwyXSxbMywyXSxbNCwyXSxbNSwyXSxbNiwyXSxbNiwzXSxbNiw0XSxbNyw0XSxbOCw0XSxbOSw0XSxbMTAsNF0sWzExLDRdLFsxMiw0XSxbMTMsNF0sWzE0LDRdLFsxNSw0XSxbMTUsNV0sWzE1LDZdLFsxNiw2XSxbMTcsNl0sWzE4LDZdXSwiYnIiOltdLCJwIjpudWxsLCJwZCI6W1szMTAsMTMwLCJuZWFyIl0sWzM3MCwxMzAsIm5lYXIiXSxbNDMwLDEzMCwibmVhciJdLFs0OTAsMTMwLCJuZWFyIl0sWzU1MCwxMzAsIm5lYXIiXSxbNTcyLDIzMCwibmVhciJdLFs1MTIsMjI4LCJuZWFyIl0sWzQ1MiwyMzAsIm5lYXIiXSxbMzkyLDIzMCwibmVhciJdLFszMzIsMjMwLCJuZWFyIl0sWzI3MiwyMzAsIm5lYXIiXSxbMjEwLDE1MCwibmVhciJdLFs2NzAsMjEwLCJuZWFyIl1dfQ=='},{n:'Речной брод',th:'grass',seed:202},{n:'Старая мельница',th:'grass',seed:303},{n:'Водопады',th:'grass',seed:404},{n:'Каменный мост',th:'grass',seed:505},
+ {n:'Тихий луг',th:'grass',seed:101,titan:1000,code:'DB1:eyJ2Ijo0LCJuIjoiMSIsInQiOiJncmFzcyIsImZhIjpbMSw2XSwicmUiOls0LDZdLCJmMCI6bnVsbCwiZjEiOlsxMiw2XSwicmQiOltbMSw2XSxbMSw1XSxbMSw0XSxbMSwzXSxbMSwyXSxbMiwyXSxbMywyXSxbNCwyXSxbNSwyXSxbNiwyXSxbNiwzXSxbNiw0XSxbNyw0XSxbOCw0XSxbOSw0XSxbMTAsNF0sWzExLDRdLFsxMiw0XSxbMTMsNF0sWzE0LDRdLFsxNSw0XSxbMTUsNV0sWzE1LDZdLFsxNiw2XSxbMTcsNl0sWzE4LDZdXSwiYnIiOltdLCJwIjpudWxsLCJwZCI6W1szMTAsMTMwLCJuZWFyIl0sWzM3MCwxMzAsIm5lYXIiXSxbNDMwLDEzMCwibmVhciJdLFs0OTAsMTMwLCJuZWFyIl0sWzU1MCwxMzAsIm5lYXIiXSxbNTcyLDIzMCwibmVhciJdLFs1MTIsMjI4LCJuZWFyIl0sWzQ1MiwyMzAsIm5lYXIiXSxbMzkyLDIzMCwibmVhciJdLFszMzIsMjMwLCJuZWFyIl0sWzI3MiwyMzAsIm5lYXIiXSxbMjEwLDE1MCwibmVhciJdLFs2NzAsMjEwLCJuZWFyIl1dfQ=='},{n:'Речной брод',th:'grass',seed:202},{n:'Старая мельница',th:'grass',seed:303},{n:'Водопады',th:'grass',seed:404},{n:'Каменный мост',th:'grass',seed:505},
  {n:'Край пустыни',th:'sand',seed:606},{n:'Кристальная долина',th:'sand',seed:707},{n:'Каменные дюны',th:'sand',seed:808},{n:'Красные столовые горы',th:'sand',seed:1616},{n:'Буровая',th:'sand',seed:1717},
  {n:'Ледяной ручей',th:'snow',seed:909},{n:'Радар',th:'snow',seed:1010},{n:'Снежный перевал',th:'snow',seed:1111},{n:'Ледник',th:'snow',seed:1818},{n:'Сосновый спуск',th:'snow',seed:1919},
  {n:'Топкий берег',th:'swamp',seed:2020},{n:'Мёртвые деревья',th:'swamp',seed:2121},{n:'Туманная заводь',th:'swamp',seed:2222},{n:'Гнилые мостки',th:'swamp',seed:2323},{n:'Сердце трясины',th:'swamp',seed:2424},
@@ -2663,7 +2664,8 @@ function campStart(i){const d=CAMP_DIFF;if(CAMP_PREV==null)CAMP_PREV=MAPI;MAPS[C
 /* campaign Titans start at 1000 health on every level; the bot's gets +600 per level (level 1: +0).
     Bot's super-weapon cooldowns shrink 2% per level (ballistic missile unchanged). */
  W.titanBase=CAMP[i].titan||1000;B.tbLv=600*i;W.botCdK=1-0.02*i;
- if(CAMP[i].dep){W.depMax=CAMP[i].dep.slice();for(const S of W.sides)S.dep=CAMP[i].dep.slice();}W.waveK=1-0.012*i;document.getElementById('camp').hidden=true;}
+ /* campaign mines: 10k / 25k on every level unless a level sets its own (both sides) */
+ {const dp=CAMP[i].dep||CAMP_DEP;W.depMax=dp.slice();for(const S of W.sides)S.dep=dp.slice();}W.waveK=1-0.012*i;document.getElementById('camp').hidden=true;}
 function campWin(){if(!CAMP_RUN)return;const i=CAMP_RUN.i,S=W&&W.sides[0],s=campStars(S?S.lives:0);CAMP_RUN.won=s;const was=CAMP_P.stars[i]|0;if(was<s){CAMP_ANIM={i,was,st:s,t0:0};CAMP_P.stars[i]=s;campSave();}}
 let CAMP_ANIM=null;
 function campOpen(){const o=document.getElementById('camp');o.hidden=false;HANG=null;CAMP_CONF=null;document.getElementById('lobby').hidden=true;CAMP_SEL=null;CAMP_T0=now();campResize();CV.z=CAMZ;if(CAMP_ANIM){CAMP_ANIM.t0=0;CAMP_ANIM.snd=null;const f=CAMP_PT[CAMP_ANIM.i];camFocus(f[0]+20,f[1]-20);return;}const n=campNext(),f=CAMP_PT[n<0?CAMP.length-1:n];camFocus(f[0]+20,f[1]-20);}
@@ -3211,9 +3213,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.15-0422</div>
+<div id="appVer">v2026.11.15-1441</div>
 <script>
-window.APP_VERSION='2026.11.15-0422';
+window.APP_VERSION='2026.11.15-1441';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
