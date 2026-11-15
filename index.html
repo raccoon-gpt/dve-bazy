@@ -947,8 +947,8 @@ const FREE_WAVE_EVERY=30;
 function freeWave(dt){const S=W.sides[1];W.fwT=(W.fwT??18)-dt;if(W.fwT>0)return;const D=DIFF[W.diff||'normal'];W.fwT=D.wave*(W.waveK||1)*(0.8+Math.random()*0.4);
  const t=W.t,n=Math.max(1,Math.round(Math.min(6,2+Math.floor(t/90))*D.waveN));for(let i=0;i<n&&S.queue.length<QUEUE_MAX+10;i++){const r=Math.random();S.queue.push('f:'+(t<120?'inf':t<300?(r<0.6?'inf':'jeep'):(r<0.4?'inf':r<0.7?'jeep':r<0.88?'tank':'heli')));}}
 /* ---------- test nuclear strike: everything freezes, the missile leaves our base, the camera jumps to the enemy, the bomb lands in the middle ---------- */
-/* campaign test mode: 120% refund for lost paid units (both sides); no free squads for the player, no free waves for the bot */
-const REFUND_K=1.2,CAMP_NOFREE=true,campNoFree=()=>CAMP_NOFREE&&!!(W&&W.hu),FINALE_BONUS=10000,NUKE_COST=1500,NUKE_CD=60,NUKE_COUNT=10,NUKE_R=90,NUKE_DEP=5000,NUKE_BLOCK=15;
+/* campaign test mode: 100% refund for lost paid units (both sides); no free squads for the player, no free waves for the bot */
+const REFUND_K=1.0,CAMP_NOFREE=true,campNoFree=()=>CAMP_NOFREE&&!!(W&&W.hu),FINALE_BONUS=10000,NUKE_COST=1500,NUKE_CD=60,NUKE_COUNT=10,NUKE_R=90,NUKE_DEP=5000,NUKE_BLOCK=15;
 const NK={launch:3.4,fall:1.25,clip:119/30,fade:1.8,x:VW/2,y:252};NK.boom=NK.launch+NK.fall;NK.end=NK.boom+NK.clip+NK.fade;
 function nukeStep(dt){const N=W.nuke,t0=N.t;N.t+=dt;const t=N.t;
  if(t0<NK.launch&&t>=NK.launch)ev({e:'nkf',s:N.tg});
@@ -1036,7 +1036,7 @@ function startEnding(){const E=W.over;const L=1-E.w;E.t=0;E.cap=false;E.ruin=fal
  q.sort((a,b)=>a.t-b.t);W.endQ=q;}
 function endingStep(dt){const E=W.over;if(E.done)return;if(E.t===undefined)startEnding();E.t+=dt;const q=W.endQ||[];while(q.length&&q[0].t<=E.t)q.shift().f();
  for(let s=0;s<2;s++)W.sides[s].units=W.sides[s].units.filter(u=>!u.dead);if(E.t>=END_T[E.why])E.done=true;}
-function titanHp(S){return Math.round(((W&&W.titanBase)??TITAN_BASE)+(S.tb||0));}/* a campaign level may set its own starting Titan health */
+function titanHp(S){return Math.round(((W&&W.titanBase)??TITAN_BASE)+(S.tb||0)+(S.tbLv||0));}/* a campaign level may set its own starting Titan health */
 function spawnTitan(si){const S=W.sides[si];if(S.titanOut)return;S.titanOut=true;
  /* a player's paid units still waiting in the queue were bought before the Titan: mark them 'p:' so they keep their worth and feed it (not the bot's) */
  if(humanSide(si))S.queue=S.queue.map(k=>k.indexOf(':')<0?'p:'+k:k);ev({e:'tout',s:si});if(W.freeBot&&si===1){S.ore+=FINALE_BONUS;ev({e:'cash',s:si,v:FINALE_BONUS});}const u=UN.titan,thp=titanHp(S);S.units.push({id:nextId++,o:si,al:0,k:'titan',d:TOTAL,b:NB?(S.brN=(S.brN|0)+1)%(NB+1):0,hp:thp,mx:thp,dm:1,cd:1,ga:0,ph:0});ev({e:'titan',s:si});}
@@ -2661,6 +2661,8 @@ function campStart(i){const d=CAMP_DIFF;if(CAMP_PREV==null)CAMP_PREV=MAPI;MAPS[C
  const B=W.sides[1],k=1+0.01*i;B.incK*=k;B.cashK=1;B.hload=HARV_LOAD;
  /* a level may set its own mine sizes (both sides) */
 if(CAMP[i].titan)W.titanBase=CAMP[i].titan;
+ /* the bot's Titan gets +600 health per campaign level (level 1: +0) */
+ B.tbLv=600*i;
  if(CAMP[i].dep){W.depMax=CAMP[i].dep.slice();for(const S of W.sides)S.dep=CAMP[i].dep.slice();}W.waveK=1-0.012*i;document.getElementById('camp').hidden=true;}
 function campWin(){if(!CAMP_RUN)return;const i=CAMP_RUN.i,S=W&&W.sides[0],s=campStars(S?S.lives:0);CAMP_RUN.won=s;const was=CAMP_P.stars[i]|0;if(was<s){CAMP_ANIM={i,was,st:s,t0:0};CAMP_P.stars[i]=s;campSave();}}
 let CAMP_ANIM=null;
@@ -3209,9 +3211,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.15-0021</div>
+<div id="appVer">v2026.11.15-0411</div>
 <script>
-window.APP_VERSION='2026.11.15-0021';
+window.APP_VERSION='2026.11.15-0411';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
