@@ -975,6 +975,8 @@ function missile(c,x,y,a,s,flame){if(ROCKET_IMG.complete&&ROCKET_IMG.naturalWidt
  RR(c,-15,-5,26,10,4,'#E9ECEF',1.6,OL);RR(c,-6,-5,5,10,1,'#F2C232');P(c,[[11,-5],[20,0],[11,5]],'#C92E2A',1.6,OL);
  E(c,0,0,2.2,2.2,'#2A2E33');c.restore();}
 function nukeT(N){return N.t+(mode==='guest'?Math.min(0.15,now()-(viewW.at||now())):Math.min(1/30,acc||0)*(viewW.pause?0:1));}
+/* bounty for an enemy harvester: the same plate as an unload, drawn after the map and the missile blast so nothing covers it */
+function drawBounty(si){if(si===me)return;for(const f of FX[si])if(f.k==='rf'&&f.hb){const k=1-f.life/f.max;ctx.save();ctx.translate(f.x,f.y-26-Math.min(1,k*2)*14);const fl=FLIP;if(fl)ctx.scale(-1,1);FLIP=false;ctx.globalAlpha=Math.min(1,f.life/0.6);ctx.font='900 14px '+FONT;const w=ctx.measureText('+'+f.v).width+30;RR(ctx,-w/2,-11,w,22,11,'rgba(20,28,18,0.85)',1.5,'#5CB8FF');crystal(ctx,-w/2+11,6,12,4.5);T('+'+f.v,-w/2+20,0.5,14,'#BFE9FF','left',900);FLIP=fl;ctx.restore();}}
 function drawNuke(si,t){const N=viewW.nuke;if(!N)return;const nt=nukeT(N);const NX=N.x??NX,NY=N.y??NY;
  if(si===N.s&&nt<NK.launch){const r=baseRects()[0],bx=r.x+r.w/2,by=r.y+r.h/2;const k=nt/NK.launch,e=k*k;const y=by-e*(by+120);
   // ignition (rocket still on the pad), a slow heavy lift-off, then it accelerates hard
@@ -1303,7 +1305,7 @@ function addFx(e){const s=e.s;if(s!==0&&s!==1)return;const fx=FX[s];try{auEvent(
  else if(e.e==='rainfall'){fx.push({k:'fall',x:e.x,y:e.y,life:e.T,max:e.T,ox:(Math.random()-0.5)*120});}
  else if(e.e==='ff'){const p=muzzlePos(s,e.u);if(!p)return;fx.push({k:'etr',x1:p[0],y1:p[1],x2:e.x+(Math.random()-0.5)*8,y2:e.y+(Math.random()-0.5)*8,life:0.07,max:0.07,big:e.k});fx.push({k:'hit',x:e.x,y:e.y,life:0.2,max:0.2});}
  else if(e.e==='freeze'){fx.push({k:'frost',life:FRZ_T,max:FRZ_T});for(let i=0;i<40;i++)fx.push({k:'flake',x:Math.random()*VW,y:Math.random()*VH,vy:12+Math.random()*20,life:1.5+Math.random()*1.5,max:3});}
- else if(e.e==='kr'){fx.push({k:'kr',x:e.x,y:e.y,v:e.v,life:1.1,max:1.1});}else if(e.e==='rf'){fx.push(e.hb?{k:'rf',hb:1,x:e.x,y:e.y,v:e.v,life:1.8,max:1.8}:{k:'rf',x:e.x,y:e.y,v:e.v,life:1.2,max:1.2});}else if(e.e==='crit'){fx.push({k:'crit',x:e.x,y:e.y,life:0.8,max:0.8});}
+ else if(e.e==='kr'){fx.push({k:'kr',x:e.x,y:e.y,v:e.v,life:1.1,max:1.1});}else if(e.e==='rf'){fx.push(e.hb?{k:'rf',hb:1,x:e.x,y:e.y,v:e.v,life:3.2,max:3.2}:{k:'rf',x:e.x,y:e.y,v:e.v,life:1.2,max:1.2});}else if(e.e==='crit'){fx.push({k:'crit',x:e.x,y:e.y,life:0.8,max:0.8});}
  else if(e.e==='built'){fx.push({k:'ring',x:e.x??cx_(e.c),y:e.y??cy_(e.r),life:0.5,max:0.5});}
  else if(e.e==='sold'){fx.push({k:'ring',x:e.x,y:e.y,life:0.5,max:0.5});}
  else if(e.e==='cash'){fx.push({k:'cash',v:e.v,life:1.4,max:1.4});}
@@ -2288,8 +2290,7 @@ function drawMap(si,t){const S=viewW.sides[si];const owner=si,tmMine=tmOf(owner)
   else if(f.k==='snowbit'){const k=1-f.life/f.max;E(ctx,f.x+f.vx*k,f.y+f.vy*k+k*k*14,2*(1-k)+0.6,2*(1-k)+0.6,'rgba(235,248,255,'+(1-k)+')');}
   else if(f.k==='ring'){const k=1-f.life/f.max;ctx.strokeStyle='rgba(255,230,120,'+(1-k)+')';ctx.lineWidth=3;ctx.beginPath();ctx.arc(f.x,f.y,10+k*26,0,6.3);ctx.stroke();}
   else if(f.k==='cash'&&si===me){const k=1-f.life/f.max,e=HWAY[HWAY.length-1],x=e[0]-10,y=e[1]-34-k*22;ctx.globalAlpha=Math.min(1,2.5-2.5*k);ctx.font='900 14px '+FONT;const w=ctx.measureText('+'+f.v).width+30;RR(ctx,x-w/2,y-11,w,22,11,'rgba(20,28,18,0.85)',1.5,'#5CB8FF');crystal(ctx,x-w/2+11,y+6,12,4.5);T('+'+f.v,x-w/2+20,y+0.5,14,'#BFE9FF','left',900);ctx.globalAlpha=1;}}
- /* bounty for an enemy harvester: the same plate as an unload, drawn over every blast */
- if(si!==me)for(const f of FX[si])if(f.k==='rf'&&f.hb){const k=1-f.life/f.max;ctx.save();ctx.translate(f.x,f.y-26-k*22);const fl=FLIP;if(fl)ctx.scale(-1,1);FLIP=false;ctx.globalAlpha=Math.min(1,2.5-2.5*k);ctx.font='900 14px '+FONT;const w=ctx.measureText('+'+f.v).width+30;RR(ctx,-w/2,-11,w,22,11,'rgba(20,28,18,0.85)',1.5,'#5CB8FF');crystal(ctx,-w/2+11,6,12,4.5);T('+'+f.v,-w/2+20,0.5,14,'#BFE9FF','left',900);FLIP=fl;ctx.restore();}
+
 }
 function towerTip(){const S=viewW.sides[me];const tw=menu&&S.towers.find(t=>t.id===menu.id);if(!tw)return'';const d=TW[tw.k],i=tw.lv-1;
  if(tw.k==='tes'){const s2=j=>'ток '+TES_DMG[j]+' ×5 целей · замедл. '+Math.round(TES_SLOW[j]*100)+'% · радиус '+Math.round(d.range*lvR(tw.k,j));return d.name+' ур.'+showLv(tw.lv)+': '+s2(i)+(tw.lv<Math.min(TW_MAXLV,capOf(viewW,tw.k))?'  →  ур.'+showLv(nextLv(tw.lv))+': '+s2(nextLv(tw.lv)-1):'');}
@@ -2479,8 +2480,8 @@ function render(t){ctx.setTransform(DPR,0,0,DPR,0,0);ctx.clearRect(0,0,VW,VH);if
     mirrored on the right page — the guest (side 1) too, so both phones look the same way round */
  const L=me===1?1:0,P=me===1?1-viewT:viewT,off=P*VW;
  shake*=0.88;if(shake<0.2)shake=0;const shx=(Math.random()-0.5)*2*shake,shy=(Math.random()-0.5)*2*shake;ctx.save();ctx.translate(shx,shy);
- if(P<0.99){ctx.save();ctx.translate(-off,0);drawMap(L,t);drawNuke(L,t);ctx.restore();}
- if(P>0.01){ctx.save();ctx.translate(2*VW-off,0);ctx.scale(-1,1);FLIP=true;drawMap(1-L,t);drawNuke(1-L,t);FLIP=false;ctx.restore();}
+ if(P<0.99){ctx.save();ctx.translate(-off,0);drawMap(L,t);drawNuke(L,t);drawBounty(L);ctx.restore();}
+ if(P>0.01){ctx.save();ctx.translate(2*VW-off,0);ctx.scale(-1,1);FLIP=true;drawMap(1-L,t);drawNuke(1-L,t);drawBounty(1-L);FLIP=false;ctx.restore();}
  if(viewW.sides[view]&&viewW.sides[view].frzT>0){const k=Math.min(1,viewW.sides[view].frzT/1.5);const gr=ctx.createRadialGradient(VW/2,VH/2,VH*0.35,VW/2,VH/2,VW*0.62);gr.addColorStop(0,'rgba(200,240,255,0)');gr.addColorStop(1,'rgba(200,240,255,'+(0.45*k)+')');ctx.fillStyle=gr;ctx.fillRect(0,0,VW,VH);}
  drawNukeFlash();ctx.restore();
  // cinematic: the interface slides away while a nuclear strike is on screen
@@ -2668,9 +2669,9 @@ function campStart(i){const d=CAMP_DIFF;if(CAMP_PREV==null)CAMP_PREV=MAPI;MAPS[C
  */
  const B=W.sides[1],k=1+0.01*i;B.incK*=k;B.cashK=k;B.hload=HARV_LOAD*k;/* harvester load and kill rewards start equal to the player's and grow +1% per level */
  /* a level may set its own mine sizes (both sides) */
-/* campaign Titans start at 1000 health on every level; the bot's gets +600 per level (level 1: +0).
+/* campaign Titans start at 1000 health on every level; the bot's gets +800 per level (level 1: +0).
     Bot's super-weapon cooldowns shrink 2% per level (ballistic missile unchanged). */
- W.titanBase=CAMP[i].titan||1000;B.tbLv=600*i;W.botCdK=1-0.02*i;
+ W.titanBase=CAMP[i].titan||1000;B.tbLv=800*i;W.botCdK=1-0.02*i;
  /* campaign mines: 10k / 25k on every level unless a level sets its own (both sides) */
  {const dp=CAMP[i].dep||CAMP_DEP;W.depMax=dp.slice();for(const S of W.sides)S.dep=dp.slice();}W.waveK=1-0.012*i;document.getElementById('camp').hidden=true;}
 function campWin(){if(!CAMP_RUN)return;const i=CAMP_RUN.i,S=W&&W.sides[0],s=campStars(S?S.lives:0);CAMP_RUN.won=s;const was=CAMP_P.stars[i]|0;if(was<s){CAMP_ANIM={i,was,st:s,t0:0};CAMP_P.stars[i]=s;campSave();}}
@@ -3220,9 +3221,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.15-1557</div>
+<div id="appVer">v2026.11.15-1619</div>
 <script>
-window.APP_VERSION='2026.11.15-1557';
+window.APP_VERSION='2026.11.15-1619';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
