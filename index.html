@@ -875,7 +875,7 @@ function simSide(si,dt){const S=W.sides[si],O=W.sides[1-si];
  const hk=UH_K[Math.min(3,S.uh|0)]*(HU(si,'harv')>=2?1.2:1),hcK=huCargo(si);for(const h of S.hv){
   /* a tap stops a harvester for 5 s, then it drives on by itself */
   if(h.stopped){h.stopT=(h.stopT??5)-dt;if(h.stopT<=0){h.stopped=false;h.stopT=0;}}
-  if(!h.stopped){if(h.wait>0)h.wait-=dt*hk;else{h.d+=h.dir*dt*32*hk;if(h.d>=HTOT){h.d=HTOT;h.dir=-1;h.wait=1;if(h.hp<HARV_HP)h.hp=HARV_HP;if(h.load>0.5&&h.cargo>0){S.ore+=h.cargo*hcK*(S.cashK||1);ev({e:'cash',s:si,v:Math.round(h.cargo*hcK)});}h.load=0;h.cargo=0;}if(h.d<=0&&S.blockT>0){h.d=0;h.dir=-1;h.wait=0.5;}else if(h.d<=0){h.d=0;h.dir=1;h.wait=2.4;const take=Math.min((S.hload||HARV_LOAD)*1.5**(S.uc||0)*(MAP.hload||1),S.dep[1]);S.dep[1]-=take;h.cargo=take;h.load=take>0?1:0;}}}
+  if(!h.stopped){if(h.wait>0)h.wait-=dt*hk;else{h.d+=h.dir*dt*32*hk;if(h.d>=HTOT){h.d=HTOT;h.dir=-1;h.wait=1;if(h.hp<HARV_HP)h.hp=HARV_HP;if(h.load>0.5&&h.cargo>0){S.ore+=h.cargo*hcK*(S.cashK||1);if(W.hu&&si===1)S.uBud=(S.uBud||0)+h.cargo*hcK*(S.cashK||1);ev({e:'cash',s:si,v:Math.round(h.cargo*hcK)});}h.load=0;h.cargo=0;}if(h.d<=0&&S.blockT>0){h.d=0;h.dir=-1;h.wait=0.5;}else if(h.d<=0){h.d=0;h.dir=1;h.wait=2.4;const take=Math.min((S.hload||HARV_LOAD)*1.5**(S.uc||0)*(MAP.hload||1),S.dep[1]);S.dep[1]-=take;h.cargo=take;h.load=take>0?1:0;}}}
   const p=hat(h.d),q=hat(h.d+(h.dir>0?6:-6));if(!h.stopped&&!(h.wait>0)&&Math.hypot(q[0]-p[0],q[1]-p[1])>1)turnTo(h,Math.atan2(q[1]-p[1],q[0]-p[0]),dt,6);
  }
  // no harvesters and no money for one: a free harvester rolls out after FREE_HARV_T seconds
@@ -1186,12 +1186,14 @@ function bestDefence(si,o){o=o||{};const S=W.sides[si];let best=null;let aaNow=0
     Titan and wave handling, so a player who kept units on the road silenced it).
     campaign with a refund of 100%+: a lost unit pays back more than it cost and feeds the Titan, so the bot keeps a steady stream
     of units on the road (a share of its spare money, a limited number in flight) instead of attacking only when it can break through */
-function botStream(si){const S=W.sides[si],t=W.t;if(W.hu&&REFUND_K>=1&&!W.finale&&t>20&&S.queue.filter(q=>q.indexOf(':')<0).length===0){/* only the stream's own units count against its limit — a big attack wave on the road doesn't pause the stream */
-  S.stPend=0;const fly=[...S.units,...W.sides[1-si].units].filter(u=>u.o===si&&!u.dead&&u.st).length+(S.stPend|0);
-  /* units come back at full price, so they are a loan, not a cost: half of the money that isn't earmarked for the
-     refinery / a harvester goes into the stream */
-  const eco=botGoal[si]==='rup'?RUP_COST[Math.min(2,S.rl|0)]:botGoal[si]==='harv'?HARV_COST2:0,free=Math.max(0,S.ore-botHold(si)-eco),cap=Math.min(30,5+Math.floor(t/30)+Math.floor(free/1000));/* a rich bot may keep more units on the road */
-  if(fly<cap){const p=massWave(si);if(p){let k=p.k,uc=unitCost(k,S.ua);if(free*0.5<uc){k='inf';uc=unitCost(k,S.ua);}const n=Math.min(cap-fly,12,Math.max(Math.floor(free*0.5/uc),free>=uc*3?1:0));for(let i=0;i<n;i++){const q0=S.queue.length;doCmd(si,{a:'send',k});if(S.queue.length>q0)S.stPend=(S.stPend|0)+1;}}}}}
+/* campaign bot's unit money: everything its harvesters unload goes straight into units (the player kills them and the
+   price comes back), so crystals never sit idle while the harvester runs back and forth. Refunds, the refinery crystal and
+   kill rewards stay in the treasury for refinery levels, harvesters (a lost one is rebought as soon as it's affordable)
+   and the rest. Runs first on every think, before any defence work can end the think. */
+function botStream(si){const S=W.sides[si];if(!W.hu||si!==1||W.finale){S.uBud=0;return;}
+ const bud=Math.min(S.uBud||0,S.ore);if(!(bud>0))return;
+ const p=massWave(si);let k=p?p.k:'inf',uc=unitCost(k,S.ua);if(bud<uc){k='inf';uc=unitCost(k,S.ua);}if(bud<uc)return;
+ let n=Math.floor(bud/uc);for(let i=0;i<n;i++){const o=S.ore;doCmd(si,{a:'send',k});if(S.ore<o){S.uBud-=o-S.ore;continue;}if(k!=='inf'&&i===0){k='inf';uc=unitCost(k,S.ua);n=Math.floor(bud/uc);i=-1;continue;}break;}}
 function botThink(dt,si){if(!W||W.over||W.nuke)return;botT[si]-=dt;if(botT[si]>0)return;botT[si]=1.2+Math.random()*0.8;const S=W.sides[si];const t=W.t;updThreat(si);
  botSuper(si);
  botStream(si);
@@ -3237,9 +3239,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.15-1752</div>
+<div id="appVer">v2026.11.15-1814</div>
 <script>
-window.APP_VERSION='2026.11.15-1752';
+window.APP_VERSION='2026.11.15-1814';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
