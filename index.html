@@ -1065,12 +1065,12 @@ function massWave(si){const S=W.sides[si],O=W.sides[1-si];let best=null;for(cons
 /* the bot's superweapons recharge slower than a player's: freeze 120 s, rocket rain 150 s, mine 180 s */
 const BOT_FRZ_CD=120,BOT_RAIN_CD=150,BOT_MINE_CD=180;
 function botSuper(si){const S=W.sides[si],O=W.sides[1-si];if(W.over||W.nuke)return;
- if(S.mineCd<=0){let best=null,bs=-1,bestB=0;for(let k=0;k<12;k++){const d=EDGE_D+40+Math.random()*(TOTAL-EDGE_D-120);const mb0=Math.floor(Math.random()*(NB+1)),mb=d<dmOf(mb0)?mb0:0;if(S.mines.some(m=>Math.abs(m.d-d)<60&&sameBr(d,m.b,mb)))continue;const p=at(d,mb);let cov=0;for(const tw of S.towers){const R=TW[tw.k].range*lvR(tw.k,tw.lv-1);if((p[0]-tw.x)**2+(p[1]-tw.y)**2<R*R)cov+=tw.lv;}const sc=cov+(d-EDGE_D)/(TOTAL-EDGE_D)*2+Math.random();if(sc>bs){bs=sc;best=d;bestB=mb;}}if(best!=null){doCmd(si,{a:'mine',d:best,b:bestB});if(S.mineCd>0)S.mineCd=BOT_MINE_CD;}}
+ if(S.mineCd<=0){let best=null,bs=-1,bestB=0;for(let k=0;k<12;k++){const d=EDGE_D+40+Math.random()*(TOTAL-EDGE_D-120);const mb0=Math.floor(Math.random()*(NB+1)),mb=d<dmOf(mb0)?mb0:0;if(S.mines.some(m=>Math.abs(m.d-d)<60&&sameBr(d,m.b,mb)))continue;const p=at(d,mb);let cov=0;for(const tw of S.towers){const R=TW[tw.k].range*lvR(tw.k,tw.lv-1);if((p[0]-tw.x)**2+(p[1]-tw.y)**2<R*R)cov+=tw.lv;}const sc=cov+(d-EDGE_D)/(TOTAL-EDGE_D)*2+Math.random();if(sc>bs){bs=sc;best=d;bestB=mb;}}if(best!=null){doCmd(si,{a:'mine',d:best,b:bestB});if(S.mineCd>0)S.mineCd=BOT_MINE_CD*(W.botCdK||1);}}
  const foes=S.units.filter(u=>u.o!==si&&!u.dead),hp=foes.reduce((a,u)=>a+u.hp,0),titan=foes.some(u=>u.k==='titan'),deep=foes.filter(u=>u.d>EDGE_D+(TOTAL-EDGE_D)*0.35).length;
  /* the first third of its road is free passage: freeze and rain only once an enemy has gone deeper than that */
  const past=foes.some(u=>u.d>EDGE_D+(TOTAL-EDGE_D)/3);
- if(past&&S.frzCd<=0&&!(S.frzT>0)&&(titan&&foes.find(u=>u.k==='titan').d>EDGE_D+(TOTAL-EDGE_D)*0.3||hp>=1000&&deep>=2||foes.some(u=>u.d>TOTAL-(TOTAL-EDGE_D)*0.3)&&hp>=500)){doCmd(si,{a:'freeze'});if(S.frzCd>0)S.frzCd=BOT_FRZ_CD;}
- if(past&&S.rainCd<=0&&(titan||foes.length>=5||hp>=1800)){doCmd(si,{a:'rain'});if(S.rainCd>0)S.rainCd=BOT_RAIN_CD;}
+ if(past&&S.frzCd<=0&&!(S.frzT>0)&&(titan&&foes.find(u=>u.k==='titan').d>EDGE_D+(TOTAL-EDGE_D)*0.3||hp>=1000&&deep>=2||foes.some(u=>u.d>TOTAL-(TOTAL-EDGE_D)*0.3)&&hp>=500)){doCmd(si,{a:'freeze'});if(S.frzCd>0)S.frzCd=BOT_FRZ_CD*(W.botCdK||1);}
+ if(past&&S.rainCd<=0&&(titan||foes.length>=5||hp>=1800)){doCmd(si,{a:'rain'});if(S.rainCd>0)S.rainCd=BOT_RAIN_CD*(W.botCdK||1);}
  if(W.diff!=='easy'&&!W.finale&&S.nkCd<=0&&!(S.nkT>0)&&S.ore>=NUKE_COST+1200&&O.dep[1]>=8000&&W.t>150&&(S.nkUsed||0)<3&&Math.random()<0.25){doCmd(si,{a:'nukebuy'});if(S.nkT>0)S.nkUsed=(S.nkUsed||0)+1;}}
 const botT=[0,0],botGoal=[null,null],botPlan=[null,null];
 /* the bot remembers what the opponent sends (by hit points) and builds/upgrades whatever kills THAT best per crystal */
@@ -2660,9 +2660,9 @@ function campStart(i){const d=CAMP_DIFF;if(CAMP_PREV==null)CAMP_PREV=MAPI;MAPS[C
     Harvester load and kill rewards are the same as the player's. */
  const B=W.sides[1],k=1+0.01*i;B.incK*=k;B.cashK=1;B.hload=HARV_LOAD;
  /* a level may set its own mine sizes (both sides) */
-if(CAMP[i].titan)W.titanBase=CAMP[i].titan;
- /* the bot's Titan gets +600 health per campaign level (level 1: +0) */
- B.tbLv=600*i;
+/* campaign Titans start at 1000 health on every level; the bot's gets +600 per level (level 1: +0).
+    Bot's super-weapon cooldowns shrink 2% per level (ballistic missile unchanged). */
+ W.titanBase=CAMP[i].titan||1000;B.tbLv=600*i;W.botCdK=1-0.02*i;
  if(CAMP[i].dep){W.depMax=CAMP[i].dep.slice();for(const S of W.sides)S.dep=CAMP[i].dep.slice();}W.waveK=1-0.012*i;document.getElementById('camp').hidden=true;}
 function campWin(){if(!CAMP_RUN)return;const i=CAMP_RUN.i,S=W&&W.sides[0],s=campStars(S?S.lives:0);CAMP_RUN.won=s;const was=CAMP_P.stars[i]|0;if(was<s){CAMP_ANIM={i,was,st:s,t0:0};CAMP_P.stars[i]=s;campSave();}}
 let CAMP_ANIM=null;
@@ -3211,9 +3211,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.15-0411</div>
+<div id="appVer">v2026.11.15-0422</div>
 <script>
-window.APP_VERSION='2026.11.15-0411';
+window.APP_VERSION='2026.11.15-0422';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
