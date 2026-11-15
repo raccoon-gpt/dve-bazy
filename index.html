@@ -870,7 +870,7 @@ function simSide(si,dt){const S=W.sides[si],O=W.sides[1-si];
  for(let i=S.mines.length-1;i>=0;i--){const m=S.mines[i];/* triggered by where a unit actually is on the map: works on every road, branch, shortcut and shared stretch */if(!S.units.some(u=>{if(u.dead||u.o===si||isAir(u))return false;const q=uat(u,u.d);return (q[0]-m.x)**2+(q[1]-m.y)**2<MINE_TRIG*MINE_TRIG;}))continue;S.mines.splice(i,1);
   for(const u of S.units){if(u.dead||u.o===si)continue;const q=uat(u,u.d);if((q[0]-m.x)**2+(q[1]-m.y)**2<MINE_R*MINE_R)damageUnit(si,u,MINE_DMG*(u.k==='titan'&&HU(u.o,'tit')>=2?0.8:1));}ev({e:'mineboom',s:si,x:m.x|0,y:m.y|0});}
  // spawn queue onto opponent map
- S.qcd-=dt;if(S.queue.length&&S.qcd<=0&&spawnGate(si,S)){let k=S.queue.shift();const free=k[0]==='f',pre=k[0]==='p',paid=pre||k.indexOf(':')<0;if(k.indexOf(':')>0)k=k.slice(2);const al=free?Math.min(S.ua,FREE_MAX_UA):S.ua;const u=UN[k];S.units.push({id:nextId++,o:si,al,k,v:paid&&(!S.titanOut||pre)?unitCost(k,S.ua):0,pc:paid?unitCost(k,S.ua):0,d:TOTAL,b:NB?(S.brN=(S.brN|0)+1)%(NB+1):0,hp:u.hp*ARM_HP[al],mx:u.hp*ARM_HP[al],dm:1,cd:Math.random(),ga:0,ph:Math.random()*6});S.qcd=QCD(k);spawnDone(si,S,k);}
+ S.qcd-=dt;if(S.queue.length&&S.qcd<=0&&spawnGate(si,S)){let k=S.queue.shift();const free=k[0]==='f',pre=k[0]==='p',paid=pre||k.indexOf(':')<0;if(k.indexOf(':')>0)k=k.slice(2);const al=free?Math.min(S.ua,FREE_MAX_UA):S.ua;const u=UN[k];S.units.push({id:nextId++,o:si,al,k,v:paid&&(!S.titanOut||pre)?unitCost(k,S.ua):0,pc:paid?unitCost(k,S.ua):0,st:paid&&S.stPend>0?(S.stPend--,1):0,d:TOTAL,b:NB?(S.brN=(S.brN|0)+1)%(NB+1):0,hp:u.hp*ARM_HP[al],mx:u.hp*ARM_HP[al],dm:1,cd:Math.random(),ga:0,ph:Math.random()*6});S.qcd=QCD(k);spawnDone(si,S,k);}
  // harvester on this map
  const hk=UH_K[Math.min(3,S.uh|0)]*(HU(si,'harv')>=2?1.2:1),hcK=huCargo(si);for(const h of S.hv){
   /* a tap stops a harvester for 5 s, then it drives on by itself */
@@ -882,7 +882,7 @@ function simSide(si,dt){const S=W.sides[si],O=W.sides[1-si];
  if(!S.hv.length&&S.dep[1]>0){S.freeT=Math.max(0,S.freeT-dt);if(S.freeT<=0){const h=newHarv();h.d=HTOT;h.dir=-1;h.load=0;h.wait=0.5;S.hv.push(h);S.freeT=huFreeHarvT(si);ev({e:'built',s:si,x:HWAY[HWAY.length-1][0]|0,y:HWAY[HWAY.length-1][1]|0});}}else S.freeT=huFreeHarvT(si);
  // units on this territory: own ones leave the base (d goes down to the border), enemy ones come in (d goes up to the base)
  for(const u of S.units){if(u.dead)continue;const def=UN[u.k];const out=u.o===si;u.ph+=dt*def.sp*0.42;
-  if(out){u.d-=dt*def.sp*(u.k==='plane'?PLANE_K:bk(u))*(u.k==='titan'&&HU(u.o,'tit')>=1?1.1:1);if(u.d<=EDGE_D){u.dead=true;u.moved=true;O.units.push({id:u.id,o:u.o,al:u.al,k:u.k,v:u.v,pc:u.pc,d:EDGE_D,b:u.b|0,sbc:u.sbc,sbn:u.sbn,hp:u.hp,mx:u.mx,dm:u.dm,cd:u.cd,ga:Math.PI-(u.ga||0),ph:u.ph});continue;}
+  if(out){u.d-=dt*def.sp*(u.k==='plane'?PLANE_K:bk(u))*(u.k==='titan'&&HU(u.o,'tit')>=1?1.1:1);if(u.d<=EDGE_D){u.dead=true;u.moved=true;O.units.push({id:u.id,o:u.o,al:u.al,k:u.k,v:u.v,pc:u.pc,st:u.st,d:EDGE_D,b:u.b|0,sbc:u.sbc,sbn:u.sbn,hp:u.hp,mx:u.mx,dm:u.dm,cd:u.cd,ga:Math.PI-(u.ga||0),ph:u.ph});continue;}
    if(u.k==='inf'){const p=uat(u,u.d);if(VW-p[0]<SB_R)snowThrow(1-si,O,u,p,dt,true);}
    const base=headingRoad(u.d,u.b)+Math.PI;let df=base-u.ga;while(df>Math.PI)df-=6.283;while(df<-Math.PI)df+=6.283;u.ga+=df*Math.min(1,dt*6);continue;}
   if(S.frzT>(u.k==='titan'&&HU(u.o,'tit')>=4?2:0)){u.fz=1;continue;}u.fz=0;
@@ -1224,11 +1224,12 @@ function botRest(si,S,t,hold){
  if(S.towers.length<2&&botNow[si]){const b=bestDefence(si,{buildOnly:true,maxCost:Math.max(TW.mg.cost,S.ore)});if(b&&S.ore>=b.cost)botExec(si,b.cmd);if(S.ore<TW.mg.cost||S.towers.length<1)return;}
  /* campaign with a refund of 100%+: a lost unit pays back more than it cost and feeds the Titan, so the bot keeps a steady stream
     of units on the road (a share of its spare money, a limited number in flight) instead of attacking only when it can break through */
- if(W.hu&&REFUND_K>=1&&!W.finale&&t>20&&S.queue.filter(q=>q.indexOf(':')<0).length===0){const fly=[...S.units,...W.sides[1-si].units].filter(u=>u.o===si&&!u.dead&&u.pc>0).length,cap=Math.min(20,5+Math.floor(t/30));
+ if(W.hu&&REFUND_K>=1&&!W.finale&&t>20&&S.queue.filter(q=>q.indexOf(':')<0).length===0){/* only the stream's own units count against its limit — a big attack wave on the road doesn't pause the stream */
+  S.stPend=0;const fly=[...S.units,...W.sides[1-si].units].filter(u=>u.o===si&&!u.dead&&u.st).length+(S.stPend|0),cap=Math.min(20,5+Math.floor(t/30));
   /* units come back at full price, so they are a loan, not a cost: half of the money that isn't earmarked for the
      refinery / a harvester goes into the stream */
   const eco=botGoal[si]==='rup'?RUP_COST[Math.min(2,S.rl|0)]:botGoal[si]==='harv'?HARV_COST2:0,free=Math.max(0,S.ore-eco);
-  if(fly<cap){const p=massWave(si);if(p){let k=p.k,uc=unitCost(k,S.ua);if(free*0.5<uc){k='inf';uc=unitCost(k,S.ua);}const n=Math.min(cap-fly,12,Math.max(Math.floor(free*0.5/uc),free>=uc*3?1:0));for(let i=0;i<n;i++)doCmd(si,{a:'send',k});}}}
+  if(fly<cap){const p=massWave(si);if(p){let k=p.k,uc=unitCost(k,S.ua);if(free*0.5<uc){k='inf';uc=unitCost(k,S.ua);}const n=Math.min(cap-fly,12,Math.max(Math.floor(free*0.5/uc),free>=uc*3?1:0));for(let i=0;i<n;i++){const q0=S.queue.length;doCmd(si,{a:'send',k});if(S.queue.length>q0)S.stPend=(S.stPend|0)+1;}}}}
  // then save up for one goal at a time
  if(!botGoal[si]){
   /* priorities: defence → economy that pays back fast → armour on schedule → attacks with what is left.
@@ -3233,9 +3234,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.15-1731</div>
+<div id="appVer">v2026.11.15-1747</div>
 <script>
-window.APP_VERSION='2026.11.15-1731';
+window.APP_VERSION='2026.11.15-1747';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
