@@ -858,8 +858,10 @@ function simSide(si,dt){const S=W.sides[si],O=W.sides[1-si];
  /* both fields dry: this side's Titan rolls out (and again 20 s after it is destroyed); selling is off for everyone from then on */
  /* one side has run both mines dry: the other side's mines are closed at once — what is left in them is lost,
     its harvesters vanish with their cargo (nothing reaches the treasury) */
- if(S.dep[0]<=0&&S.dep[1]<=0){const O=W.sides[1-si];if(O.dep[0]>0||O.dep[1]>0||O.hv.length){O.dep[0]=0;O.dep[1]=0;for(const h of O.hv){const q=hat(h.d);ev({e:'boom',s:1-si,x:q[0]|0,y:q[1]|0,b:1});}O.hv.length=0;ev({e:'minesgone',s:1-si});}
-  W.finale=true;if(!S.titanOut){S.titanCd-=dt;if(S.titanCd<=0){spawnTitan(si);}}}S.mineCd=Math.max(0,S.mineCd-dt);
+ if(S.dep[0]<=0&&S.dep[1]<=0){const O=W.sides[1-si];if(O.dep[0]>0||O.dep[1]>0||O.hv.length){O.dep[0]=0;O.dep[1]=0;for(const h of O.hv){const q=hat(h.d);ev({e:'boom',s:1-si,x:q[0]|0,y:q[1]|0,b:1});}O.hv.length=0;O.forced=true;ev({e:'minesgone',s:1-si});}
+  /* a side whose mines were closed by the other's doesn't roll its Titan out now: it follows the usual race delay
+     after the other Titan is out */
+  W.finale=true;if(!S.titanOut&&!S.forced){S.titanCd-=dt;if(S.titanCd<=0){spawnTitan(si);}}}S.mineCd=Math.max(0,S.mineCd-dt);
  // missile: 10 s countdown on the base, then launch at the opponent's rich crystal field (waits if another strike is on screen)
  if(S.nkT>0){const c0=Math.ceil(S.nkT);S.nkT-=dt;if(S.nkT<=0){if(W.nuke)S.nkT=0.05;else{S.nkT=0;const F=FIELDS[1];W.nuke={t:0,s:si,tg:1-si,x:F.x|0,y:(F.y+10)|0};ev({e:'nkl',s:si});}}else if(Math.ceil(S.nkT)<c0)ev({e:'nkc',s:si,n:Math.ceil(S.nkT)});}
  if(S.nkCd>0)S.nkCd=Math.max(0,S.nkCd-dt);if(S.blockT>0)S.blockT=Math.max(0,S.blockT-dt);S.frzCd=Math.max(0,S.frzCd-dt);S.frzT=Math.max(0,S.frzT-dt);S.rainCd=Math.max(0,S.rainCd-dt);S.confT=Math.max(0,S.confT-dt);
@@ -1044,7 +1046,7 @@ function spawnTitan(si){const S=W.sides[si];if(S.titanOut)return;S.titanOut=true
  /* a player's paid units still waiting in the queue were bought before the Titan: mark them 'p:' so they keep their worth and feed it (not the bot's) */
  if(humanSide(si))S.queue=S.queue.map(k=>k.indexOf(':')<0?'p:'+k:k);ev({e:'tout',s:si});if(W.freeBot&&si===1){S.ore+=FINALE_BONUS;ev({e:'cash',s:si,v:FINALE_BONUS});}const u=UN.titan,thp=titanHp(S);S.units.push({id:nextId++,o:si,al:0,k:'titan',d:TOTAL,b:NB?(S.brN=(S.brN|0)+1)%(NB+1):0,hp:thp,mx:thp,dm:1,cd:1,ga:0,ph:0});ev({e:'titan',s:si});}
 /* vs the bot: once one Titan rolls out, the other side's follows within 10 s even if its fields still have crystals */
-function titanRace(dt){if(!W.freeBot)return;for(let s=0;s<2;s++){const A=W.sides[s],B=W.sides[1-s];if(A.titanOut&&!B.titanOut){W.finale=true;B.raceT=(B.raceT??(HU(1-s,'tit')>=5?13.5:15))-dt;if(B.raceT<=0)spawnTitan(1-s);}}}
+function titanRace(dt){for(let s=0;s<2;s++){const A=W.sides[s],B=W.sides[1-s];if(!W.freeBot&&!B.forced)continue;if(A.titanOut&&!B.titanOut){W.finale=true;B.raceT=(B.raceT??(HU(1-s,'tit')>=5?13.5:15))-dt;if(B.raceT<=0)spawnTitan(1-s);}}}
 function simStep(dt){if(!W)return;if(W.nuke){nukeStep(dt);return;}if(W.over){endingStep(dt);return;}W.t+=dt;if(W.freeBot&&!campNoFree())freeWave(dt);simSide(0,dt);simSide(1,dt);titanRace(dt);
  if(W.sides[0].lives<=0||W.sides[1].lives<=0){const L=W.sides[0].lives<=0?0:1;W.over={w:1-L,why:W.sides[L].lastHit==='titan'?'tbase':'base'};}}
 
@@ -3218,9 +3220,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.15-1526</div>
+<div id="appVer">v2026.11.15-1530</div>
 <script>
-window.APP_VERSION='2026.11.15-1526';
+window.APP_VERSION='2026.11.15-1530';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
