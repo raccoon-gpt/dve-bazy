@@ -1182,8 +1182,19 @@ function bestDefence(si,o){o=o||{};const S=W.sides[si];let best=null;let aaNow=0
   for(const k2 of far?['rkt']:['mg','can','tes','rkt']){if(k2===tw.k||capOf(W,k2)<1)continue;let L=0;for(let l=1;l<=Math.min(TW_MAXLV,capOf(W,k2));l=nextLv(l)){if(cumCost(k2,l)<=tw.spent*sk+budget)L=l;}if(!L)continue;
    const gain=towerValue(si,k2,L,tw.x,tw.y)-old;if(gain<=old*(swap?0.1:0.3)||gain<=0)continue;consider(gain,Math.max(40,cumCost(k2,L)-tw.spent*sk),{a:'replace',id:tw.id,k:k2,lv:L});}}
  return best;}
+/* runs first on every think, before defence work can end the think early (it used to sit behind the anti-air,
+    Titan and wave handling, so a player who kept units on the road silenced it).
+    campaign with a refund of 100%+: a lost unit pays back more than it cost and feeds the Titan, so the bot keeps a steady stream
+    of units on the road (a share of its spare money, a limited number in flight) instead of attacking only when it can break through */
+function botStream(si){const S=W.sides[si],t=W.t;if(W.hu&&REFUND_K>=1&&!W.finale&&t>20&&S.queue.filter(q=>q.indexOf(':')<0).length===0){/* only the stream's own units count against its limit — a big attack wave on the road doesn't pause the stream */
+  S.stPend=0;const fly=[...S.units,...W.sides[1-si].units].filter(u=>u.o===si&&!u.dead&&u.st).length+(S.stPend|0);
+  /* units come back at full price, so they are a loan, not a cost: half of the money that isn't earmarked for the
+     refinery / a harvester goes into the stream */
+  const eco=botGoal[si]==='rup'?RUP_COST[Math.min(2,S.rl|0)]:botGoal[si]==='harv'?HARV_COST2:0,free=Math.max(0,S.ore-botHold(si)-eco),cap=Math.min(30,5+Math.floor(t/30)+Math.floor(free/1000));/* a rich bot may keep more units on the road */
+  if(fly<cap){const p=massWave(si);if(p){let k=p.k,uc=unitCost(k,S.ua);if(free*0.5<uc){k='inf';uc=unitCost(k,S.ua);}const n=Math.min(cap-fly,12,Math.max(Math.floor(free*0.5/uc),free>=uc*3?1:0));for(let i=0;i<n;i++){const q0=S.queue.length;doCmd(si,{a:'send',k});if(S.queue.length>q0)S.stPend=(S.stPend|0)+1;}}}}}
 function botThink(dt,si){if(!W||W.over||W.nuke)return;botT[si]-=dt;if(botT[si]>0)return;botT[si]=1.2+Math.random()*0.8;const S=W.sides[si];const t=W.t;updThreat(si);
  botSuper(si);
+ botStream(si);
  /* aircraft over the bot's land and not enough rockets to stop them: anti-air comes before any saving */
  {if(botAirPk.w!==W){botAirPk[0]=botAirPk[1]=0;botAirPk.w=W;}const air=[...S.units,...W.sides[1-si].units].filter(u=>u.o!==si&&!u.dead&&isAir(u));botAirPk[si]=Math.max(botAirPk[si]*0.985,air.reduce((a,u)=>a+u.hp,0));if(air.length){const airHp=air.reduce((a,u)=>a+u.hp,0);
    /* up to 3 anti-air actions per think while the rockets can't hold the aircraft */
@@ -1222,15 +1233,7 @@ function botRest(si,S,t,hold){
   if(room>0){const p=bestWave(si,S.ore)||massWave(si);if(p){const uc=unitCost(p.k,S.ua),n=Math.min(room,p.n,Math.floor(S.ore/uc));for(let i=0;i<n;i++)doCmd(si,{a:'send',k:p.k});}}
   if(S.ore>=unitCost('inf',S.ua)*3)return;}
  if(S.towers.length<2&&botNow[si]){const b=bestDefence(si,{buildOnly:true,maxCost:Math.max(TW.mg.cost,S.ore)});if(b&&S.ore>=b.cost)botExec(si,b.cmd);if(S.ore<TW.mg.cost||S.towers.length<1)return;}
- /* campaign with a refund of 100%+: a lost unit pays back more than it cost and feeds the Titan, so the bot keeps a steady stream
-    of units on the road (a share of its spare money, a limited number in flight) instead of attacking only when it can break through */
- if(W.hu&&REFUND_K>=1&&!W.finale&&t>20&&S.queue.filter(q=>q.indexOf(':')<0).length===0){/* only the stream's own units count against its limit — a big attack wave on the road doesn't pause the stream */
-  S.stPend=0;const fly=[...S.units,...W.sides[1-si].units].filter(u=>u.o===si&&!u.dead&&u.st).length+(S.stPend|0),cap=Math.min(20,5+Math.floor(t/30));
-  /* units come back at full price, so they are a loan, not a cost: half of the money that isn't earmarked for the
-     refinery / a harvester goes into the stream */
-  const eco=botGoal[si]==='rup'?RUP_COST[Math.min(2,S.rl|0)]:botGoal[si]==='harv'?HARV_COST2:0,free=Math.max(0,S.ore-eco);
-  if(fly<cap){const p=massWave(si);if(p){let k=p.k,uc=unitCost(k,S.ua);if(free*0.5<uc){k='inf';uc=unitCost(k,S.ua);}const n=Math.min(cap-fly,12,Math.max(Math.floor(free*0.5/uc),free>=uc*3?1:0));for(let i=0;i<n;i++){const q0=S.queue.length;doCmd(si,{a:'send',k});if(S.queue.length>q0)S.stPend=(S.stPend|0)+1;}}}}
- // then save up for one goal at a time
+  // then save up for one goal at a time
  if(!botGoal[si]){
   /* priorities: defence → economy that pays back fast → armour on schedule → attacks with what is left.
      (before: an attack "looked possible" almost always, so it kept buying unarmoured waves and never invested) */
@@ -3234,9 +3237,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.15-1747</div>
+<div id="appVer">v2026.11.15-1752</div>
 <script>
-window.APP_VERSION='2026.11.15-1747';
+window.APP_VERSION='2026.11.15-1752';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
