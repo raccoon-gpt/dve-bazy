@@ -832,7 +832,7 @@ const TITAN_BASE=10000,TB_LOST=2,TB_BREACH=4;
 /* units a player paid for before their own Titan came out keep feeding it: while it is out, their worth goes straight into its health
    (the bot's units don't; units bought once the Titan is out carry no worth at all, see the spawn) */
 const humanSide=si=>!(typeof mode!=='undefined'&&mode==='solo'&&si===1);
-function titanBank(o,v){const S=W.sides[o];if(!S||!(v>0))return;/* campaign: the bot's Titan grows half as fast (×1 lost, ×2 breach) */if(W.hu&&o===1)v*=0.5;S.tb=(S.tb||0)+v;
+function titanBank(o,v){const S=W.sides[o];if(!S||!(v>0))return;/* campaign: the bot's Titan bank gets 55% of the player's rate (×1.1 lost, ×2.2 breach) */if(W.hu&&o===1)v*=0.55;S.tb=(S.tb||0)+v;
  if(S.titanOut&&humanSide(o))for(const T of W.sides)for(const u of T.units)if(u.k==='titan'&&u.o===o&&!u.dead){u.hp+=v;u.mx+=v;}}
 function damageUnit(si,u,dmg){u.hp-=dmg;if(u.hp<=0&&!u.dead){u.dead=true;if(u.v)titanBank(u.o,u.v*TB_LOST);if(u.k==='titan'&&!W.over){W.over={w:1-u.o,why:'titan',ts:si,tx:uat(u,u.d)[0]|0,ty:uat(u,u.d)[1]|0,ta:+(headingRoad(u.d,u.b)+(u.o===si?Math.PI:0)).toFixed(2),tg:+(u.ga||0).toFixed(2)};ev({e:'boom',s:si,x:uat(u,u.d)[0]|0,y:uat(u,u.d)[1]|0,b:2});}const S=W.sides[si];const rw=UN[u.k].reward*ARMOR_RW[u.al||0];const gain=Math.round(rw*(S.cashK||1));S.ore+=gain;const p=uat(u,u.d);if(isAir(u))p[1]-=HELI_ALT*0.85;ev({e:'boom',s:si,x:p[0]|0,y:p[1]|0,b:u.k==='inf'?0:1});if(gain>0)ev({e:'kr',s:si,x:p[0]|0,y:p[1]|0,v:gain});if(W.hu&&u.pc>0){const rf=Math.round(u.pc*REFUND_K);W.sides[u.o].ore+=rf;ev({e:'rf',s:si,x:p[0]|0,y:p[1]|0,v:rf});}}}
 /* spawn spacing per unit (tanks a little wider so they don't ride nose-to-tail) */
@@ -3266,9 +3266,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.15-2038</div>
+<div id="appVer">v2026.11.15-2056</div>
 <script>
-window.APP_VERSION='2026.11.15-2038';
+window.APP_VERSION='2026.11.15-2056';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
