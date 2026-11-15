@@ -777,6 +777,8 @@ const huRainN=si=>{const l=HU(si,'sup');return l<0?RAIN_N:l>=2?10:5;};
 const huScorch=si=>{const l=HU(si,'sup');return l<0||l>=3;};
 const huFrzT=si=>{const l=HU(si,'sup');return l<0?FRZ_T:l>=4?8:5;};
 const huHarvCost=si=>HU(si,'harv')>=5?Math.round(HARV_COST2*0.8):HARV_COST2;
+/* harvesters allowed by the refinery level: one per level below the top (a lost one can be rebought), five at the top */
+const harvCap=S=>(S.rl|0)>=RUP_MAX?HARV_MAXN:(S.rl|0)+1;
 const huFreeHarvT=si=>HU(si,'harv')>=5?10:FREE_HARV_T;
 const huCargo=si=>HU(si,'harv')>=3?1.1:1;
 const huSellK=si=>HU(si,'tow')>=3?1:SELL_K;
@@ -814,9 +816,9 @@ function doCmd(si,cmd){if(!W||W.over)return;if(W.nuke&&cmd&&cmd.a!=='pause')retu
  else if(a==='rain'){if(!(S.rainCd<=0))return;S.rainCd=huSupCd(si,'rain');ev({e:'vrain',s:si});let last=0;for(let i=0,nR=huRainN(si);i<nR;i++){const d=EDGE_D+20+Math.random()*(TOTAL-EDGE_D-70);const p=at(d,Math.floor(Math.random()*(NB+1)));const T=0.55+i*0.14+Math.random()*0.1;last=Math.max(last,T);S.strikes.push({x:p[0],y:p[1],t:T});ev({e:'rainfall',s:si,x:p[0]|0,y:p[1]|0,T:+T.toFixed(2)});}S.confT=last+RAIN_CONF;}
  else if(a==='freeze'){if(!(S.frzCd<=0))return;S.frzCd=huSupCd(si,'freeze');S.frzT=huFrzT(si);ev({e:'freeze',s:si});}
  else if(a==='ua'){if(S.ua>=UPG_MAX||S.ua>=capOf(W,'ua')||S.ore<uaCost(S))return;S.ore-=uaCost(S);S.ua=nextLv(S.ua);S.uaBuyT=W.t;ev({e:'up',s:si});if(S.ua>=UPG_MAX)ev({e:'vbig',s:si});}
- else if(a==='rup'){const l=S.rl|0;if(l>=RUP_MAX||S.ore<RUP_COST[l])return;S.ore-=RUP_COST[l];S.rl=l+1;S.uh=S.rl;S.uc=S.rl;ev({e:'up',s:si});if(S.rl>=RUP_MAX)ev({e:'vbig',s:si});
+ else if(a==='rup'){const l=S.rl|0;if(l>=RUP_MAX||S.ore<RUP_COST[l]||S.hv.length<harvCap(S)&&S.dep[1]>0)return;/* lost harvesters are replaced before the next level */S.ore-=RUP_COST[l];S.rl=l+1;S.uh=S.rl;S.uc=S.rl;ev({e:'up',s:si});if(S.rl>=RUP_MAX)ev({e:'vbig',s:si});
   if(S.hv.length<HARV_MAXN&&S.dep[1]>0){const h=newHarv();h.d=HTOT;h.dir=-1;h.load=0;h.wait=0.5;S.hv.push(h);}}
- else if(a==='harv'){if((S.rl|0)<RUP_MAX||S.hv.length>=HARV_MAXN||S.ore<huHarvCost(si)||!(S.dep[1]>0))return;S.ore-=huHarvCost(si);const h=newHarv();h.d=HTOT;h.dir=-1;h.load=0;h.wait=0.5;S.hv.push(h);}
+ else if(a==='harv'){if(S.hv.length>=harvCap(S)||S.ore<huHarvCost(si)||!(S.dep[1]>0))return;S.ore-=huHarvCost(si);const h=newHarv();h.d=HTOT;h.dir=-1;h.load=0;h.wait=0.5;S.hv.push(h);}
  else if(a==='fsend'){const k=cmd.k,f=FREE_SQ[k];if(!f||S.fcd[k]>0||campNoFree())return;S.fcd[k]=huFreeCd(si,k);for(let i=0,nF=huFreeN(si,k);i<nF;i++)S.queue.push('g:'+k);ev({e:'fsq',s:si});}
  else if(a==='uc'){if(S.uc>=UC_MAX||S.ore<UC_COST)return;S.ore-=UC_COST;S.uc++;ev({e:'up',s:si});}
  else if(a==='uh'){if(S.uh>=UH_MAX||S.ore<UH_COST)return;S.ore-=UH_COST;S.uh++;}
@@ -1190,7 +1192,11 @@ function bestDefence(si,o){o=o||{};const S=W.sides[si];let best=null;let aaNow=0
    price comes back), so crystals never sit idle while the harvester runs back and forth. Refunds, the refinery crystal and
    kill rewards stay in the treasury for refinery levels, harvesters (a lost one is rebought as soon as it's affordable)
    and the rest. Runs first on every think, before any defence work can end the think. */
-function botStream(si){const S=W.sides[si];if(!W.hu||si!==1||W.finale){S.uBud=0;return;}
+function botStream(si){const S=W.sides[si];
+ /* a lost harvester (within what the refinery level allows) is rebought at once with any money — unless all are gone and
+    the free one is due within 5 s */
+ if(S.hv.length<harvCap(S)&&S.dep[1]>0&&!(S.hv.length===0&&S.freeT<=5)&&(W.hu||S.hv.length<(S.rl|0)+1)){const o=S.ore;doCmd(si,{a:'harv'});if(S.ore<o)S.uBud=Math.min(S.uBud||0,S.ore);}
+ if(!W.hu||si!==1||W.finale){S.uBud=0;return;}
  const bud=Math.min(S.uBud||0,S.ore);if(!(bud>0))return;
  const p=massWave(si);let k=p?p.k:'inf',uc=unitCost(k,S.ua);if(bud<uc){k='inf';uc=unitCost(k,S.ua);}if(bud<uc)return;
  let n=Math.floor(bud/uc);for(let i=0;i<n;i++){const o=S.ore;doCmd(si,{a:'send',k});if(S.ore<o){S.uBud-=o-S.ore;continue;}if(k!=='inf'&&i===0){k='inf';uc=unitCost(k,S.ua);n=Math.floor(bud/uc);i=-1;continue;}break;}}
@@ -1246,8 +1252,8 @@ function botRest(si,S,t,hold){
   const ecoRush=!!W.hu;
   const wantHv=ecoRush?HARV_MAXN:Math.min(HARV_MAXN,1+Math.floor(t/70)),wantUa=Math.min(capOf(W,'ua'),(calm?[45,120,220,340,480]:[60,150,270,420,600]).filter(x=>t>x*(S.uaT||1)).length);/* never aim past the level's armour cap: an unreachable goal used to freeze all spending */
   if(botNow[si]&&(S.towers.length<wantT||threat>=4)&&Math.random()<(calm?0.3:0.55))botGoal[si]='tower';
-    else if((S.rl|0)<RUP_MAX&&S.dep[1]>3000&&(ecoRush||t>[0,50,130][S.rl|0]))botGoal[si]='rup';
-    else if((S.rl|0)>=RUP_MAX&&S.hv.length<wantHv&&S.dep[1]>3000)botGoal[si]='harv';
+    else if((S.rl|0)<RUP_MAX&&S.hv.length>=harvCap(S)&&S.dep[1]>3000&&(ecoRush||t>[0,50,130][S.rl|0]))botGoal[si]='rup';
+    else if(S.hv.length<Math.min(wantHv,harvCap(S))&&S.dep[1]>3000)botGoal[si]='harv';
   else if(S.ua<wantUa&&uaGapOk(S)&&(!ecoRush||S.hv.length>=3||!(S.dep[1]>3000))&&Math.random()<0.55)botGoal[si]='ua';
   else if(S.ua===4&&S.ua<capOf(W,'ua')&&uaGapOk(S)&&S.ore>=uaCost(S)*0.8)botGoal[si]='ua';
   else{const plan=bestWave(si,Math.max(S.ore,700));if(plan){botGoal[si]='attack';botPlan[si]=plan;}else if(S.ua<Math.min(UPG_MAX,capOf(W,'ua'))&&uaGapOk(S))botGoal[si]='ua';else if(botNow[si]&&botPress[si]>=400)botGoal[si]='tower';else{botGoal[si]='mass';botPlan[si]=massWave(si);}}}
@@ -2318,8 +2324,8 @@ function radialItems(){if(!menu)return[];const S=viewW.sides[me];
  if(menu.kind==='field'){const lv=S.ext[menu.f];if(!lv)return[{k:'ext',lab:''+EXT_COST,dis:S.ore<EXT_COST,cmd:{a:'ext',f:menu.f}}];const c=extUpCost(menu.f);return[{k:'up',lab:lv>=EXT_MAXLV?'макс.':''+c,dis:lv>=EXT_MAXLV||S.ore<c,cmd:{a:'extup',f:menu.f}}];}
 
  if(menu.kind==='factory'){const busy=S.nkT>0,cd=S.nkCd||0,empty=((viewW.sides[1-me].dep||[1,1])[1]<=0);return[{k:'nuke',big:1,lab:busy?'пуск '+Math.ceil(S.nkT):empty?'рудник пуст':cd>0?Math.ceil(cd)+' с':''+NUKE_COST,dis:busy||empty||cd>0||S.ore<NUKE_COST,cmd:{a:'nukebuy'}}];}
- if(menu.kind==='refinery'){const l=S.rl|0,n=S.hv.length;if(l<RUP_MAX)return[{k:'up',big:1,lab:''+RUP_COST[l],dis:S.ore<RUP_COST[l],cmd:{a:'rup'}}];
-  const empty=(S.dep||[1,1])[1]<=0;return[{k:'harv',big:1,lab:empty?'рудник пуст':n>=HARV_MAXN?n+' из '+HARV_MAXN:''+huHarvCost(me),dis:empty||n>=HARV_MAXN||S.ore<huHarvCost(me),cmd:{a:'harv'}}];}
+ if(menu.kind==='refinery'){const l=S.rl|0,n=S.hv.length;if(l<RUP_MAX&&n<harvCap(S)&&(S.dep||[1,1])[1]>0)return[{k:'harv',big:1,lab:''+huHarvCost(me),dis:S.ore<huHarvCost(me),cmd:{a:'harv'}}];if(l<RUP_MAX)return[{k:'up',big:1,lab:''+RUP_COST[l],dis:S.ore<RUP_COST[l],cmd:{a:'rup'}}];
+  const empty=(S.dep||[1,1])[1]<=0;return[{k:'harv',big:1,lab:empty?'рудник пуст':n>=harvCap(S)?n+' из '+HARV_MAXN:''+huHarvCost(me),dis:empty||n>=harvCap(S)||S.ore<huHarvCost(me),cmd:{a:'harv'}}];}
  if(menu.kind==='harv'){return[{k:'rep',lab:'Ремонт',dis:false,cmd:{a:'hrep',id:menu.id},close:true},{k:'go',lab:'Дальше',dis:false,cmd:{a:'hgo',id:menu.id},close:true}];}
  return[];}
 function menuCenter(){const S=viewW.sides[me];if(menu.kind==='harv'){const h=S.hv.find(v=>v.id===menu.id);if(!h)return null;return hat(h.dd??h.d);}if(menu.kind==='tower'){const tw=S.towers.find(t=>t.id===menu.id);return tw?[tw.x,tw.y]:null;}return[menu.x,menu.y];}
@@ -3239,9 +3245,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.15-1814</div>
+<div id="appVer">v2026.11.15-1905</div>
 <script>
-window.APP_VERSION='2026.11.15-1814';
+window.APP_VERSION='2026.11.15-1905';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
