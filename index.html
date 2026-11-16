@@ -3227,9 +3227,9 @@ function voicePlay(k){const v=VOICE[k];if(!v||!v.buf||!AU.ctx)return false;const
 /* priority lines: the first in the queue plays 1 s after the last voice ended; one still downloading is waited for, a broken one dropped */
 /* "mine ready" / "reload done" make no sense once the game is over: dropped even if they were already waiting */
 const VOICE_NOEND=['mine','balist1'];/* lines that make no sense once the game is over: 'Titan health low' and the 'buy units' reminder — dropped from the queue,
-   and cut off if one is playing when the game ends, so the victory / defeat line comes clean */
+   (one already playing is let finish) */
 const noEndV=k=>VOICE_NOEND.includes(k)||/^(tlow|remind)\d/.test(k);
-function voiceEndCut(){VQ.q=VQ.q.filter(k=>!noEndV(k));if(VQ.cur&&VQ.cur.k&&/^(tlow|remind)\d/.test(VQ.cur.k)){try{if(VQ.src)VQ.src.stop();}catch(_){}VQ.cur=null;VQ.src=null;VQ.rq=false;}}
+function voiceEndCut(){VQ.q=VQ.q.filter(k=>!noEndV(k));}/* a line already playing finishes */
 const voiceOver=()=>typeof viewW!=='undefined'&&viewW&&viewW.over;
 function voicePump(){if(VQ.cur||!VQ.q.length)return;if(voiceOver())VQ.q=VQ.q.filter(k=>!noEndV(k));while(VQ.q.length&&VOICE[VQ.q[0]].bad)VQ.q.shift();if(!VQ.q.length)return;const v=VOICE[VQ.q[0]];
  if(!v.buf){voiceLoad();return;}const w=VQ.end+VOICE_PRI_GAP-vNow();if(w>0){clearTimeout(VQ.t);VQ.t=setTimeout(voicePump,w*1000+20);return;}voicePlay(VQ.q.shift());}
@@ -3301,9 +3301,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.16-1249</div>
+<div id="appVer">v2026.11.16-1253</div>
 <script>
-window.APP_VERSION='2026.11.16-1249';
+window.APP_VERSION='2026.11.16-1253';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
