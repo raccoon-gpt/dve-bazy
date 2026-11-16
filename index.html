@@ -2746,10 +2746,10 @@ function campStart(i){const d=CAMP_DIFF;if(CAMP_PREV==null)CAMP_PREV=MAPI;MAPS[C
 /* campaign Titans start at 1000 health on every level; the bot's gets +800 per level (level 1: +0).
     Bot's super-weapon cooldowns shrink 2% per level (ballistic missile unchanged). */
  W.titanBase=CAMP[i].titan||1000;B.tbLv=800*i;W.botCdK=1-0.02*i;
- /* campaign mines: 10k / 25k, the rich mine +600 per level (both sides), unless a level sets its own.
+ /* campaign mines: 10k / 25k, the rich mine +800 per level (both sides), unless a level sets its own.
     The bot also starts with +15 crystals per level. */
  B.ore+=15*i;
- {const dp=CAMP[i].dep||[CAMP_DEP[0],CAMP_DEP[1]+600*i];W.depMax=dp.slice();for(const S of W.sides)S.dep=dp.slice();}W.waveK=1-0.012*i;document.getElementById('camp').hidden=true;}
+ {const dp=CAMP[i].dep||[CAMP_DEP[0],CAMP_DEP[1]+800*i];W.depMax=dp.slice();for(const S of W.sides)S.dep=dp.slice();}W.waveK=1-0.012*i;document.getElementById('camp').hidden=true;}
 function campWin(){if(!CAMP_RUN)return;const i=CAMP_RUN.i,S=W&&W.sides[0],s=campStars(S?S.lives:0);CAMP_RUN.won=s;const was=CAMP_P.stars[i]|0;if(was<s){CAMP_ANIM={i,was,st:s,t0:0};CAMP_P.stars[i]=s;campSave();}}
 let CAMP_ANIM=null;
 function campOpen(){const o=document.getElementById('camp');o.hidden=false;HANG=null;CAMP_CONF=null;document.getElementById('lobby').hidden=true;CAMP_SEL=null;CAMP_T0=now();campResize();CV.z=CAMZ;if(CAMP_ANIM){CAMP_ANIM.t0=0;CAMP_ANIM.snd=null;const f=CAMP_PT[CAMP_ANIM.i];camFocus(f[0]+20,f[1]-20);return;}const n=campNext(),f=CAMP_PT[n<0?CAMP.length-1:n];camFocus(f[0]+20,f[1]-20);}
@@ -3297,9 +3297,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.16-1235</div>
+<div id="appVer">v2026.11.16-1237</div>
 <script>
-window.APP_VERSION='2026.11.16-1235';
+window.APP_VERSION='2026.11.16-1237';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
