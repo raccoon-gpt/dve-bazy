@@ -1296,6 +1296,11 @@ function botRest(si,S,t,hold){
   else if(S.ua===4&&S.ua<capOf(W,'ua')&&uaGapOk(S)&&S.ore>=uaCost(S)*0.8)botGoal[si]='ua';
   else{const plan=bestWave(si,Math.max(S.ore,700));if(plan){botGoal[si]='attack';botPlan[si]=plan;}else if(S.ua<Math.min(UPG_MAX,capOf(W,'ua'))&&uaGapOk(S))botGoal[si]='ua';else if(botNow[si]&&botPress[si]>=400)botGoal[si]='tower';else{botGoal[si]='mass';botPlan[si]=massWave(si);}}}
  const g=botGoal[si];const cost={uc:UC_COST,extup0:extUpCost(0),extup1:extUpCost(1),attack:botPlan[si]?botPlan[si].cost:200,mass:botPlan[si]?botPlan[si].cost:2000,tower:(bestDefence(si)||{cost:140}).cost,harv:HARV_COST2,rup:rupC(S)[Math.min(2,S.rl|0)],ext1:EXT_COST,uh:UH_COST,ua:uaCost(S)}[g];
+ /* an attack is not saved up for: the planned units go into the queue as soon as each is affordable, the rest follow while
+    the queue is still running, so the column stays tight and no money sits idle */
+ if((g==='attack'||g==='mass')&&botPlan[si]&&botPlan[si].n>0){const p=botPlan[si],uc=unitCost(p.k,S.ua);let m=Math.min(p.n,Math.floor(S.ore/uc));
+  while(m-->0){const o=S.ore;doCmd(si,{a:'send',k:p.k});if(S.ore<o)p.n--;else{p.n=0;break;}}
+  if(p.n<=0){botGoal[si]=null;botPlan[si]=null;}return;}
  /* the anti-air savings never block the economy: refinery upgrades and harvesters may use them */
  const eco=(g==='rup'||g==='harv')?hold:0;
  if(S.ore+eco<cost){if(S.ore>cost*0.5+1500){if(botNow[si]){const b=bestDefence(si);if(b&&S.ore-b.cost>cost*0.5)botExec(si,b.cmd);}else{const p=bestWave(si,S.ore-cost*0.5);if(p&&S.queue.filter(q=>q.indexOf(':')<0).length===0)for(let i=0;i<p.n;i++)doCmd(si,{a:'send',k:p.k});}}return;}botGoal[si]=null; /* spare money while saving goes into defence */
@@ -3283,9 +3288,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.16-1144</div>
+<div id="appVer">v2026.11.16-1158</div>
 <script>
-window.APP_VERSION='2026.11.16-1144';
+window.APP_VERSION='2026.11.16-1158';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
