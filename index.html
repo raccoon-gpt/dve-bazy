@@ -766,6 +766,9 @@ const START_ORE=260,START_LIVES=20,BASE_INC=6,EXT_COST=150,HARV_COST=500,UPG_MAX
 
 /* ---------------- world (host authoritative) ---------------- */
 let W=null,nextId=1,netEvents=[];
+/* extra health for heavily armoured tanks and jeeps (price unchanged): one step before max and max ('star') armour */
+const ARM_XTRA={tank:{3:1.3,5:1.5},jeep:{3:1.1,5:1.2}};
+const armHp=(k,al)=>ARM_HP[al]*((ARM_XTRA[k]||{})[al]||1);
 function newSide(){return{ore:START_ORE,nkT:0,nkCd:0,blockT:0,lives:START_LIVES,towers:[],snow:[],units:[],ext:[0,0],rl:0,queue:[],qcd:0,hv:[newHarv()],uc:0,fcd:{inf:FREE_SQ.inf.cd,jeep:FREE_SQ.jeep.cd,tank:FREE_SQ.tank.cd,heli:FREE_SQ.heli.cd},dep:DEPOSIT.slice(),titanOut:false,titanCd:0,mineCd:0,frzCd:0,frzT:0,mines:[],rainCd:0,confT:0,strikes:[],burns:[],freeT:FREE_HARV_T,ua:0,ud:0,uh:0,rockets:[],shells:[],hurtT:-9,breachT:-9,spent:0}}
 /* a new harvester starts empty; the starting one stands at the field and fills up there (taking real crystals from the deposit) before its first run */
 /* hangar (campaign only, the player's side 0): W.hu={free,sup,harv,tow,tit} levels 0..5; -1 = not a campaign game (normal rules) */
@@ -872,7 +875,7 @@ function simSide(si,dt){const S=W.sides[si],O=W.sides[1-si];
  for(let i=S.mines.length-1;i>=0;i--){const m=S.mines[i];/* triggered by where a unit actually is on the map: works on every road, branch, shortcut and shared stretch */if(!S.units.some(u=>{if(u.dead||u.o===si||isAir(u))return false;const q=uat(u,u.d);return (q[0]-m.x)**2+(q[1]-m.y)**2<MINE_TRIG*MINE_TRIG;}))continue;S.mines.splice(i,1);
   for(const u of S.units){if(u.dead||u.o===si)continue;const q=uat(u,u.d);if((q[0]-m.x)**2+(q[1]-m.y)**2<MINE_R*MINE_R)damageUnit(si,u,MINE_DMG*(u.k==='titan'&&HU(u.o,'tit')>=2?0.8:1));}ev({e:'mineboom',s:si,x:m.x|0,y:m.y|0});}
  // spawn queue onto opponent map
- S.qcd-=dt;if(S.queue.length&&S.qcd<=0&&spawnGate(si,S)){let k=S.queue.shift();const free=k[0]==='f',pre=k[0]==='p',paid=pre||k.indexOf(':')<0;if(k.indexOf(':')>0)k=k.slice(2);const al=free?Math.min(S.ua,FREE_MAX_UA):S.ua;const u=UN[k];S.units.push({id:nextId++,o:si,al,k,v:paid&&(!S.titanOut||pre)?unitCost(k,S.ua):0,pc:paid?unitCost(k,S.ua):0,st:paid&&S.stPend>0?(S.stPend--,1):0,d:TOTAL,b:NB?(S.brN=(S.brN|0)+1)%(NB+1):0,hp:u.hp*ARM_HP[al],mx:u.hp*ARM_HP[al],dm:1,cd:Math.random(),ga:0,ph:Math.random()*6});S.qcd=QCD(k);spawnDone(si,S,k);}
+ S.qcd-=dt;if(S.queue.length&&S.qcd<=0&&spawnGate(si,S)){let k=S.queue.shift();const free=k[0]==='f',pre=k[0]==='p',paid=pre||k.indexOf(':')<0;if(k.indexOf(':')>0)k=k.slice(2);const al=free?Math.min(S.ua,FREE_MAX_UA):S.ua;const u=UN[k];S.units.push({id:nextId++,o:si,al,k,v:paid&&(!S.titanOut||pre)?unitCost(k,S.ua):0,pc:paid?unitCost(k,S.ua):0,st:paid&&S.stPend>0?(S.stPend--,1):0,d:TOTAL,b:NB?(S.brN=(S.brN|0)+1)%(NB+1):0,hp:u.hp*armHp(k,al),mx:u.hp*armHp(k,al),dm:1,cd:Math.random(),ga:0,ph:Math.random()*6});S.qcd=QCD(k);spawnDone(si,S,k);}
  // harvester on this map
  const hk=UH_K[Math.min(3,S.uh|0)]*(HU(si,'harv')>=2?1.2:1),hcK=huCargo(si);for(const h of S.hv){
   /* a tap stops a harvester for 5 s, then it drives on by itself */
@@ -1060,14 +1063,14 @@ function simStep(dt){if(!W)return;if(W.nuke){nukeStep(dt);return;}if(W.over){end
 const BOT_DMG_K=0.7;
 function planeCover(tw){const R=TW[tw.k].range*lvR(tw.k,tw.lv-1);let n=0;for(let d=EDGE_D;d<=TOTAL;d+=10*PLANE_K){const p=planeAt(d);if((p[0]-tw.x)**2+(p[1]-tw.y)**2<R*R)n++;}return n*10*PLANE_K;}
 function towerCover(tw){const R=TW[tw.k].range*lvR(tw.k,tw.lv-1);let n=0;for(const p of ROAD_SAMPLES)if((p[0]-tw.x)**2+(p[1]-tw.y)**2<R*R)n++;return n*10;}
-function waveOutcome(def,k,n,armorLv){const u=UN[k],hp=u.hp*ARM_HP[armorLv],iv=k==='inf'?0.8:1.2;let D=0;
+function waveOutcome(def,k,n,armorLv){const u=UN[k],hp=u.hp*armHp(k,armorLv),iv=k==='inf'?0.8:1.2;let D=0;
  for(const tw of def.towers){const d=TW[tw.k];const dps=tw.k==='tes'?TES_DMG[tw.lv-1]*Math.min(5,n)*0.6*ARMOR.tes[k]:d.dmg*(tw.k==='can'?CAN_LVM:tw.k==='mg'?MG_LVM:LVM)[tw.lv-1]/(d.cd*LVC[tw.lv-1])*ARMOR[tw.k][k]*(tw.k==='rkt'&&(k==='inf'||k==='heli')?(k==='inf'?1.6:1.2):1)*(tw.k==='can'?(k==='jeep'?0.45:k==='inf'?(n>1?1.2:0.85):(n>1?1.3:1)):1);const L=k==='plane'?(tw._pcov??(tw._pcov=planeCover(tw))):(tw._cov??(tw._cov=towerCover(tw)));if(!L)continue;D+=dps*(L/u.sp+iv*(n-1)*Math.min(1,L/(u.sp*iv)));}
  const through=Math.max(0,n-Math.ceil(D*BOT_DMG_K/hp));/* towers spread fire: measured deaths ≈ 0.55–0.7 × D/hp */return{through,D,lives:through*u.lives,cost:n*u.cost};}
 function bestWave(si,budget){const S=W.sides[si],O=W.sides[1-si];let best=null;
  for(const k of ['inf','jeep','tank','heli','plane'])if(unitOpen(k))for(let n=1;n<=8;n++){const c=n*unitCost(k,S.ua);if(c>budget)break;const r=waveOutcome(O,k,n,S.ua);if(r.lives<1)continue;const score=r.lives/c;if(!best||score>best.score)best={k,n,cost:c,lives:r.lives,score};}
  return best;}
 /* a full queue of the unit type the defence handles worst (least damage per hit point) */
-function massWave(si){const S=W.sides[si],O=W.sides[1-si];let best=null;for(const k of ['tank','jeep','inf','heli','plane']){if(!unitOpen(k))continue;const n=QUEUE_MAX,r=waveOutcome(O,k,n,S.ua),hp=n*UN[k].hp*ARM_HP[S.ua]*UN[k].lives,sc=hp/Math.max(1,r.D);if(!best||sc>best.sc)best={k,n,cost:n*unitCost(k,S.ua),sc};}return best;}
+function massWave(si){const S=W.sides[si],O=W.sides[1-si];let best=null;for(const k of ['tank','jeep','inf','heli','plane']){if(!unitOpen(k))continue;const n=QUEUE_MAX,r=waveOutcome(O,k,n,S.ua),hp=n*UN[k].hp*armHp(k,S.ua)*UN[k].lives,sc=hp/Math.max(1,r.D);if(!best||sc>best.sc)best={k,n,cost:n*unitCost(k,S.ua),sc};}return best;}
 /* the bot's special weapons:
    mines go down as soon as they recharge (on the road where its towers already cover, so a wave stalls in the fire);
    freeze when a real wave or the Titan is inside its defence; fire rain on a crowd; the missile on a rich enemy field when it can spare the crystals */
@@ -3266,9 +3269,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.15-2056</div>
+<div id="appVer">v2026.11.16-1052</div>
 <script>
-window.APP_VERSION='2026.11.15-2056';
+window.APP_VERSION='2026.11.16-1052';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
