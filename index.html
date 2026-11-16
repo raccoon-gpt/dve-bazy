@@ -803,7 +803,7 @@ function crystalInc(S){const d=S.dep||[1,1];if(!(d[0]>0))return 0;let k=1;
  return CRY_INC*(1+(S.rl|0))*(S.incK||1)*k;}
 function income(S){return Math.round(crystalInc(S));}
 const DIFF={easy:{name:'Лёгкий',hl:200,inc:1,wave:45,waveN:0.6,tw:1,cash:1,uaK:1,uaT:1},normal:{name:'Нормальный',hl:300,inc:1.2,wave:30,waveN:1,tw:1,cash:1.25,uaK:0.75,uaT:0.85},hard:{name:'Сложный',hl:400,inc:1.5,wave:22,waveN:1.5,tw:1,cash:1.6,uaK:0.55,uaT:0.65}};
-const uaCost=S=>Math.round(UPG_COSTS[Math.min(S.ua,UPG_MAX - 1)]*(S.uaK||1)/10)*10;
+const uaCost=S=>W&&W.hu&&S===W.sides[1]&&S.ua===3?10000:Math.round(UPG_COSTS[Math.min(S.ua,UPG_MAX - 1)]*(S.uaK||1)/10)*10;/* campaign bot: the last armour step costs 10 000 */
 let diff='normal';try{const d=localStorage.getItem('dvebazy-diff');if(DIFF[d])diff=d;}catch(e){}
 const extUpCost=f=>FIELDS[f].inc*60; // each level adds +inc/s, so the upgrade pays back in exactly one minute
 function slotFree(S,i){const sl=SLOTS[i];return !!sl&&!S.towers.some(t=>t.s===i);}
@@ -3297,9 +3297,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.16-1208</div>
+<div id="appVer">v2026.11.16-1212</div>
 <script>
-window.APP_VERSION='2026.11.16-1208';
+window.APP_VERSION='2026.11.16-1212';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
