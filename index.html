@@ -882,7 +882,7 @@ function simSide(si,dt){const S=W.sides[si],O=W.sides[1-si];
  const hk=UH_K[Math.min(3,S.uh|0)]*(HU(si,'harv')>=2?1.2:1),hcK=huCargo(si);for(const h of S.hv){
   /* a tap stops a harvester for 5 s, then it drives on by itself */
   if(h.stopped){h.stopT=(h.stopT??5)-dt;if(h.stopT<=0){h.stopped=false;h.stopT=0;}}
-  if(!h.stopped){if(h.wait>0)h.wait-=dt*hk;else{h.d+=h.dir*dt*32*hk;if(h.d>=HTOT){h.d=HTOT;h.dir=-1;h.wait=1;if(h.hp<HARV_HP)h.hp=HARV_HP;if(h.load>0.5&&h.cargo>0){S.ore+=h.cargo*hcK*(S.cashK||1);if(W.hu&&si===1)S.uBud=(S.uBud||0)+h.cargo*hcK*(S.cashK||1);ev({e:'cash',s:si,v:Math.round(h.cargo*hcK)});}h.load=0;h.cargo=0;}if(h.d<=0&&S.blockT>0){h.d=0;h.dir=-1;h.wait=0.5;}else if(h.d<=0){h.d=0;h.dir=1;h.wait=2.4;const take=Math.min((S.hload||HARV_LOAD)*1.5**(S.uc||0)*(MAP.hload||1),S.dep[1]);S.dep[1]-=take;h.cargo=take;h.load=take>0?1:0;}}}
+  if(!h.stopped){if(h.wait>0)h.wait-=dt*hk;else{h.d+=h.dir*dt*32*hk;if(h.d>=HTOT){h.d=HTOT;h.dir=-1;h.wait=1;if(h.hp<HARV_HP)h.hp=HARV_HP;if(h.load>0.5&&h.cargo>0){S.ore+=h.cargo*hcK*(S.cashK||1);if(W.hu&&si===1){const v=h.cargo*hcK*(S.cashK||1);S.uBud=(S.uBud||0)+v;S.uBudAdd=(S.uBudAdd||0)+v;}ev({e:'cash',s:si,v:Math.round(h.cargo*hcK)});}h.load=0;h.cargo=0;}if(h.d<=0&&S.blockT>0){h.d=0;h.dir=-1;h.wait=0.5;}else if(h.d<=0){h.d=0;h.dir=1;h.wait=2.4;const take=Math.min((S.hload||HARV_LOAD)*1.5**(S.uc||0)*(MAP.hload||1),S.dep[1]);S.dep[1]-=take;h.cargo=take;h.load=take>0?1:0;}}}
   const p=hat(h.d),q=hat(h.d+(h.dir>0?6:-6));if(!h.stopped&&!(h.wait>0)&&Math.hypot(q[0]-p[0],q[1]-p[1])>1)turnTo(h,Math.atan2(q[1]-p[1],q[0]-p[0]),dt,6);
  }
  // no harvesters and no money for one: a free harvester rolls out after FREE_HARV_T seconds
@@ -1237,7 +1237,16 @@ function botStream(si){const S=W.sides[si];
  const bud=Math.min(S.uBud||0,S.ore);if(!(bud>0))return;
  const p=massWave(si);let k=p?p.k:'inf',uc=unitCost(k,S.ua);if(bud<uc){k='inf';uc=unitCost(k,S.ua);}if(bud<uc)return;
  let n=Math.floor(bud/uc);for(let i=0;i<n;i++){const o=S.ore;doCmd(si,{a:'send',k});if(S.ore<o){S.uBud-=o-S.ore;continue;}if(k!=='inf'&&i===0){k='inf';uc=unitCost(k,S.ua);n=Math.floor(bud/uc);i=-1;continue;}break;}}
-function botThink(dt,si){if(!W||W.over||W.nuke)return;botT[si]-=dt;if(botT[si]>0)return;botT[si]=1.2+Math.random()*0.8;const S=W.sides[si];const t=W.t;updThreat(si);
+/* campaign bot's armour pot: once the economy is complete (or the rich mine is empty) and armour isn't at the top, 70% of
+   all new money goes into a pot for the next armour step; attacks may only spend what is outside the pot (towers against
+   a wave may still use everything). The step is bought the moment the pot covers it. The bot spends only on its own
+   thinks, so the money gained between two thinks is exactly the new income. */
+function botUaPot(si){const S=W.sides[si];const inc=Math.max(0,S.ore-(S.oreEnd??S.ore)-(S.uBudAdd||0));S.uBudAdd=0;/* harvester unloads stay the units' money */
+ const on=W.hu&&si===1&&!W.finale&&S.ua<Math.min(UPG_MAX,capOf(W,'ua'))&&((S.rl|0)>=RUP_MAX&&S.hv.length>=harvCap(S)||!(S.dep[1]>0));
+ if(!on){S.uaPot=0;return;}S.uaPot=Math.min(S.ore,(S.uaPot||0)+inc*0.7);
+ if(S.uaPot>=uaCost(S)&&S.ore>=uaCost(S)){const c=uaCost(S);doCmd(si,{a:'ua'});S.uaPot=Math.max(0,S.uaPot-c);}}
+function botThink(dt,si){if(!W||W.over||W.nuke)return;botT[si]-=dt;if(botT[si]>0)return;botT[si]=1.2+Math.random()*0.8;try{botThink0(si);}finally{const S=W.sides[si];S.oreEnd=S.ore;if(S.uaPot>S.ore)S.uaPot=S.ore;}}
+function botThink0(si){const S=W.sides[si];const t=W.t;botUaPot(si);updThreat(si);
  botSuper(si);
  botStream(si);
  /* aircraft over the bot's land and not enough rockets to stop them: anti-air comes before any saving */
@@ -1298,7 +1307,7 @@ function botRest(si,S,t,hold){
  const g=botGoal[si];const cost={uc:UC_COST,extup0:extUpCost(0),extup1:extUpCost(1),attack:botPlan[si]?botPlan[si].cost:200,mass:botPlan[si]?botPlan[si].cost:2000,tower:(bestDefence(si)||{cost:140}).cost,harv:HARV_COST2,rup:rupC(S)[Math.min(2,S.rl|0)],ext1:EXT_COST,uh:UH_COST,ua:uaCost(S)}[g];
  /* an attack is not saved up for: the planned units go into the queue as soon as each is affordable, the rest follow while
     the queue is still running, so the column stays tight and no money sits idle */
- if((g==='attack'||g==='mass')&&botPlan[si]&&botPlan[si].n>0){const p=botPlan[si],uc=unitCost(p.k,S.ua);let m=Math.min(p.n,Math.floor(S.ore/uc));
+ if((g==='attack'||g==='mass')&&botPlan[si]&&botPlan[si].n>0){const p=botPlan[si],uc=unitCost(p.k,S.ua);let m=Math.min(p.n,Math.floor(Math.max(0,S.ore-(S.uaPot||0))/uc));
   while(m-->0){const o=S.ore;doCmd(si,{a:'send',k:p.k});if(S.ore<o)p.n--;else{p.n=0;break;}}
   if(p.n<=0){botGoal[si]=null;botPlan[si]=null;}return;}
  /* the anti-air savings never block the economy: refinery upgrades and harvesters may use them */
@@ -3288,9 +3297,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.16-1158</div>
+<div id="appVer">v2026.11.16-1208</div>
 <script>
-window.APP_VERSION='2026.11.16-1158';
+window.APP_VERSION='2026.11.16-1208';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
