@@ -1085,8 +1085,12 @@ function botSuper(si){const S=W.sides[si],O=W.sides[1-si];if(W.over||W.nuke)retu
  if(past&&S.rainCd<=0&&(titan||foes.length>=5||hp>=1800)){doCmd(si,{a:'rain'});if(S.rainCd>0)S.rainCd=BOT_RAIN_CD*(W.botCdK||1);}
  if(W.diff!=='easy'&&!W.finale&&S.nkCd<=0&&!(S.nkT>0)&&S.ore>=NUKE_COST+1200&&O.dep[1]>=8000&&W.t>150&&(S.nkUsed||0)<3&&Math.random()<0.25){doCmd(si,{a:'nukebuy'});if(S.nkT>0){S.nkUsed=(S.nkUsed||0)+1;if(W.hu)S.nkCd=BOT_NUKE_CD;}}}
 /* campaign bot: its ballistic missile recharges 3× longer than the player's; armour goes up one step at a time,
-   at least a minute apart, so the money keeps flowing into units instead of one big armour splurge */
-const BOT_NUKE_CD=180,BOT_UA_GAP=60;
+   at least 20 s apart, so the money keeps flowing into units instead of one big armour splurge */
+const BOT_NUKE_CD=180,BOT_UA_GAP=20;
+/* campaign bot's armour vs economy: the first armour step once 2 harvesters work; with 3 or more, armour only from money
+   beyond the next economy purchase (refinery level / missing harvester); once the rich mine is worked out, no limit */
+const uaEcoOk=S=>{if(!W.hu||!(S.dep[1]>3000))return true;const n=S.hv.length;if(n<2)return false;if(n===2)return S.ua===0;
+ const eco=(S.rl|0)<RUP_MAX?RUP_COST[S.rl|0]:n<harvCap(S)?HARV_COST2:0;return S.ore-eco>=uaCost(S);};
 const uaGapOk=S=>!W.hu||W.t-(S.uaBuyT??-999)>=BOT_UA_GAP;
 const botT=[0,0],botGoal=[null,null],botPlan=[null,null];
 /* the bot remembers what the opponent sends (by hit points) and builds/upgrades whatever kills THAT best per crystal */
@@ -1216,6 +1220,11 @@ function bestDefence(si,o){o=o||{};const S=W.sides[si];let best=null;let aaNow=0
    kill rewards stay in the treasury for refinery levels, harvesters (a lost one is rebought as soon as it's affordable)
    and the rest. Runs first on every think, before any defence work can end the think. */
 function botStream(si){const S=W.sides[si];
+ /* campaign: the rich mine is worked out — nothing left to save for in the economy, so the treasury goes into armour
+    right away, up to the level's cap (no pause between steps) */
+ /* the first armour step is cheap: buy it as soon as 2 harvesters work, without waiting for its turn among the goals */
+ if(W.hu&&si===1&&!W.finale&&S.ua===0&&S.hv.length>=2&&capOf(W,'ua')>=1&&S.ore>=uaCost(S))doCmd(si,{a:'ua'});
+ if(W.hu&&si===1&&!W.finale&&!(S.dep[1]>0))for(let i=0;i<5&&S.ua<Math.min(UPG_MAX,capOf(W,'ua'))&&S.ore>=uaCost(S);i++)doCmd(si,{a:'ua'});
  /* a lost harvester (within what the refinery level allows) is rebought at once with any money — unless all are gone and
     the free one is due within 5 s */
  if(S.hv.length<harvCap(S)&&S.dep[1]>0&&!(S.hv.length===0&&S.freeT<=5)&&(W.hu||S.hv.length<(S.rl|0)+1)){const o=S.ore;doCmd(si,{a:'harv'});if(S.ore<o)S.uBud=Math.min(S.uBud||0,S.ore);}
@@ -1278,7 +1287,7 @@ function botRest(si,S,t,hold){
   if(botNow[si]&&(S.towers.length<wantT||threat>=4)&&Math.random()<(calm?0.3:0.55))botGoal[si]='tower';
     else if((S.rl|0)<RUP_MAX&&S.hv.length>=harvCap(S)&&S.dep[1]>3000&&(ecoRush||t>[0,50,130][S.rl|0]))botGoal[si]='rup';
     else if(S.hv.length<Math.min(wantHv,harvCap(S))&&S.dep[1]>3000)botGoal[si]='harv';
-  else if(S.ua<wantUa&&uaGapOk(S)&&(!ecoRush||S.hv.length>=3||!(S.dep[1]>3000))&&Math.random()<0.55)botGoal[si]='ua';
+  else if(S.ua<wantUa&&uaGapOk(S)&&uaEcoOk(S)&&Math.random()<0.55)botGoal[si]='ua';
   else if(S.ua===4&&S.ua<capOf(W,'ua')&&uaGapOk(S)&&S.ore>=uaCost(S)*0.8)botGoal[si]='ua';
   else{const plan=bestWave(si,Math.max(S.ore,700));if(plan){botGoal[si]='attack';botPlan[si]=plan;}else if(S.ua<Math.min(UPG_MAX,capOf(W,'ua'))&&uaGapOk(S))botGoal[si]='ua';else if(botNow[si]&&botPress[si]>=400)botGoal[si]='tower';else{botGoal[si]='mass';botPlan[si]=massWave(si);}}}
  const g=botGoal[si];const cost={uc:UC_COST,extup0:extUpCost(0),extup1:extUpCost(1),attack:botPlan[si]?botPlan[si].cost:200,mass:botPlan[si]?botPlan[si].cost:2000,tower:(bestDefence(si)||{cost:140}).cost,harv:HARV_COST2,rup:RUP_COST[Math.min(2,S.rl|0)],ext1:EXT_COST,uh:UH_COST,ua:uaCost(S)}[g];
@@ -3269,9 +3278,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.16-1052</div>
+<div id="appVer">v2026.11.16-1112</div>
 <script>
-window.APP_VERSION='2026.11.16-1052';
+window.APP_VERSION='2026.11.16-1112';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
