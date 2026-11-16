@@ -200,7 +200,8 @@ function mineAlign(tr,fc,fr){const x0=fc*CS,y0=fr*CS;const a=tr[0],b=tr[1];
 function fieldEntry(fc,fr,p){const x0=fc*CS,y0=fr*CS,deep=(v,o)=>Math.max(o+24,Math.min(o+56,v));
  /* coming to the cave mouth (left of its bottom row, or below its left column): the last bit turns straight into the mouth */
  if((p[0]===x0-20&&p[1]===y0+60)||(p[0]===x0+20&&p[1]===y0+100))return[x0+32,y0+60];
- if(p[1]>=y0&&p[1]<=y0+80)return[deep(p[0],x0),p[1]];if(p[0]>=x0&&p[0]<=x0+80)return[p[0],deep(p[1],y0)];return[deep(p[0],x0),deep(p[1],y0)];}
+ /* from the right or from above: run on under the cave, so the track never stops at its edge */
+ if(p[1]>=y0&&p[1]<=y0+80)return[p[0]>x0+80?x0+32:deep(p[0],x0),p[1]];if(p[0]>=x0&&p[0]<=x0+80)return[p[0],p[1]<y0?y0+48:deep(p[1],y0)];return[deep(p[0],x0),deep(p[1],y0)];}
 function genRandomMap(seed){let s=(seed>>>0)||1;const R=()=>{s=(s*1103515245+12345)>>>0;return s/4294967296;};const ri=(a,b)=>a+Math.floor(R()*(b-a+1));
  const cx=c=>c*CS+CS/2,cy=r=>r*CS+CS/2;
  for(let tries=0;tries<400;tries++){
@@ -984,6 +985,12 @@ function missile(c,x,y,a,s,flame){if(ROCKET_IMG.complete&&ROCKET_IMG.naturalWidt
 function nukeT(N){return N.t+(mode==='guest'?Math.min(0.15,now()-(viewW.at||now())):Math.min(1/30,acc||0)*(viewW.pause?0:1));}
 /* bounty for an enemy harvester: the same plate as an unload, drawn after the map and the missile blast so nothing covers it */
 function drawBounty(si){if(si===me)return;for(const f of FX[si])if(f.k==='rf'&&f.hb){const k=1-f.life/f.max;ctx.save();ctx.translate(f.x,f.y-26-Math.min(1,k*2)*14);const fl=FLIP;if(fl)ctx.scale(-1,1);FLIP=false;ctx.globalAlpha=Math.min(1,f.life/0.6);ctx.font='900 14px '+FONT;const w=ctx.measureText('+'+f.v).width+30;RR(ctx,-w/2,-11,w,22,11,'rgba(20,28,18,0.85)',1.5,'#5CB8FF');crystal(ctx,-w/2+11,6,12,4.5);T('+'+f.v,-w/2+20,0.5,14,'#BFE9FF','left',900);FLIP=fl;ctx.restore();}}
+/* yellow badge on the own refinery: the next upgrade's price (or «макс.») and how many harvesters can be bought now, e.g. «1800 | 1» */
+function refBadgeText(S){if(!((S.dep||[1,1])[1]>0))return'';const l=S.rl|0,n=S.hv.length,free=Math.max(0,harvCap(S)-n);
+ const up=l<RUP_MAX?''+rupC(S)[l]:'макс.';return free>0?up+' | '+free:up;}
+function drawRefBadge(si){if(si!==me||!viewW||viewW.over)return;const S=viewW.sides[si];if(!S)return;const bt=refBadgeText(S);if(!bt)return;
+ const r=baseRects().find(q=>q.k==='refinery');if(!r)return;ctx.font='900 10px '+FONT;const bw=Math.max(24,ctx.measureText(bt).width+12),x=r.x+r.w-bw+6,y=r.y-10;
+ RR(ctx,x,y,bw,15,7,'#F2C232',1.4,'#11161C');T(bt,x+bw/2,y+8,10,'#1C2416','center',900);}
 function drawNuke(si,t){const N=viewW.nuke;if(!N)return;const nt=nukeT(N);const NX=N.x??NX,NY=N.y??NY;
  if(si===N.s&&nt<NK.launch){const r=baseRects()[0],bx=r.x+r.w/2,by=r.y+r.h/2;const k=nt/NK.launch,e=k*k;const y=by-e*(by+120);
   // ignition (rocket still on the pad), a slow heavy lift-off, then it accelerates hard
@@ -1379,7 +1386,7 @@ function addFx(e){const s=e.s;if(s!==0&&s!==1)return;const fx=FX[s];try{auEvent(
  else if(e.e==='rainfall'){fx.push({k:'fall',x:e.x,y:e.y,life:e.T,max:e.T,ox:(Math.random()-0.5)*120});}
  else if(e.e==='ff'){const p=muzzlePos(s,e.u);if(!p)return;fx.push({k:'etr',x1:p[0],y1:p[1],x2:e.x+(Math.random()-0.5)*8,y2:e.y+(Math.random()-0.5)*8,life:0.07,max:0.07,big:e.k});fx.push({k:'hit',x:e.x,y:e.y,life:0.2,max:0.2});}
  else if(e.e==='freeze'){fx.push({k:'frost',life:FRZ_T,max:FRZ_T});for(let i=0;i<40;i++)fx.push({k:'flake',x:Math.random()*VW,y:Math.random()*VH,vy:12+Math.random()*20,life:1.5+Math.random()*1.5,max:3});}
- else if(e.e==='kr'){fx.push({k:'kr',x:e.x,y:e.y,v:e.v,life:1.1,max:1.1});}else if(e.e==='rf'){fx.push(e.hb?{k:'rf',hb:1,x:e.x,y:e.y,v:e.v,life:3.2,max:3.2}:{k:'rf',x:e.x,y:e.y,v:e.v,life:1.2,max:1.2});}else if(e.e==='crit'){fx.push({k:'crit',x:e.x,y:e.y,life:0.8,max:0.8});}
+ else if(e.e==='kr'){fx.push({k:'kr',x:e.x,y:e.y,v:e.v,life:1.1,max:1.1});}else if(e.e==='rf'){/* several harvesters killed at once (a missile): one plate with the total */const j=e.hb?fx.find(f=>f.k==='rf'&&f.hb&&f.max-f.life<0.5&&Math.hypot(f.x-e.x,f.y-e.y)<160):null;if(j){j.v+=e.v;j.n=(j.n||1)+1;j.x+=(e.x-j.x)/j.n;j.y+=(e.y-j.y)/j.n;}else fx.push(e.hb?{k:'rf',hb:1,x:e.x,y:e.y,v:e.v,life:3.2,max:3.2}:{k:'rf',x:e.x,y:e.y,v:e.v,life:1.2,max:1.2});}else if(e.e==='crit'){fx.push({k:'crit',x:e.x,y:e.y,life:0.8,max:0.8});}
  else if(e.e==='built'){fx.push({k:'ring',x:e.x??cx_(e.c),y:e.y??cy_(e.r),life:0.5,max:0.5});}
  else if(e.e==='sold'){fx.push({k:'ring',x:e.x,y:e.y,life:0.5,max:0.5});}
  else if(e.e==='cash'){fx.push({k:'cash',v:e.v,life:1.4,max:1.4});}
@@ -2554,7 +2561,7 @@ function render(t){ctx.setTransform(DPR,0,0,DPR,0,0);ctx.clearRect(0,0,VW,VH);if
     mirrored on the right page — the guest (side 1) too, so both phones look the same way round */
  const L=me===1?1:0,P=me===1?1-viewT:viewT,off=P*VW;
  shake*=0.88;if(shake<0.2)shake=0;const shx=(Math.random()-0.5)*2*shake,shy=(Math.random()-0.5)*2*shake;ctx.save();ctx.translate(shx,shy);
- if(P<0.99){ctx.save();ctx.translate(-off,0);drawMap(L,t);drawNuke(L,t);drawBounty(L);ctx.restore();}
+ if(P<0.99){ctx.save();ctx.translate(-off,0);drawMap(L,t);drawNuke(L,t);drawBounty(L);drawRefBadge(L);ctx.restore();}
  if(P>0.01){ctx.save();ctx.translate(2*VW-off,0);ctx.scale(-1,1);FLIP=true;drawMap(1-L,t);drawNuke(1-L,t);drawBounty(1-L);FLIP=false;ctx.restore();}
  if(viewW.sides[view]&&viewW.sides[view].frzT>0){const k=Math.min(1,viewW.sides[view].frzT/1.5);const gr=ctx.createRadialGradient(VW/2,VH/2,VH*0.35,VW/2,VH/2,VW*0.62);gr.addColorStop(0,'rgba(200,240,255,0)');gr.addColorStop(1,'rgba(200,240,255,'+(0.45*k)+')');ctx.fillStyle=gr;ctx.fillRect(0,0,VW,VH);}
  drawNukeFlash();ctx.restore();
@@ -2569,7 +2576,8 @@ let hudA=1,hudT=0,NK_BACK=0;
 function toLocal(ev){const r=cv.getBoundingClientRect();return[(ev.clientX-r.left)*VW/r.width,(ev.clientY-r.top)*VH/r.height];}
 function sendCmd(cmd){if(cmd&&cmd.a==='send'&&!VQ.fout&&viewW&&viewW.sides&&!viewW.over){const S=viewW.sides[me];if(S&&S.ore>=unitCost(cmd.k,S.ua)){VQ.fout=true;vAct();VQ.need=REMIND_FIRST;voiceGrp('fout');}}if(mode==='guest'){if(room)room.emit('cmd',{g:code,c:cmd}).catch(()=>{});}else doCmd(me,cmd);}
 let down=null;
-cv.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,t:performance.now()};});
+let TAP_T=0,MENU_REF=null,MENU_T=0;const MENU_IDLE=3;
+cv.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,t:performance.now()};TAP_T=now();});
 cv.addEventListener('pointerdown',e=>{if(mode!=='editor')return;try{cv.setPointerCapture(e.pointerId);}catch(_){}auUnlock();edDown(...toLocal(e));});
 cv.addEventListener('pointermove',e=>{if(mode==='editor'&&ED_DRAG)edMove(...toLocal(e));});
 for(const ev of ['pointerup','pointercancel'])cv.addEventListener(ev,()=>{if(mode==='editor')edUp();});
@@ -3286,7 +3294,7 @@ function frameBody(nowMs){if(viewW&&viewW.nuke&&mode!=='menu'){const N=viewW.nuk
  else if(NK_BACK===-1&&viewW&&mode!=='menu'){if(hudA>0.98)NK_BACK=now()+0.3;}
  if(NK_BACK>0&&now()>=NK_BACK){NK_BACK=0;if(viewW&&!viewW.over&&!viewW.nuke&&view!==me){view=me;menu=null;}}if(viewW&&viewW.over&&mode!=='menu'){const o=viewW.over;if(!endSeen){endSeen=true;AU.mode='end';try{voiceEndCut();}catch(_){}const won=o.w===me;playEnd(won?'win':'lost');{/* 2 s after the end of any kind: the victory or the defeat line */const g=won?'win':'lose',w0=viewW;setTimeout(()=>{if(endSeen&&viewW===w0||endSeen&&viewW&&viewW.over)voiceGrp(g);},2000);}}
  if(!o.done){const tv=(o.why==='titan'&&o.ts!=null)?o.ts:1-o.w;if(view!==tv){view=tv;menu=null;}}}{const lb=document.getElementById('lobby');document.body.classList.toggle('playing',!!lb&&lb.hidden);}if(viewW&&mode!=='menu'&&AU.mode!=='menu'&&AU.mode!=='end'){const fm=viewW.finale&&!viewW.over?'finale':'battle';if(AU.mode!==fm)AU.mode=fm;}
-if(menu&&menu.until&&now()>menu.until)menu=null;if(menu&&menu.kind==='factory'&&viewW&&viewW.sides[me]&&viewW.sides[me].nkT>0)menu=null;
+if(menu&&menu.until&&now()>menu.until)menu=null;/* an open menu (and its dimming) goes away after 3 s without a tap; not while a sale is counting down */if(menu!==MENU_REF){MENU_REF=menu;MENU_T=now();}if(menu&&!PEND_SELL&&now()-Math.max(MENU_T,TAP_T)>MENU_IDLE){menu=null;MENU_REF=null;}if(menu&&menu.kind==='factory'&&viewW&&viewW.sides[me]&&viewW.sides[me].nkT>0)menu=null;
 if(viewW&&viewW.sides&&mode!=='menu'){const M=viewW.sides[me];if(M&&!viewW.over){const c=M.mineCd||0;if(VOICE_PREV>0&&c<=0)voice('mine');VOICE_PREV=c;const nc=M.nkCd||0;if(VOICE_NKP>0&&nc<=0){const O=viewW.sides[1-me];if(O&&O.dep&&O.dep[1]>0)voice('balist1');}VOICE_NKP=nc;try{voiceNear(M);voiceTitanLow();voiceRemind(M);}catch(_){}}}
 if(viewW&&viewW.sides){const M=viewW.sides[me];AU.hot=!!M&&M.units.filter(u=>u.o!==me).length>=4;}
 const dt=Math.min(0.05,(nowMs-lastFrame)/1000);lastFrame=nowMs;const t=now();menuMusicTick(dt);try{jetTick();}catch(_){}
@@ -3301,9 +3309,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.16-1332</div>
+<div id="appVer">v2026.11.16-2241</div>
 <script>
-window.APP_VERSION='2026.11.16-1332';
+window.APP_VERSION='2026.11.16-2241';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
