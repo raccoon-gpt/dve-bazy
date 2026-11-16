@@ -1226,6 +1226,9 @@ function botStream(si){const S=W.sides[si];
     right away, up to the level's cap (no pause between steps) */
  /* the first armour step is cheap: buy it as soon as 2 harvesters work, without waiting for its turn among the goals */
  if(W.hu&&si===1&&!W.finale&&S.ua===0&&S.hv.length>=2&&capOf(W,'ua')>=1&&S.ore>=uaCost(S))doCmd(si,{a:'ua'});
+ /* economy complete (refinery at the top, every harvester the level allows): the next armour step is bought as soon as it's
+    affordable and 20 s have passed — it doesn't wait behind an attack the bot is saving for */
+ if(W.hu&&si===1&&!W.finale&&(S.rl|0)>=RUP_MAX&&S.hv.length>=harvCap(S)&&uaGapOk(S)&&S.ua<Math.min(UPG_MAX,capOf(W,'ua'))&&S.ore>=uaCost(S)){doCmd(si,{a:'ua'});if(botGoal[si]==='ua')botGoal[si]=null;}
  if(W.hu&&si===1&&!W.finale&&!(S.dep[1]>0))for(let i=0;i<5&&S.ua<Math.min(UPG_MAX,capOf(W,'ua'))&&S.ore>=uaCost(S);i++)doCmd(si,{a:'ua'});
  /* a lost harvester (within what the refinery level allows) is rebought at once with any money — unless all are gone and
     the free one is due within 5 s */
@@ -3280,9 +3283,9 @@ window.__dbg={get W(){return W},simStep,doCmd,botThink,packSnap,onSnap,setCode:c
 requestAnimationFrame(frame);
 </script>
 
-<div id="appVer">v2026.11.16-1129</div>
+<div id="appVer">v2026.11.16-1144</div>
 <script>
-window.APP_VERSION='2026.11.16-1129';
+window.APP_VERSION='2026.11.16-1144';
 /* the version label only on the lobby screen */
 setInterval(()=>{const l=document.getElementById('lobby'),v=document.getElementById('appVer');if(l&&v)v.style.display=l.hidden?'none':'';},500);
 if('serviceWorker' in navigator){let reloaded=false;
