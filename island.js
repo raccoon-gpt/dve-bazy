@@ -929,7 +929,7 @@ window.__isle.D=D;window.__isle.cam=cam;window.__isle.DL=DL;window.__isle.stepAr
 /* ================== lock-on: a moving enemy held under the red dot for 3 s gets homing missiles from the base ================== */
 const LOCK_T=3,LOCK_PX=34,MIS=[];let MIS_CD=0,MID=0;const LK={u:null,t:0,beep:0};
 function stepLock(dt){if(CUR!=='drone'||D.dead>0||G_.over){LK.u=null;LK.t=0;return;}
- const cx=innerWidth/2,cy=innerHeight/2,v=new THREE.Vector3();let best=null,bd=LOCK_PX;
+ const cx=innerWidth/2,cy=innerHeight/2,v=new THREE.Vector3();let best=null,bd=LOCK_PX*D.zoom;/* the same patch of ground at any zoom */
  for(const u of G_.units){if(u.dead||u.s!==1||u.lk)continue;v.set(u.x,u.y+6,u.z).project(cam);if(v.z>1)continue;const d=Math.hypot((v.x+1)/2*innerWidth-cx,(1-v.y)/2*innerHeight-cy);if(d<bd){bd=d;best=u;}}
  if(best&&best===LK.u)LK.t+=dt;else{LK.u=best;LK.t=0;}
  if(LK.u){LK.u.mk=1;LK.beep-=dt;if(LK.t>0.25&&LK.beep<=0){LK.beep=0.45-0.3*Math.min(1,LK.t/LOCK_T);AUD.play('lockp');}}
