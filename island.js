@@ -748,7 +748,7 @@ const ptr=new Map();let pinch0=0,zoom0=1;
 const TAP={};cv3.addEventListener('pointerdown',e=>{try{cv3.setPointerCapture(e.pointerId);}catch(_){}ptr.set(e.pointerId,[e.clientX,e.clientY]);TAP[e.pointerId]={x:e.clientX,y:e.clientY,t:performance.now(),m:0,n:ptr.size};if(ptr.size===2){const [a,b]=[...ptr.values()];pinch0=Math.hypot(a[0]-b[0],a[1]-b[1]);zoom0=CUR==='drone'?D.zoom:P.zoom;}});
 cv3.addEventListener('pointermove',e=>{const p=ptr.get(e.pointerId);if(!p)return;const dx=e.clientX-p[0],dy=e.clientY-p[1];ptr.set(e.pointerId,[e.clientX,e.clientY]);
  if(TAP[e.pointerId])TAP[e.pointerId].m+=Math.abs(dx)+Math.abs(dy);
- if(CUR==='drone'){if(ptr.size===1){const k=0.004/D.zoom;D.yaw+=dx*k;D.pitch=Math.max(-1.45,Math.min(-0.55,D.pitch-dy*k*0.8));}else if(ptr.size===2&&pinch0>0){const [a,b]=[...ptr.values()];D.zoom=Math.max(1,Math.min(4,zoom0*Math.hypot(a[0]-b[0],a[1]-b[1])/pinch0));}return;}
+ if(CUR==='drone'){if(ptr.size===1){const k=0.004/D.zoom;D.yaw+=dx*k;D.pitch=Math.max(-1.45,Math.min(-28*Math.PI/180,D.pitch-dy*k*0.8));}else if(ptr.size===2&&pinch0>0){const [a,b]=[...ptr.values()];D.zoom=Math.max(1,Math.min(4,zoom0*Math.hypot(a[0]-b[0],a[1]-b[1])/pinch0));}return;}
  if(ptr.size===1){const k=0.0055/P.zoom;P.yaw+=dx*k;P.pitch=Math.max(-0.35,Math.min(0.25,P.pitch-dy*k*0.8));}
  else if(ptr.size===2&&pinch0>0){const [a,b]=[...ptr.values()];P.zoom=Math.max(1,Math.min(3.5,zoom0*Math.hypot(a[0]-b[0],a[1]-b[1])/pinch0));}});
 for(const n of ['pointerup','pointercancel'])cv3.addEventListener(n,e=>{const tp=TAP[e.pointerId];delete TAP[e.pointerId];ptr.delete(e.pointerId);if(ptr.size<2)pinch0=0;
