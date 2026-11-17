@@ -381,7 +381,8 @@ function buildWorld(){if(world)scene.remove(world);BATT[0]=[];BATT[1]=[];world=n
  ocean=new THREE.Mesh(new THREE.PlaneGeometry(40000,40000),new THREE.MeshStandardMaterial({color:lin(0x2C4352),roughness:0.12,metalness:0.2,normalMap:TX.ripple,normalScale:new THREE.Vector2(0.5,0.5),transparent:true,opacity:0.94}));
  TX.ripple.repeat.set(160,160);ocean.rotation.x=-Math.PI/2;ocean.position.set(IW/2,WATER,IH/2);world.add(ocean);
  /* dirt roads between the bases and the mines */
- for(const pl of ROADS_I){const s=strip(chaikin(pl,2),42,0.6,M3.road,42);if(s)world.add(s);}
+ M3.road.polygonOffsetFactor=-4;M3.road.polygonOffsetUnits=-16;
+ for(const pl of ROADS_I){const s=roadStrip(resample(chaikin(pl,2),14),42);if(s)world.add(s);}
  /* rocks scattered over the island */
  {const rp=[];for(let i=0;i<9000&&rp.length<(isMob?500:900);i++){const x=rn()*IW,z=rn()*IH,h=hgt(x,z);if(h<6)continue;if(nearBase(x,z,300)||nearMine(x,z,140))continue;rp.push([x,z,rn()]);}
   const geo=displace(new THREE.IcosahedronGeometry(1,2),0.5,1.4);const im=new THREE.InstancedMesh(geo,M3.rock,rp.length);im.castShadow=true;im.receiveShadow=true;const o=new THREE.Object3D();
@@ -408,6 +409,14 @@ function mkMine(){const g=new THREE.Group();const hill=new THREE.Mesh(displace(n
  const mouth=new THREE.Mesh(new THREE.SphereGeometry(1,16,10),std(0x0E0C0A,1,0));mouth.scale.set(18,16,9);mouth.position.set(0,6,40);g.add(mouth);
  for(let i=0;i<12;i++){const c=new THREE.Mesh(new THREE.OctahedronGeometry(4+(i%3)*2,0),M3.crys);const a=i*0.55;c.position.set(Math.cos(a)*(32+i%2*9),12+(i%3)*8,Math.sin(a)*27);c.scale.y=2.2;c.rotation.set((i%3-1)*0.4,i,(i%2-0.5)*0.6);g.add(c);}
  g.add(BOX(30,2,8,M3.wood,0,1,50));return addShadow(g,true,true);}
+/* the terrain mesh is coarser than the height grid: lift each road vertex to the highest ground around it */
+const gmax=(x,z)=>Math.max(hgt(x,z),hgt(x+24,z),hgt(x-24,z),hgt(x,z+24),hgt(x,z-24),hgt(x+17,z+17),hgt(x-17,z-17),hgt(x+17,z-17),hgt(x-17,z+17));
+function resample(pl,st){const o=[pl[0]];for(let i=1;i<pl.length;i++){const a=o[o.length-1],b=pl[i],d=Math.hypot(b[0]-a[0],b[1]-a[1]);const n=Math.floor(d/st);for(let k=1;k<=n;k++)o.push([a[0]+(b[0]-a[0])*k/n,a[1]+(b[1]-a[1])*k/n]);}return o;}
+function roadStrip(pl,w){const n=pl.length;if(n<2)return null;const P_=[],U=[],I=[];let L=0;
+ for(let i=0;i<n;i++){const a=pl[Math.max(0,i-1)],b=pl[Math.min(n-1,i+1)];let dx=b[0]-a[0],dz=b[1]-a[1];const l=Math.hypot(dx,dz)||1;dx/=l;dz/=l;if(i>0)L+=Math.hypot(pl[i][0]-pl[i-1][0],pl[i][1]-pl[i-1][1]);
+  const nx=-dz,nz=dx,x=pl[i][0],z=pl[i][1];for(const sd of [1,-1]){const px=x+nx*w/2*sd,pz=z+nz*w/2*sd;P_.push(px,Math.max(0.5,gmax(px,pz))+1.4,pz);}U.push(0,L/w,1,L/w);
+  if(i>0){const k=(i-1)*2;I.push(k,k+1,k+2,k+1,k+3,k+2);}}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P_,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(U,2));g.setIndex(I);g.computeVertexNormals();const o=new THREE.Mesh(g,M3.road);o.receiveShadow=true;return o;}
 const nearBase=(x,z,r)=>BASES.some(([bx,bz])=>Math.hypot(x-bx,z-bz)<r);
 const nearMine=(x,z,r)=>MINES_AT.some(([mx,mz])=>Math.hypot(x-mx,z-mz)<r);
 function nearRoad(x,z,r){for(const pl of ROADS_I)for(let i=0;i<pl.length-1;i+=1){if(segDist2(x,z,pl[i],pl[i+1])<r)return true;}return false;}
@@ -532,7 +541,8 @@ function stepTitan(dt){if(P.dead>0){P.dead-=dt;if(P.dead<=0)spawnTitan();return;
  for(const u of G_.units){if(u.dead||u.s===0||US[u.k].air)continue;test(u.x,u.y+6,u.z,{k:'u',o:u});}
  for(const t of G_.towers){if(t.s===0)continue;test(t.x,hgt(t.x,t.z)+12,t.z,{k:'t',o:t});}
  for(const h of G_.harv){if(h.s===0)continue;test(h.x,hgt(h.x,h.z)+7,h.z,{k:'h',o:h});}
- {const [bx,bz]=BASES[1];test(bx,hgt(bx,bz)+20,bz,{k:'b'});}
+ if(G_.sides[1].lives>0){const [bx,bz]=BASES[1];test(bx,hgt(bx,bz)+20,bz,{k:'b'});}
+ if(G_.over)LOCK=null;
  if(LOCK&&P.cd<=0){P.cd=TITAN.cd;shoot(LOCK.x,LOCK.y,LOCK.z,LOCK.tg);}
  if(P.hp<=0){P.hp=0;P.dead=TITAN.respawn;P.move=false;G_.sides[1].ore+=TITAN.bounty;explode(P.x,hgt(P.x,P.z),P.z,2.6);HUD.msg('Титан уничтожен — возрождение через 5 с');}}
 function muzzle(){const st=new THREE.Vector3(0,-7.5,-53);barrel.localToWorld(st);return st;}
@@ -544,7 +554,7 @@ function superShot(){if(P.dead>0||P.scd>0)return;P.scd=TITAN.superCd;cam.updateM
  for(let i=0;i<TITAN.superN;i++){const a=i/TITAN.superN*6.28,r=i?40+rn()*30:0,x=hit.x+Math.cos(a)*r,z=hit.z+Math.sin(a)*r;setTimeout(()=>shoot(x,hgt(x,z),z,null,true),i*90);}
  puff(muzzle().x,muzzle().y,muzzle().z,'muzzle');P.rec=1;HUD.kick();HUD.msg('Залп!');}
 function impact(s){explode(s.tx,s.ty,s.tz,s.sup?1.4:1.1);const by=0;
- if(s.tg&&s.tg.k==='b'||Math.hypot(s.tx-BASES[1][0],s.tz-BASES[1][1])<90){if(!s.sup||rn()<0.35)hitBase(1,1);}
+ if(!G_.over&&(s.tg&&s.tg.k==='b'||Math.hypot(s.tx-BASES[1][0],s.tz-BASES[1][1])<90)){if(!s.sup||rn()<0.35)hitBase(1,1);}
  splash(0,s.tx,s.tz,TITAN.r,TITAN.dmg,by);
  for(const t of G_.towers){if(t.s===0)continue;if(Math.hypot(t.x-s.tx,t.z-s.tz)<TITAN.r)dmgTower(t,TITAN.dmg*1.6,by);}}
 function stepShells(dt){for(let i=shells.length-1;i>=0;i--){const s=shells[i];s.t+=dt;const k=Math.min(1,s.t/s.T);s.x=s.sx+(s.tx-s.sx)*k;s.z=s.sz+(s.tz-s.sz)*k;s.y=s.sy+(s.ty-s.sy)*k+Math.sin(Math.PI*k)*Math.min(30,s.T*30);if(k>=1){shells.splice(i,1);impact(s);}}
@@ -569,7 +579,7 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:'Rubi
 #h3 .hp{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);width:min(300px,38vw);height:10px;border-radius:6px;background:rgba(0,0,0,.45);overflow:hidden;border:1px solid rgba(255,255,255,.3)}
 #h3 .hp i{display:block;height:100%;background:linear-gradient(90deg,#5FD068,#A8F07A)}
 #h3 .rl{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);font-size:12px;opacity:.9;letter-spacing:.5px}
-#h3 .fps{position:absolute;right:max(14px,env(safe-area-inset-right));top:58px;font-size:11px;opacity:.6}
+#h3 .fps{position:absolute;right:max(14px,env(safe-area-inset-right));top:58px;font-size:12px;opacity:.85;background:rgba(12,18,14,.5);border-radius:8px;padding:2px 8px}
 #h3 .msg{position:absolute;left:50%;top:28%;transform:translateX(-50%);background:rgba(12,18,14,.7);border-radius:12px;padding:8px 16px;font-size:16px;display:none}
 #h3 .frame{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 46%,transparent 62%,rgba(5,8,6,.5) 100%)}
 #h3 .hurt{position:absolute;inset:0;transition:box-shadow .15s}
@@ -659,6 +669,7 @@ function start(){if(!BUILT){genIsland(1234);buildNav();planRoads();}newGame();if
 let running=false,MIL_DIRTY=false,last=performance.now();
 function loop(now_){requestAnimationFrame(loop);const dt=Math.min(0.05,(now_-last)/1000);last=now_;if(!running)return;
  if(T3.map){mapLoop();stepGame(dt);stepShells(dt);return;}
+ if(T3.applyQ){T3.applyQ=false;R.setPixelRatio(T3.q);size();}/* resolution changes happen before drawing, so the canvas is never shown cleared */
  if(keys.has('KeyA'))P.yaw-=1.6*dt;if(keys.has('KeyD'))P.yaw+=1.6*dt;
  const t=now_/1000;stepGame(dt);stepTitan(dt);stepShells(dt);syncAll(t,dt);stepParts(dt);
  if(G_.over&&over.style.display!=='flex'){over.style.display='flex';over.querySelector('.t').textContent=G_.over.w===0?'Победа!':'Поражение';}
@@ -669,9 +680,13 @@ function loop(now_){requestAnimationFrame(loop);const dt=Math.min(0.05,(now_-las
  const fov=P.fov/P.zoom;if(Math.abs(cam.fov-fov)>0.01){cam.fov=fov;cam.updateProjectionMatrix();}cock.visible=P.dead<=0&&P.zoom<1.6;barrel.position.z=P.rec*5;
  sky.position.copy(cam.position);sun.position.set(P.x+SUN_DIR.x*700,SUN_DIR.y*700,P.z+SUN_DIR.z*700);sun.target.position.set(P.x+Math.cos(P.yaw)*150,0,P.z+Math.sin(P.yaw)*150);
  HUD.upd(dt);if(FR%6===0)drawMap(q('.mini'),false);draw();
- T3.fpsN++;T3.fpsT+=dt;if(T3.fpsT>=2){T3.fps=T3.fpsN/T3.fpsT;T3.fpsN=0;T3.fpsT=0;let nq=T3.q;if(T3.fps<40&&T3.q>0.55)nq=Math.max(0.55,T3.q-0.15);else if(T3.fps>57&&T3.q<Math.min(2,devicePixelRatio||1))nq=Math.min(devicePixelRatio||1,T3.q+0.1);
-  if(nq!==T3.q){T3.q=nq;R.setPixelRatio(nq);size();try{localStorage.setItem('dvebazy-isleq',''+nq);}catch(_){}}
-  if(T3.fps<28&&T3.q<=0.56&&R.shadowMap.enabled){R.shadowMap.enabled=false;scene.traverse(o=>{if(o.material)o.material.needsUpdate=true;});}}}
+ T3.fpsN++;T3.fpsT+=dt;if(T3.fpsT>=2){T3.fps=T3.fpsN/T3.fpsT;T3.fpsN=0;T3.fpsT=0;T3.warm=(T3.warm||0)+1;
+  /* ignore the first seconds (shaders compiling); go down after two slow windows, up only after four fast ones and never soon after going down */
+  if(T3.warm>2){T3.lowN=T3.fps<38?(T3.lowN||0)+1:0;T3.hiN=T3.fps>58?(T3.hiN||0)+1:0;let nq=T3.q;
+   if(T3.lowN>=2&&T3.q>0.55){nq=Math.max(0.55,T3.q-0.15);T3.lowN=0;T3.downAt=now_;}
+   else if(T3.hiN>=4&&T3.q<Math.min(2,devicePixelRatio||1)&&now_-(T3.downAt||-1e9)>30000){nq=Math.min(devicePixelRatio||1,T3.q+0.1);T3.hiN=0;}
+   if(nq!==T3.q){T3.q=nq;T3.applyQ=true;try{localStorage.setItem('dvebazy-isleq',''+nq);}catch(_){}}
+   if(T3.fps<26&&T3.q<=0.56&&R.shadowMap.enabled){R.shadowMap.enabled=false;scene.traverse(o=>{if(o.material)o.material.needsUpdate=true;});}}}}
 requestAnimationFrame(loop);
 window.__isle={stepGame,stepTitan,stepShells,ROADS:()=>ROADS_I,GAPS:()=>GAPS,P,get G(){return G_;},start,sendUnit,T3,superShot,get LOCK(){return LOCK;},hgt,openMap};
 
