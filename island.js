@@ -560,9 +560,14 @@ function stepTitan(dt){if(P.dead>0){P.dead-=dt;if(P.dead<=0)spawnTitan();return;
  if(G_.over)LOCK=null;
  if(LOCK&&P.cd<=0){P.cd=TITAN.cd;shoot(LOCK.x,LOCK.y,LOCK.z,LOCK.tg);}
  if(P.hp<=0){P.hp=0;P.dead=TITAN.respawn;P.move=false;G_.sides[1].ore+=TITAN.bounty;explode(P.x,hgt(P.x,P.z),P.z,2.6);HUD.msg('Титан уничтожен — возрождение через 5 с');}}
-function muzzle(){const st=new THREE.Vector3(0,-7.5,-53);barrel.localToWorld(st);return st;}
+/* the painted cockpit: twin barrels at the bottom of the screen; shells leave from the tip of the barrel whose turn it is */
+let GUN=0;const TIPS=[[0.347,0.03],[0.652,0.03]];
+function muzzle(){const el=document.getElementById('tiGun');if(!el||!el.offsetWidth){const st=new THREE.Vector3(0,-7.5,-53);barrel.localToWorld(st);return st;}
+ const r=el.getBoundingClientRect(),[fx,fy]=TIPS[GUN],sx=r.left+r.width*fx,sy=r.top+r.height*fy;const v=new THREE.Vector3(sx/innerWidth*2-1,-(sy/innerHeight*2-1),0.5).unproject(cam).sub(cam.position).normalize();
+ const o=new THREE.Vector3(P.x,Math.max(hgt(P.x,P.z),0)+26,P.z);if(cam.position.distanceTo(o)>5)return o;return cam.position.clone().addScaledVector(v,14);}
+function gunFlash(){const f=document.getElementById('tiFl'+GUN);if(f){f.style.opacity='1';setTimeout(()=>f.style.opacity='0',70);}const el=document.getElementById('tiGun');if(el){el.style.transform='translateY(7px)';setTimeout(()=>el.style.transform='',110);}GUN=1-GUN;}
 function shoot(x,y,z,tg,sup){const st=muzzle();const L=Math.hypot(x-st.x,y-st.y,z-st.z);shells.push({id:++SID,x:st.x,y:st.y,z:st.z,sx:st.x,sy:st.y,sz:st.z,tx:x,ty:y,tz:z,t:0,T:Math.max(0.05,L/TITAN.v),tg,sup});
- if(!sup){puff(st.x,st.y,st.z,'muzzle');P.rec=1;flash.position.copy(st);flash.intensity=Math.max(flash.intensity,2);HUD.kick();}}
+ if(!sup){gunFlash();puff(st.x,st.y,st.z,'muzzle');P.rec=1;flash.position.copy(st);flash.intensity=Math.max(flash.intensity,2);HUD.kick();}}
 /* super shot: a fan of shells around where the sight meets the ground */
 function superShot(){if(P.dead>0||P.scd>0)return;P.scd=TITAN.superCd;cam.updateMatrixWorld();const o=new THREE.Vector3(),d=new THREE.Vector3();cam.getWorldPosition(o);cam.getWorldDirection(d);
  let hit=null;for(let s=10;s<1200;s+=8){const p=o.clone().addScaledVector(d,s);if(p.y<=hgt(p.x,p.z)){hit=p;break;}}if(!hit)hit=o.clone().addScaledVector(d,700);
@@ -590,6 +595,12 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:'Rubi
 #h3 .units .b{position:static;width:60px;height:40px;font-size:12px;flex-direction:column;line-height:1.1}
 #h3 .units .b.dis{opacity:.45}
 #h3 .stat{position:absolute;left:max(14px,env(safe-area-inset-left));top:10px;background:rgba(12,18,14,.5);border-radius:12px;padding:6px 12px;line-height:1.35}
+#tiCock{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+#tiFrame{position:absolute;left:0;top:0;width:100%;height:auto;max-height:46vh;object-fit:fill}
+#tiGun{position:absolute;left:0;width:100%;height:auto;bottom:calc(min(0px, 40vh - 37.47vw));transition:transform .1s}
+#tiCock .fl{position:absolute;width:13vh;height:13vh;margin:-6.5vh 0 0 -6.5vh;border-radius:50%;background:radial-gradient(circle,rgba(255,240,190,1) 0,rgba(255,170,60,.85) 30%,rgba(255,120,20,0) 70%);opacity:0;transition:opacity .05s}
+#h3 img.sight{position:absolute;left:50%;top:50%;height:46vh;transform:translate(-50%,-50%);opacity:.92;transition:filter .15s}
+#h3 img.sight.lock{filter:hue-rotate(-115deg) saturate(1.6)}
 #h3 svg.xh{position:absolute;left:50%;top:50%;width:150px;height:150px;margin:-75px 0 0 -75px;overflow:visible}
 #h3 .hp{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);width:min(300px,38vw);height:10px;border-radius:6px;background:rgba(0,0,0,.45);overflow:hidden;border:1px solid rgba(255,255,255,.3)}
 #h3 .hp i{display:block;height:100%;background:linear-gradient(90deg,#5FD068,#A8F07A)}
@@ -612,7 +623,7 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:'Rubi
 #over button{border:2px solid #0C120B;border-radius:12px;background:linear-gradient(#F2C232,#C99A1A);color:#1C2416;font:900 18px 'Rubik',system-ui,sans-serif;padding:12px 28px}`;
 document.head.appendChild(css);
 const H=document.createElement('div');H.id='h3';H.style.display='none';H.innerHTML=`<div class="frame"></div><div class="hurt"></div>
-<svg class="xh" viewBox="-75 -75 150 150"><g class="xg" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.6"><circle r="22" stroke-dasharray="10 6"/><path d="M-60 0H-30M30 0H60M0 -46V-30M0 30V60"/><path d="M-8 34H8M-5 42H5M-3 50H3" stroke-width="1.2"/></g><circle r="1.8" fill="#FF5040"/><circle class="rld" r="27" fill="none" stroke="#F2C232" stroke-width="2.5" stroke-dasharray="0 170" transform="rotate(-90)"/><rect class="lk" x="-30" y="-30" width="60" height="60" fill="none" stroke="#FF4A3A" stroke-width="2.4" stroke-dasharray="14 32" stroke-dashoffset="7" display="none"/></svg>
+<div id="tiCock"><img id="tiFrame" src="ti_frame.webp" alt=""><img id="tiGun" src="ti_barrels.webp" alt=""><i id="tiFl0" class="fl"></i><i id="tiFl1" class="fl"></i></div><img class="sight" src="ti_sight.webp" alt=""><svg class="xh" viewBox="-75 -75 150 150"><circle class="rld" r="27" fill="none" stroke="#F2C232" stroke-width="2.5" stroke-dasharray="0 170" transform="rotate(-90)"/><rect class="lk" x="-30" y="-30" width="60" height="60" fill="none" stroke="#FF4A3A" stroke-width="2.4" stroke-dasharray="14 32" stroke-dashoffset="7" display="none"/></svg>
 <div class="stat"><div class="s1"></div><div class="s2" style="font-size:12px;opacity:.85"></div></div>
 <div class="units"></div><div class="b map">Карта</div><div class="fps"></div><canvas class="mini" width="300" height="188"></canvas>
 <div class="b go">Старт</div><div class="b sup">Залп<span style="font-size:11px"></span></div><div class="hp"><i></i></div><div class="rl"></div><div class="msg"></div>`;
@@ -627,7 +638,7 @@ let lastHp=P.max;
 const HUD={msgT:0,k:0,msg(s){const m=q('.msg');m.textContent=s;m.style.display='block';this.msgT=2.5;},kick(){this.k=0.12;},
  upd(dt){const S=G_.sides[0],E=G_.sides[1];q('.s1').innerHTML=`❤ ${S.lives} &nbsp; 💎 ${Math.floor(S.ore)}`;q('.s2').innerHTML=`Соперник: ❤ ${E.lives}`;
   q('.hp i').style.width=(100*Math.max(0,P.hp)/P.max).toFixed(1)+'%';q('.rl').textContent=P.dead>0?'возрождение '+Math.ceil(P.dead)+' с':LOCK?'цель захвачена':'поиск цели';
-  q('.rld').setAttribute('stroke-dasharray',(170*(1-P.cd/TITAN.cd)).toFixed(1)+' 170');q('.lk').setAttribute('display',LOCK?'inline':'none');
+  q('.rld').setAttribute('stroke-dasharray',(170*(1-P.cd/TITAN.cd)).toFixed(1)+' 170');q('.lk').setAttribute('display',LOCK?'inline':'none');{const im=q('img.sight');if(im)im.classList.toggle('lock',!!LOCK);const g=document.getElementById('tiGun');if(g&&g.offsetWidth){const r=g.getBoundingClientRect();for(const k of [0,1]){const f=document.getElementById('tiFl'+k);f.style.left=(r.left+r.width*TIPS[k][0])+'px';f.style.top=(r.top+r.height*TIPS[k][1])+'px';}}}
   q('.sup span').textContent=P.scd>0?Math.ceil(P.scd)+' с':'';q('.sup').classList.toggle('cd',P.scd>0);
   q('.hurt').style.boxShadow='inset 0 0 120px rgba(200,20,10,'+(P.hurt>0?0.5:0)+')';
   q('.go').textContent=P.move?'Стоп':'Старт';q('.go').classList.toggle('on',P.move);
@@ -692,7 +703,7 @@ function loop(now_){requestAnimationFrame(loop);const dt=Math.min(0.05,(now_-las
  for(const c of world.children)if(c.userData.cloud){c.position.x+=c.userData.v*dt;if(c.position.x>IW+7000)c.position.x=-7000;}
  const gy=hgt(P.x,P.z),bob=P.move?Math.sin(P.bob)*0.6:0,sh=P.shake||0;const y=Math.max(gy,0)+(P.dead>0?90:26)+bob+(rn()-0.5)*sh*3;cam.position.set(P.x+(rn()-0.5)*sh*3,y,P.z);
  const lp=P.pitch+(HUD.k>0?HUD.k*0.22:0);cam.lookAt(P.x+Math.cos(P.yaw)*Math.cos(lp)*100,y+Math.sin(lp)*100,P.z+Math.sin(P.yaw)*Math.cos(lp)*100);
- const fov=P.fov/P.zoom;if(Math.abs(cam.fov-fov)>0.01){cam.fov=fov;cam.updateProjectionMatrix();}cock.visible=P.dead<=0&&P.zoom<1.6;barrel.position.z=P.rec*5;
+ const fov=P.fov/P.zoom;if(Math.abs(cam.fov-fov)>0.01){cam.fov=fov;cam.updateProjectionMatrix();}cock.visible=false;{const v=P.dead<=0&&P.zoom<1.6;const g=document.getElementById('tiCock');if(g)g.style.display=v?'block':'none';}barrel.position.z=P.rec*5;
  sky.position.copy(cam.position);sun.position.set(P.x+SUN_DIR.x*700,SUN_DIR.y*700,P.z+SUN_DIR.z*700);sun.target.position.set(P.x+Math.cos(P.yaw)*150,0,P.z+Math.sin(P.yaw)*150);
  HUD.upd(dt);if(FR%6===0)drawMap(q('.mini'),false);cam.updateMatrixWorld();cockRoot.position.copy(cam.position);cockRoot.quaternion.copy(cam.quaternion);cockScene.environment=scene.environment;drawFrame();AUD.tick(dt);
  T3.fpsN++;T3.fpsT+=dt;if(T3.fpsT>=2){T3.fps=T3.fpsN/T3.fpsT;T3.fpsN=0;T3.fpsT=0;T3.warm=(T3.warm||0)+1;
@@ -703,7 +714,7 @@ function loop(now_){requestAnimationFrame(loop);const dt=Math.min(0.05,(now_-las
    if(nq!==T3.q){T3.q=nq;T3.applyQ=true;try{localStorage.setItem('dvebazy-isleq',''+nq);}catch(_){}}
    if(T3.fps<26&&T3.q<=0.56&&R.shadowMap.enabled){R.shadowMap.enabled=false;scene.traverse(o=>{if(o.material)o.material.needsUpdate=true;});}}}}
 requestAnimationFrame(loop);
-window.__isle={world:()=>world,stepGame,stepTitan,stepShells,ROADS:()=>ROADS_I,GAPS:()=>GAPS,P,get G(){return G_;},start,sendUnit,T3,superShot,get LOCK(){return LOCK;},hgt,openMap};
+window.__isle={prof:()=>{const T={};const m=(k,f)=>{const t=performance.now();f();T[k]=Math.round(performance.now()-t);};m("step",()=>stepGame(1/60));m("titan",()=>stepTitan(1/60));m("sync",()=>syncAll(performance.now()/1000,1/60));m("parts",()=>stepParts(1/60));m("mini",()=>drawMap(q(".mini"),false));m("hud",()=>HUD.upd(1/60));m("draw",()=>drawFrame());m("gl",()=>R.getContext().finish());return T;},dbg:()=>({running,map:T3.map,fr:FR,fps:T3.fps}),world:()=>world,stepGame,stepTitan,stepShells,ROADS:()=>ROADS_I,GAPS:()=>GAPS,P,get G(){return G_;},start,sendUnit,T3,superShot,get LOCK(){return LOCK;},hgt,openMap};
 
 function drawFrame(){if(!PO.on){R.setRenderTarget(null);R.render(scene,cam);R.autoClear=false;R.clearDepth();if(cock.visible)R.render(cockScene,cam);R.autoClear=true;return;}
  R.setRenderTarget(PO.rt);R.render(scene,cam);R.autoClear=false;R.clearDepth();if(cock.visible)R.render(cockScene,cam);R.autoClear=true;
