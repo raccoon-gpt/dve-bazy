@@ -848,11 +848,8 @@ function droneCam(dt){const [lx,lz]=[DL.x,DL.z];if(D.dead>0){const [bx,bz]=BASES
  const fov=56/D.zoom;if(Math.abs(cam.fov-fov)>0.01){cam.fov=fov;cam.updateProjectionMatrix();}}
 /* ---------- artillery from the base battery ---------- */
 function artTap(sx,sy){if(D.dead>0)return;if(ART.cd>0){HUD.msg('Артиллерия перезаряжается');return;}
- /* a tap close to a marked enemy aims at that enemy, leading it; otherwise at the ground under the finger */
- let tgt=null,bd=55;cam.updateMatrixWorld();const v=new THREE.Vector3();
- for(const u of G_.units){if(u.dead||u.s!==1||!u.mk)continue;v.set(u.x,u.y+6,u.z).project(cam);if(v.z>1)continue;const px=(v.x+1)/2*innerWidth,py=(1-v.y)/2*innerHeight,d=Math.hypot(px-sx,py-sy);if(d<bd){bd=d;tgt=u;}}
- let x,z;if(tgt){const g=BATT[0][1],gx=g?g.position.x:BASES[0][0],gz=g?g.position.z:BASES[0][1];const T=artTime(Math.hypot(tgt.x-gx,tgt.z-gz));x=tgt.x+(tgt.vx||0)*T;z=tgt.z+(tgt.vz||0)*T;/* lead by how the unit really moves: one that stands and shoots gets no lead */}
- else{const r=new THREE.Vector3(sx/innerWidth*2-1,-(sy/innerHeight*2-1),0.5).unproject(cam).sub(cam.position).normalize();if(r.y>=-0.02)return;const k=-cam.position.y/r.y;x=cam.position.x+r.x*k;z=cam.position.z+r.z*k;}
+ /* artillery always lands exactly under the finger */
+ let x,z;{const r=new THREE.Vector3(sx/innerWidth*2-1,-(sy/innerHeight*2-1),0.5).unproject(cam).sub(cam.position).normalize();if(r.y>=-0.02)return;const k=-cam.position.y/r.y;x=cam.position.x+r.x*k;z=cam.position.z+r.z*k;}
  fireArt(x,z);}
 const artTime=d=>1.6+d/2600;
 function fireArt(x,z){ART.cd=ART.CD;BATT[0].forEach((g,i)=>{const gx=g.position.x,gz=g.position.z,a=Math.atan2(z-gz,x-gx);if(g.userData.tu)g.userData.tu.rotation.y=-a;
