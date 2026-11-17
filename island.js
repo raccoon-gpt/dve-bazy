@@ -322,12 +322,12 @@ function genYard(seed){seedR=seed;OBS.length=0;
  GAPS=[IH*0.2+rn()*250,IH*0.5+(rn()-0.5)*300,IH*0.8-rn()*250];
  MINES_AT=[[1900,1250],[1900,IH-1250],[IW-1900,1250],[IW-1900,IH-1250],[3100,IH/2+(rn()-0.5)*500],[IW-3100,IH/2+(rn()-0.5)*500],[IW/2,GAPS[0]],[IW/2,GAPS[2]]];
  /* the spine: a double wall of stacked containers through the middle, open only at the three gaps */
- for(let z=60;z<IH-60;z+=CONT.L+6){if(GAPS.some(g=>Math.abs(z-g)<200))continue;for(const dx of [-14,14])OBS.push({x:IW/2+dx,z,w:CONT.W,d:CONT.L,h:CONT.H*(2+((z/96|0)%2)),k:'c',rot:1});}
+ for(let z=60;z<IH-60;z+=CONT.L){if(GAPS.some(g=>Math.abs(z-g)<200))continue;for(const dx of [-CONT.W/2,CONT.W/2])OBS.push({x:IW/2+dx,z,w:CONT.W,d:CONT.L,h:CONT.H*(2+((z/96|0)%2)),k:'c',rot:1});}
  /* container yards: rows of stacks with lanes between them */
  for(let n=0,t=0;t<2500&&n<62;t++){const rot=rn()<0.5,rows=2+Math.floor(rn()*3),len=3+Math.floor(rn()*5),gap=70;
   const W_=rot?rows*(CONT.W*2+gap):len*CONT.L,D_=rot?len*CONT.L:rows*(CONT.W*2+gap),cx=300+rn()*(IW-600),cz=300+rn()*(IH-600);if(!freeRect(cx,cz,W_,D_,100))continue;n++;
   for(let r=0;r<rows;r++)for(let i=0;i<len;i++){if(rn()<0.12)continue;const off=-((rows-1)*(CONT.W*2+gap))/2+r*(CONT.W*2+gap),al=-((len-1)*CONT.L)/2+i*CONT.L;
-   for(const s2 of [-CONT.W/2,CONT.W/2]){const h=CONT.H*(1+Math.floor(rn()*3));OBS.push(rot?{x:cx+off+s2,z:cz+al,w:CONT.W,d:CONT.L-4,h,k:'c',rot:1}:{x:cx+al,z:cz+off+s2,w:CONT.L-4,d:CONT.W,h,k:'c',rot:0});}}}
+   for(const s2 of [-CONT.W/2,CONT.W/2]){const h=CONT.H*(1+Math.floor(rn()*3));OBS.push(rot?{x:cx+off+s2,z:cz+al,w:CONT.W,d:CONT.L,h,k:'c',rot:1}:{x:cx+al,z:cz+off+s2,w:CONT.L,d:CONT.W,h,k:'c',rot:0});}}}
  /* hangars and concrete bunkers */
  for(let n=0,t=0;t<600&&n<7;t++){const rot=rn()<0.5,w=rot?200:320,d=rot?320:200,x=300+rn()*(IW-600),z=300+rn()*(IH-600);if(!freeRect(x,z,w,d,140))continue;n++;OBS.push({x,z,w,d,h:64,k:'hang',rot:rot?1:0});}
  for(let n=0,t=0;t<1500&&n<30;t++){const w=80+rn()*60,d=60+rn()*50,x=300+rn()*(IW-600),z=300+rn()*(IH-600);if(!freeRect(x,z,w,d,110))continue;n++;OBS.push({x,z,w,d,h:24+rn()*10,k:'bunk'});}
@@ -431,7 +431,7 @@ function buildWorld(){if(world)scene.remove(world);BATT[0]=[];BATT[1]=[];world=n
  /* containers: one instanced box, ribbed paint, colour per box */
  {const L_=OBS.filter(q=>q.k==='c');const mat=new THREE.MeshStandardMaterial({map:T.cont,bumpMap:T.contB,bumpScale:0.6,roughness:0.62,metalness:0.35,envMapIntensity:0.5});
   let n=0;for(const q of L_)n+=Math.round(q.h/CONT.H);const im=add(new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),mat,n));let i=0;
-  for(const q of L_){const lv=Math.round(q.h/CONT.H);for(let k=0;k<lv;k++){o.position.set(q.x+(rn()-0.5)*1.5,CONT.H*(k+0.5),q.z+(rn()-0.5)*1.5);o.rotation.set(0,q.rot?Math.PI/2:0,0);o.scale.set(CONT.L-4,CONT.H-0.4,CONT.W);o.updateMatrix();im.setMatrixAt(i,o.matrix);
+  for(const q of L_){const lv=Math.round(q.h/CONT.H);for(let k=0;k<lv;k++){rn();rn();o.position.set(q.x,CONT.H*(k+0.5),q.z);o.rotation.set(0,q.rot?Math.PI/2:0,0);o.scale.set(CONT.L+0.3,CONT.H+0.05,CONT.W+0.3);o.updateMatrix();im.setMatrixAt(i,o.matrix);
     const c=lin(CONT_COLS[Math.floor(rn()*CONT_COLS.length)]);c.multiplyScalar(0.85+rn()*0.3);im.setColorAt(i,c);i++;}}im.instanceColor.needsUpdate=true;}
  /* perimeter wall with buttresses and floodlights */
  {const mat=new THREE.MeshStandardMaterial({map:T.wall,roughness:0.7,metalness:0.45,envMapIntensity:0.45});const seg=[];const SL=240;
