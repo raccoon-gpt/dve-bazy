@@ -833,6 +833,8 @@ function spawnDrone(){const [bx,bz]=BASES[0];D.x=bx+120;D.z=bz;D.yaw=0;D.pitch=-
 function droneLook(){const k=1/Math.tan(-D.pitch),h=D.alt;return[D.x+Math.cos(D.yaw)*h*k,D.z+Math.sin(D.yaw)*h*k];}
 function stepDrone(dt){if(D.dead>0){D.dead-=dt;if(D.dead<=0)spawnDrone();return;}
  D.hurt=Math.max(0,D.hurt-dt);
+ /* real velocity of enemy units (smoothed), for leading the artillery */
+ if(dt>0)for(const u of G_.units){if(u.s!==1||u.dead)continue;if(u.px!=null){const k=Math.min(1,dt*4);u.vx=(u.vx||0)+(((u.x-u.px)/dt)-(u.vx||0))*k;u.vz=(u.vz||0)+(((u.z-u.pz)/dt)-(u.vz||0))*k;}u.px=u.x;u.pz=u.z;}
  if(D.move){D.x+=Math.cos(D.yaw)*D.sp*dt;D.z+=Math.sin(D.yaw)*D.sp*dt;}
  D.x=Math.max(-150,Math.min(IW+150,D.x));D.z=Math.max(-150,Math.min(IH+150,D.z));D.y=D.alt+Math.sin(performance.now()/700)*1.5;
  const [lx,lz]=droneLook();DL.x=lx;DL.z=lz;DL.r=(D.alt/Math.sin(-D.pitch))*0.62/D.zoom+60;
@@ -849,7 +851,7 @@ function artTap(sx,sy){if(D.dead>0)return;if(ART.cd>0){HUD.msg('Артиллер
  /* a tap close to a marked enemy aims at that enemy, leading it; otherwise at the ground under the finger */
  let tgt=null,bd=55;cam.updateMatrixWorld();const v=new THREE.Vector3();
  for(const u of G_.units){if(u.dead||u.s!==1||!u.mk)continue;v.set(u.x,u.y+6,u.z).project(cam);if(v.z>1)continue;const px=(v.x+1)/2*innerWidth,py=(1-v.y)/2*innerHeight,d=Math.hypot(px-sx,py-sy);if(d<bd){bd=d;tgt=u;}}
- let x,z;if(tgt){const g=BATT[0][1],gx=g?g.position.x:BASES[0][0],gz=g?g.position.z:BASES[0][1];const T=artTime(Math.hypot(tgt.x-gx,tgt.z-gz)),sp=US[tgt.k].sp*USPK;x=tgt.x+Math.cos(tgt.a||0)*sp*T*0.85;z=tgt.z+Math.sin(tgt.a||0)*sp*T*0.85;}
+ let x,z;if(tgt){const g=BATT[0][1],gx=g?g.position.x:BASES[0][0],gz=g?g.position.z:BASES[0][1];const T=artTime(Math.hypot(tgt.x-gx,tgt.z-gz));x=tgt.x+(tgt.vx||0)*T;z=tgt.z+(tgt.vz||0)*T;/* lead by how the unit really moves: one that stands and shoots gets no lead */}
  else{const r=new THREE.Vector3(sx/innerWidth*2-1,-(sy/innerHeight*2-1),0.5).unproject(cam).sub(cam.position).normalize();if(r.y>=-0.02)return;const k=-cam.position.y/r.y;x=cam.position.x+r.x*k;z=cam.position.z+r.z*k;}
  fireArt(x,z);}
 const artTime=d=>1.6+d/2600;
