@@ -622,7 +622,13 @@ function stepTitan(dt){if(P.dead>0){P.dead-=dt;if(P.dead<=0)spawnTitan();return;
  if(LOCK&&P.cd<=0){P.cd=TITAN.cd;shoot(LOCK.x,LOCK.y,LOCK.z,LOCK.tg);}
  if(P.hp<=0){P.hp=0;P.dead=TITAN.respawn;P.move=false;G_.sides[1].ore+=TITAN.bounty;explode(P.x,hgt(P.x,P.z),P.z,2.6);HUD.msg('Титан уничтожен — возрождение через 5 с');}}
 /* the painted cockpit: twin barrels at the bottom of the screen; shells leave from the tip of the barrel whose turn it is */
-let GUN=0;const TIPS=[[0.347,0.03],[0.652,0.03]];
+/* cockpit skins: the barrels picture, where its two muzzles are (fractions of the picture) and its aspect */
+const SKINS=[{img:'ti_barrels.webp',tips:[[0.347,0.03],[0.652,0.03]],ar:649/1732},{img:'ti_barrels2.webp',tips:[[0.359,0.056],[0.64,0.056]],ar:531/1734}];
+let SKIN=0;try{SKIN=Math.min(SKINS.length-1,Math.max(0,+localStorage.getItem('dvebazy-skin')||0));}catch(_){}
+let GUN=0,TIPS=SKINS[SKIN].tips;
+function placeGun(){const el=document.getElementById('tiGun');if(!el)return;const sk=SKINS[SKIN];el.style.bottom=Math.min(0,0.40*innerHeight-innerWidth*sk.ar)+'px';}
+function setSkin(i){SKIN=(i+SKINS.length)%SKINS.length;TIPS=SKINS[SKIN].tips;const el=document.getElementById('tiGun');if(el)el.src=SKINS[SKIN].img;placeGun();try{localStorage.setItem('dvebazy-skin',''+SKIN);}catch(_){}}
+addEventListener('resize',placeGun);
 function muzzle(){const el=document.getElementById('tiGun');if(!el||!el.offsetWidth){const st=new THREE.Vector3(0,-7.5,-53);barrel.localToWorld(st);return st;}
  const r=el.getBoundingClientRect(),[fx,fy]=TIPS[GUN],sx=r.left+r.width*fx,sy=r.top+r.height*fy;const v=new THREE.Vector3(sx/innerWidth*2-1,-(sy/innerHeight*2-1),0.5).unproject(cam).sub(cam.position).normalize();
  const o=new THREE.Vector3(P.x,Math.max(hgt(P.x,P.z),0)+26,P.z);if(cam.position.distanceTo(o)>5)return o;return cam.position.clone().addScaledVector(v,14);}
@@ -658,7 +664,7 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:'Rubi
 #h3 .stat{position:absolute;left:max(14px,env(safe-area-inset-left));top:10px;background:rgba(12,18,14,.5);border-radius:12px;padding:6px 12px;line-height:1.35}
 #tiCock{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 #tiFrame{position:absolute;left:0;top:0;width:100%;height:auto;max-height:46vh;object-fit:fill}
-#tiGun{position:absolute;left:0;width:100%;height:auto;bottom:calc(min(0px, 40vh - 37.47vw));transition:transform .1s}
+#tiGun{position:absolute;left:0;width:100%;height:auto;bottom:0;transition:transform .1s}
 #tiCock .fl{position:absolute;width:13vh;height:13vh;margin:-6.5vh 0 0 -6.5vh;border-radius:50%;background:radial-gradient(circle,rgba(255,240,190,1) 0,rgba(255,170,60,.85) 30%,rgba(255,120,20,0) 70%);opacity:0;transition:opacity .05s}
 #h3 img.sight{position:absolute;left:50%;top:50%;height:46vh;transform:translate(-50%,-50%);opacity:.92;transition:filter .15s}
 #h3 img.sight.lock{filter:hue-rotate(-115deg) saturate(1.6)}
@@ -800,6 +806,8 @@ try{AUD.on=localStorage.getItem('dvebazy-islesnd')!=='0';}catch(_){}
 {const ex0=explode;explode=function(x,y,z,k){ex0(x,y,z,k);AUD.play('boom',x,z,k);};const tr0=tracer;tracer=function(a,b,c){tr0(a,b,c);AUD.play(c===0xFF9050?'shot':'mg',a[0],a[2]);};const sh0=shoot;shoot=function(x,y,z,tg,sup){sh0(x,y,z,tg,sup);AUD.play('cannon');};}
 {const sb=document.createElement('div');sb.className='b snd';sb.style.cssText='right:calc(max(14px,env(safe-area-inset-right)) + 96px);top:12px;width:44px;height:40px;font-size:18px';const upd=()=>sb.textContent=AUD.on?'🔊':'🔇';upd();H.appendChild(sb);
  tapBtn(sb,()=>{AUD.setOn(!AUD.on);upd();});}
+{const kb=document.createElement('div');kb.className='b skin';kb.style.cssText='right:calc(max(14px,env(safe-area-inset-right)) + 148px);top:12px;padding:0 12px;height:40px;font-size:13px';const upd=()=>kb.textContent='Скин '+(SKIN+1)+'/'+SKINS.length;upd();H.appendChild(kb);
+ tapBtn(kb,()=>{setSkin(SKIN+1);upd();});setSkin(SKIN);}
 document.getElementById('bPlay').addEventListener('click',()=>AUD.init());over.querySelector('button').addEventListener('click',()=>AUD.init());
 document.addEventListener('visibilitychange',()=>{if(!AUD.music)return;if(document.hidden)AUD.music.pause();else if(AUD.on&&running)AUD.music.play().catch(()=>{});});
 
