@@ -389,11 +389,6 @@ function buildWorld(){if(world)scene.remove(world);BATT[0]=[];BATT[1]=[];world=n
  TX.ripple.repeat.set(160,160);ocean.rotation.x=-Math.PI/2;ocean.position.set(IW/2,WATER,IH/2);world.add(ocean);
  /* dirt roads between the bases and the mines */
 
- /* rocks scattered over the island */
- {const rp=[];for(let i=0;i<9000&&rp.length<(isMob?500:900);i++){const x=rn()*IW,z=rn()*IH,h=hgt(x,z);if(h<6)continue;if(nearBase(x,z,300)||nearMine(x,z,140))continue;rp.push([x,z,rn()]);}
-  const geo=displace(new THREE.IcosahedronGeometry(1,2),0.5,1.4);const im=new THREE.InstancedMesh(geo,M3.rock,rp.length);im.castShadow=true;im.receiveShadow=true;const o=new THREE.Object3D();
-  rp.forEach(([x,z,r],i)=>{const s=3+r*r*16;o.position.set(x,hgt(x,z)-s*0.25,z);o.scale.set(s*(1+r*0.5),s*(0.55+r*0.35),s);o.rotation.set(r*2,r*9,0);o.updateMatrix();im.setMatrixAt(i,o.matrix);const g=0.7+((r*7919)%1)*0.35;im.setColorAt(i,new THREE.Color(g,g*0.97,g*0.92));});
-  im.instanceColor.needsUpdate=true;world.add(im);}
  /* landmarks instead of trees: abandoned outposts (sandbags, barrels, crates, tyres), lines of tank traps, watchtowers on hilltops */
  if(MIL){const kinds={bag:['Barrier_006',30],brl:['Barrel_005',5],box:['Box_003',9],box2:['Box_005',11],tyr:['Tires_001',6],hog:['Hedgehog_001',8],tow:['Tower_003',22],tent:['Tent_010',30],gen:['Generator_004',14]},pl={};for(const k in kinds)pl[k]=[];
   const put=(k,x,z,r)=>pl[k].push([x,z,r]);
