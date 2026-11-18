@@ -1003,8 +1003,9 @@ function syncPlane(t){if(!PLANE_O){PLANE_O=instantiate(proto('Uplane0',()=>build
 const PA=document.createElement('div');PA.className='b palt';PA.style.cssText='right:max(14px,env(safe-area-inset-right));top:58px;padding:0 12px;height:38px;font-size:13px;display:none';H.appendChild(PA);
 {const ALTS=[120,200,300,450];let ai=1;try{const v=+localStorage.getItem('dvebazy-plalt');if(ALTS.includes(v))ai=ALTS.indexOf(v);}catch(_){}F.alt=ALTS[ai];F.y=F.alt;
  const upd=()=>PA.textContent='Высота '+F.alt;upd();tapBtn(PA,()=>{ai=(ai+1)%ALTS.length;F.alt=ALTS[ai];upd();try{localStorage.setItem('dvebazy-plalt',''+F.alt);}catch(_){}});}
-function planeHud(){if(CUR!=='plane'){q('.fps').style.top='';return;}q('.fps').style.top='102px';
- const g=document.getElementById('tiCock');if(g)g.style.display=F.dead<=0&&F.zoom<1.5?'block':'none';
+const PCK=document.createElement('img');PCK.src='pl_cockpit.webp';PCK.alt='';PCK.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none;display:none';{const tc=document.getElementById('tiCock');tc.parentNode.insertBefore(PCK,tc);}
+function planeHud(){if(CUR!=='plane'){PCK.style.display='none';q('.fps').style.top='';return;}q('.fps').style.top='102px';
+ const g=document.getElementById('tiCock');if(g)g.style.display='none';PCK.style.display=F.dead<=0&&F.zoom<1.5?'block':'none';
  q('.lk').setAttribute('display',LOCKF?'inline':'none');const im=q('img.sight');if(im)im.classList.toggle('lock',!!LOCKF);
  q('.rld').setAttribute('stroke-dasharray',(170*(1-F.rcd/PLANE.rocketCd)).toFixed(1)+' 170');
  q('.sup span').textContent=F.rcd>0?Math.ceil(F.rcd)+' с':'';q('.sup').classList.toggle('cd',F.rcd>0);q('.hurt').style.boxShadow='inset 0 0 120px rgba(200,20,10,'+(F.hurt>0?0.5:0)+')';}
