@@ -528,9 +528,9 @@ function enemiesOf(s){return G_.units.filter(u=>u.s!==s&&!u.dead);}
 function dmgUnit(u,d,by){if(u.dead)return;u.hp-=d;if(u.hp<=0){u.dead=true;const st=US[u.k];if(by!=null)G_.sides[by].ore+=st.rw*2;deathFx(u);}}
 function dmgTower(t,d,by){t.hp-=d;if(t.hp<=0&&!t.dead){t.dead=true;explode(t.x,hgt(t.x,t.z)+8,t.z,1.8);if(by!=null)G_.sides[by].ore+=TWS[t.k].cost*0.25;}}
 function dmgHarv(h,d,by){h.hp-=d;if(h.hp<=0&&!h.dead){h.dead=true;explode(h.x,hgt(h.x,h.z)+5,h.z,1.4);if(by!=null)G_.sides[by].ore+=500+(h.load?300:0);}}
-function hitBase(s,n){const S=G_.sides[s];if(S.lives<=0)return;S.lives=Math.max(0,S.lives-n);const [bx,bz]=BASES[s];explode(bx+(rn()-0.5)*60,hgt(bx,bz)+20,bz+(rn()-0.5)*60,1.4);if(S.lives<=0)explode(bx,hgt(bx,bz)+30,bz,3);checkOver(s);}
+function hitBase(s,n){const S=G_.sides[s];if(S.lives<=0)return;S.lives=Math.max(0,S.lives-n);const [bx,bz]=BASES[s];explode(bx+(rn()-0.5)*60,hgt(bx,bz)+20,bz+(rn()-0.5)*60,1.4);if(S.lives<=0){explode(bx,hgt(bx,bz)+30,bz,3);shakeAt(bx,hgt(bx,bz)+30,bz,1.5);}checkOver(s);}
 function checkOver(s){if(!G_.over&&G_.sides[s].lives<=0&&!G_.mines.some(m=>m.s===s&&!m.dead))G_.over={w:1-s};}
-function hitMine(m,n){if(m.dead)return;m.lives=Math.max(0,m.lives-n);explode(m.x+(rn()-0.5)*60,14,m.z+(rn()-0.5)*50,1.2);if(m.lives<=0){m.dead=true;explode(m.x,20,m.z,2.6);checkOver(m.s);}}
+function hitMine(m,n){if(m.dead)return;m.lives=Math.max(0,m.lives-n);explode(m.x+(rn()-0.5)*60,14,m.z+(rn()-0.5)*50,1.2);if(m.lives<=0){m.dead=true;explode(m.x,20,m.z,2.6);shakeAt(m.x,20,m.z,1.3);checkOver(m.s);}}
 function dmgMine(m,d){if(m.dead)return;m.acc+=d;while(m.acc>=MINE_HP&&!m.dead){m.acc-=MINE_HP;hitMine(m,1);}}
 const nearMineOf=(s,x,z,r)=>G_.mines.find(m=>m.s===s&&!m.dead&&Math.hypot(m.x-x,m.z-z)<r);
 function tracer(a,b,c){tracers.push({id:++SID,a,b,t:0.06,c:c||0xFFE070});}
@@ -636,7 +636,12 @@ const UR={tank:55,jeep:42,heli:48,inf:12};
 function deathFx(u){if(u.k==='heli'){startFall(u);return;}queueBlast(u.x,u.y,u.z,UR[u.k]||30);makeWreck(u,u.x,u.y,u.z);}
 /* deaths close together within a moment merge into one bigger blast */
 function queueBlast(x,y,z,R){for(const b of BLQ)if(Math.hypot(b.x-x,b.z-z)<180){b.x=(b.x*b.n+x)/(b.n+1);b.z=(b.z*b.n+z)/(b.n+1);b.n++;b.R=Math.max(b.R,R);return;}BLQ.push({x,y,z,R,n:1,t:0.12});}
-function bigBlast(x,y,z,S){if(Math.hypot(x-P.x,z-P.z)<S*5&&CUR==='titan')P.shake=Math.max(P.shake||0,0.9);
+/* screen shake from a kill: strong when close, fading with distance; the drone sits 450 m up, so its range starts further out */
+let SHK=0;
+function shakeAt(x,y,z,pw){const d=cam.position.distanceTo(FSP.center.set(x,y,z));const [d0,d1]=CUR==='drone'?[550,1700]:CUR==='plane'?[200,1100]:[150,950];
+ const k=Math.max(0,Math.min(1,1-(d-d0)/(d1-d0)));if(k>0)SHK=Math.max(SHK,pw*k);}
+function applyShake(dt){if(SHK<=0)return;const z=CUR==='drone'?D.zoom||1:CUR==='plane'?F.zoom||1:P.zoom||1,a=SHK*SHK*0.02/z;cam.rotateX((rn()-0.5)*a);cam.rotateY((rn()-0.5)*a);cam.rotateZ((rn()-0.5)*a*0.6);SHK=Math.max(0,SHK-dt*1.8);}
+function bigBlast(x,y,z,S){shakeAt(x,y,z,Math.min(1.3,0.55+S/110));
  if(!seen(x,y+S*0.5,z,S*3))return;
  flash.position.set(x,y+S*0.6,z);flash.intensity=Math.max(flash.intensity,6);
  for(let i=0;i<4;i++)fire(x+(rn()-0.5)*S*0.4,y+S*0.4,z+(rn()-0.5)*S*0.4,S*1.1,S*(2.8+rn()*0.6),0.4+rn()*0.2,0,S*0.4,0,0.1,0.7,true,1,0);
@@ -880,6 +885,7 @@ function loop(now_){requestAnimationFrame(loop);const dt=Math.min(0.05,(now_-las
  const lp=P.pitch+(HUD.k>0?HUD.k*0.22:0);cam.lookAt(P.x+Math.cos(P.yaw)*Math.cos(lp)*100,y+Math.sin(lp)*100,P.z+Math.sin(P.yaw)*Math.cos(lp)*100);
  const fov=P.fov/P.zoom;if(Math.abs(cam.fov-fov)>0.01){cam.fov=fov;cam.updateProjectionMatrix();}cock.visible=false;{const v=P.dead<=0&&P.zoom<1.6;const g=document.getElementById('tiCock');if(g)g.style.display=v?'block':'none';}barrel.position.z=P.rec*5;
  if(CUR==='drone')droneCam(dt);else if(CUR==='plane')planeCam();
+ applyShake(dt);
  sky.position.copy(cam.position);{const cx=CUR==='drone'?DL.x:CUR==='plane'?F.x+Math.cos(F.yaw)*200:P.x+Math.cos(P.yaw)*150,cz=CUR==='drone'?DL.z:CUR==='plane'?F.z+Math.sin(F.yaw)*200:P.z+Math.sin(P.yaw)*150;sun.position.set(cx+SUN_DIR.x*700,SUN_DIR.y*700,cz+SUN_DIR.z*700);sun.target.position.set(cx,0,cz);}
  cam.updateMatrixWorld();stepLock(dt);HUD.upd(dt);droneHud(t);planeHud();markHud();if(PO.on){PO.fin.uniforms.mono.value=CUR==='drone'?1:0;PO.fin.uniforms.tm.value=t%100;}if(FR%6===0)drawMap(q('.mini'),false);cam.updateMatrixWorld();cockRoot.position.copy(cam.position);cockRoot.quaternion.copy(cam.quaternion);cockScene.environment=scene.environment;drawFrame();AUD.tick(dt);
  T3.fpsN++;T3.fpsT+=dt;if(T3.fpsT>=2){T3.fps=T3.fpsN/T3.fpsT;T3.fpsN=0;T3.fpsT=0;T3.warm=(T3.warm||0)+1;
@@ -1135,7 +1141,7 @@ function planeHud(){if(CUR!=='plane'){PCK.style.display='none';q('.fps').style.t
  q('.lk').setAttribute('display','none');const im=q('img.sight');if(im)im.classList.toggle('lock',!!LOCKF);
  q('.rld').setAttribute('stroke-dasharray',(170*(1-F.rcd/PLANE.rocketCd)).toFixed(1)+' 170');
  q('.sup span').textContent=F.rcd>0?Math.ceil(F.rcd)+' с':'';q('.sup').classList.toggle('cd',F.rcd>0);q('.hurt').style.boxShadow='inset 0 0 120px rgba(200,20,10,'+(F.hurt>0?0.5:0)+')';}
-window.__isle.F=F;window.__isle.dmgUnit=dmgUnit;window.__isle.stepFx=stepFx;window.__isle.FXP=FXP;window.__isle.bigBlast=bigBlast;window.__isle.FXN=()=>({fx:FXP.length,wrk:WRK.length,fall:FALL.length,deb:DEBR.length,part:PART.length});window.__isle.buildXM=buildXM;window.__isle.XM=XM;window.__isle.hitBase=hitBase;window.__isle.syncAll=syncAll;window.__isle.PART=PART;window.__isle.stepParts=stepParts;window.__isle.hitMine=hitMine;window.__isle.stepTitan=stepTitan;window.__isle.P=P;window.__isle.get_LOCK=()=>LOCK;window.__isle.stepPlane=stepPlane;window.__isle.planeRockets=planeRockets;window.__isle.PR=PR;window.__isle.get_LOCKF=()=>LOCKF;
+window.__isle.F=F;window.__isle.dmgUnit=dmgUnit;window.__isle.stepFx=stepFx;window.__isle.shk=(v)=>{if(v!=null)SHK=v;return SHK;};window.__isle.shakeAt=shakeAt;window.__isle.FXP=FXP;window.__isle.bigBlast=bigBlast;window.__isle.FXN=()=>({fx:FXP.length,wrk:WRK.length,fall:FALL.length,deb:DEBR.length,part:PART.length});window.__isle.buildXM=buildXM;window.__isle.XM=XM;window.__isle.hitBase=hitBase;window.__isle.syncAll=syncAll;window.__isle.PART=PART;window.__isle.stepParts=stepParts;window.__isle.hitMine=hitMine;window.__isle.stepTitan=stepTitan;window.__isle.P=P;window.__isle.get_LOCK=()=>LOCK;window.__isle.stepPlane=stepPlane;window.__isle.planeRockets=planeRockets;window.__isle.PR=PR;window.__isle.get_LOCKF=()=>LOCKF;
 
 /* ================== TEST: the bot sends free waves (mostly helicopters); they don't take lives from our base ================== */
 const TESTW={on:true,t:6,n:0};try{TESTW.on=localStorage.getItem('dvebazy-testw')!=='0';}catch(_){}
