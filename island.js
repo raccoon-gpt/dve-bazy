@@ -893,11 +893,12 @@ function syncDrone(t,dt){if(!DRONE_O){const g=new THREE.Group(),M=mats(0);g.add(
 #drHud .art.ready{border-color:#FF5A40;color:#FFB0A0}
 #drTgt{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;border:2px dashed #FF5A40;border-radius:50%;display:none}
 #mkLayer{position:absolute;inset:0;pointer-events:none}
-#mkLayer i{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;display:none;background:
- linear-gradient(#FF3B2E,#FF3B2E) left top/8px 2px no-repeat,linear-gradient(#FF3B2E,#FF3B2E) left top/2px 8px no-repeat,
- linear-gradient(#FF3B2E,#FF3B2E) right top/8px 2px no-repeat,linear-gradient(#FF3B2E,#FF3B2E) right top/2px 8px no-repeat,
- linear-gradient(#FF3B2E,#FF3B2E) left bottom/8px 2px no-repeat,linear-gradient(#FF3B2E,#FF3B2E) left bottom/2px 8px no-repeat,
- linear-gradient(#FF3B2E,#FF3B2E) right bottom/8px 2px no-repeat,linear-gradient(#FF3B2E,#FF3B2E) right bottom/2px 8px no-repeat}
+#mkLayer i{--c:#FF3B2E;position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;display:none;background:
+ linear-gradient(var(--c),var(--c)) left top/8px 2px no-repeat,linear-gradient(var(--c),var(--c)) left top/2px 8px no-repeat,
+ linear-gradient(var(--c),var(--c)) right top/8px 2px no-repeat,linear-gradient(var(--c),var(--c)) right top/2px 8px no-repeat,
+ linear-gradient(var(--c),var(--c)) left bottom/8px 2px no-repeat,linear-gradient(var(--c),var(--c)) left bottom/2px 8px no-repeat,
+ linear-gradient(var(--c),var(--c)) right bottom/8px 2px no-repeat,linear-gradient(var(--c),var(--c)) right bottom/2px 8px no-repeat}
+#mkLayer i.air{--c:#3EA6FF}
 #mkLayer i.t{width:40px;height:40px;margin:-20px 0 0 -20px}
 #mkLayer i.lp{transform:scale(1.25);transition:transform .2s}
 #mkLayer i.lk{animation:mkb .14s steps(2,start) infinite;transform:scale(1.35)}
@@ -924,7 +925,7 @@ function droneHud(t){if(CUR!=='drone')return;const g=document.getElementById('ti
  const m=document.getElementById('drTgt');if(m.dataset.t&&performance.now()<+m.dataset.t){const v=new THREE.Vector3(+m.dataset.x,0,+m.dataset.z).project(cam);if(v.z<1){m.style.display='block';m.style.left=((v.x+1)/2*innerWidth)+'px';m.style.top=((1-v.y)/2*innerHeight)+'px';}else m.style.display='none';}else m.style.display='none';}
 /* red brackets over every marked enemy that is on screen, in either view */
 function markHud(){const L_=document.getElementById('mkLayer').children,v=new THREE.Vector3();let n=0;const put=(x,y,z,big,cls)=>{if(n>=L_.length)return;v.set(x,y,z).project(cam);if(v.z>1||Math.abs(v.x)>1.05||Math.abs(v.y)>1.05)return;const el=L_[n++];el.style.display='block';el.className=(big?'t ':'')+(cls||'');el.style.left=((v.x+1)/2*innerWidth)+'px';el.style.top=((1-v.y)/2*innerHeight)+'px';};
- for(const u of G_.units)if(u.mk&&!u.dead)put(u.x,u.y+8,u.z,u.k==='tank',u.lk?'lk':LK.u===u&&LK.t>0.25?'lp':'');for(const t of G_.towers)if(t.mk&&!t.dead)put(t.x,22,t.z,true);for(const h of G_.harv)if(h.mk&&!h.dead)put(h.x,10,h.z,false);
+ for(const u of G_.units)if(u.mk&&!u.dead)put(u.x,u.y+8,u.z,u.k==='tank',(US[u.k].air?'air ':'')+(u.lk?'lk':LK.u===u&&LK.t>0.25?'lp':''));for(const t of G_.towers)if(t.mk&&!t.dead)put(t.x,22,t.z,true);for(const h of G_.harv)if(h.mk&&!h.dead)put(h.x,10,h.z,false);
  for(let i=n;i<L_.length;i++)if(L_[i].style.display!=='none')L_[i].style.display='none';}
 {const p0=AUD.play.bind(AUD);AUD.play=function(kind,x,z,k){if(kind==='mark'){if(!this.ctx||!this.on)return;const C=this.ctx,now=C.currentTime;if(this.last.mark&&now-this.last.mark<0.25)return;this.last.mark=now;const o=C.createOscillator(),g=C.createGain();o.type='square';o.frequency.setValueAtTime(1400,now);o.frequency.setValueAtTime(1900,now+0.05);g.gain.setValueAtTime(0.05,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.12);o.connect(g).connect(this.out);o.start(now);o.stop(now+0.13);return;}return p0(kind,x,z,k);};}
 window.__isle.D=D;window.__isle.cam=cam;window.__isle.DL=DL;window.__isle.stepArt=stepArt;window.__isle.stepDrone=stepDrone;window.__isle.setVeh=setVeh;window.__isle.fireArt=fireArt;window.__isle.ART=ART;window.__isle.artTap=artTap;
@@ -956,7 +957,7 @@ window.__isle.setVeh=setVeh;window.__isle.LK=LK;window.__isle.MIS=MIS;window.__i
 
 /* ================== the plane: always flying, machine gun fires by itself, rockets on demand, turns back smoothly past the limit ================== */
 const F={x:0,z:0,y:0,yaw:0,ty:0,pitch:-0.18,hp:2500,max:2500,dead:0,zoom:1,alt:200,sp:225,cd:0,rcd:0,bank:0,turn:false,hurt:0,move:true};
-const PLANE={limit:450,maxRate:0.75,mgCd:0.09,mgDmg:32,range:900,cone:0.05,rocketCd:15,rocketN:6,rocketDmg:300,rocketR:48};
+const PLANE={limit:450,maxRate:0.75,mgCd:0.09,mgDmg:32,range:900,cone:0.05,rocketCd:5,rocketN:6,rocketDmg:300,rocketR:48};
 let LOCKF=null;const PR=[],PB=[];let PRID=0;
 function spawnPlane(){const [bx,bz]=BASES[0];F.x=bx-300;F.z=bz;F.yaw=0;F.ty=0;F.pitch=-0.18;F.hp=F.max;F.dead=0;F.bank=0;F.turn=false;F.zoom=1;}
 function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0)spawnPlane();return;}
@@ -968,6 +969,7 @@ function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0)spawnPlane();return;
  let d=F.ty-F.yaw;const rate=Math.max(-PLANE.maxRate,Math.min(PLANE.maxRate,d*1.6));F.yaw+=rate*dt;F.bank+=(-rate*0.75-F.bank)*Math.min(1,dt*3);
  F.x+=Math.cos(F.yaw)*F.sp*dt;F.z+=Math.sin(F.yaw)*F.sp*dt;F.y+=(F.alt-F.y)*Math.min(1,dt*1.2);
  /* machine gun: the first enemy near the centre of the sight */
+ if(CUR==='plane')for(const u of G_.units){if(u.dead||u.s===0||!US[u.k].air||u.mk)continue;const dx=u.x-F.x,dz=u.z-F.z,d=Math.hypot(dx,dz);if(d<1300){let a=Math.atan2(dz,dx)-F.yaw;a=Math.atan2(Math.sin(a),Math.cos(a));if(Math.abs(a)<0.75)u.mk=1;}}
  LOCKF=null;if(CUR==='plane'&&!G_.over){const o=new THREE.Vector3(F.x,F.y,F.z),dv=new THREE.Vector3(Math.cos(F.yaw)*Math.cos(F.pitch),Math.sin(F.pitch),Math.sin(F.yaw)*Math.cos(F.pitch));let best=PLANE.cone/F.zoom;
   const test=(x,y,z,tg)=>{const vx=x-o.x,vy=y-o.y,vz=z-o.z,Ln=Math.hypot(vx,vy,vz);if(Ln>PLANE.range||Ln<25)return;const a=Math.acos(Math.max(-1,Math.min(1,(vx*dv.x+vy*dv.y+vz*dv.z)/Ln)))-Math.atan(10/Ln);if(a<best){best=a;LOCKF={tg,x,y,z};}};
   for(const u of G_.units){if(u.dead||u.s===0)continue;test(u.x,u.y+5,u.z,{k:'u',o:u});}
