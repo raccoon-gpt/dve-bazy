@@ -955,9 +955,9 @@ function stepMissiles(dt){MIS_CD=Math.max(0,MIS_CD-dt);const SP=1150;
 window.__isle.setVeh=setVeh;window.__isle.LK=LK;window.__isle.MIS=MIS;window.__isle.stepLock=stepLock;window.__isle.stepMissiles=stepMissiles;window.__isle.launchMissiles=launchMissiles;
 
 /* ================== the plane: always flying, machine gun fires by itself, rockets on demand, turns back smoothly past the limit ================== */
-const F={x:0,z:0,y:0,yaw:0,ty:0,pitch:-0.18,hp:2500,max:2500,dead:0,zoom:1,alt:200,sp:330,cd:0,rcd:0,bank:0,turn:false,hurt:0,move:true};
-const PLANE={limit:450,maxRate:0.75,mgCd:0.09,mgDmg:16,range:900,cone:0.05,rocketCd:15,rocketN:6,rocketDmg:300,rocketR:48};
-let LOCKF=null;const PR=[];let PRID=0;
+const F={x:0,z:0,y:0,yaw:0,ty:0,pitch:-0.18,hp:2500,max:2500,dead:0,zoom:1,alt:200,sp:225,cd:0,rcd:0,bank:0,turn:false,hurt:0,move:true};
+const PLANE={limit:450,maxRate:0.75,mgCd:0.09,mgDmg:32,range:900,cone:0.05,rocketCd:15,rocketN:6,rocketDmg:300,rocketR:48};
+let LOCKF=null;const PR=[],PB=[];let PRID=0;
 function spawnPlane(){const [bx,bz]=BASES[0];F.x=bx-300;F.z=bz;F.yaw=0;F.ty=0;F.pitch=-0.18;F.hp=F.max;F.dead=0;F.bank=0;F.turn=false;F.zoom=1;}
 function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0)spawnPlane();return;}
  F.cd=Math.max(0,F.cd-dt);F.rcd=Math.max(0,F.rcd-dt);F.hurt=Math.max(0,F.hurt-dt);
@@ -974,14 +974,16 @@ function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0)spawnPlane();return;
   for(const t of G_.towers){if(t.s===0)continue;test(t.x,14,t.z,{k:'t',o:t});}
   for(const h of G_.harv){if(h.s===0)continue;test(h.x,7,h.z,{k:'h',o:h});}
   if(LOCKF&&F.cd<=0){F.cd=PLANE.mgCd;const tg=LOCKF.tg;applyHit(tg,PLANE.mgDmg*(tg.k==='t'?0.5:1),0);
-   const sd=(F.mgSide=-(F.mgSide||1));tracer([F.x-Math.sin(F.yaw)*sd*6,F.y-3,F.z+Math.cos(F.yaw)*sd*6],[LOCKF.x+(rn()-0.5)*4,LOCKF.y+(rn()-0.5)*3,LOCKF.z+(rn()-0.5)*4],0xFFE070);if(rn()<0.3)puff(LOCKF.x,LOCKF.y,LOCKF.z,'dust');}}
+   const sd=(F.mgSide=-(F.mgSide||1));{const ax=F.x-Math.sin(F.yaw)*sd*7+Math.cos(F.yaw)*8,ay=F.y-4,az=F.z+Math.cos(F.yaw)*sd*7+Math.sin(F.yaw)*8,bx=LOCKF.x+(rn()-0.5)*5,by=LOCKF.y+(rn()-0.5)*4,bz=LOCKF.z+(rn()-0.5)*5;PB.push({id:++PRID,x:ax,y:ay,z:az,sx:ax,sy:ay,sz:az,tx:bx,ty:by,tz:bz,t:0,T:Math.max(0.05,Math.hypot(bx-ax,by-ay,bz-az)/2400)});AUD.play('mg',ax,az);}}}
  if(F.hp<=0){F.hp=0;F.dead=5;G_.sides[1].ore+=400;explode(F.x,F.y,F.z,2);if(CUR==='plane')HUD.msg('Самолёт сбит — новый через 5 с');}
+ /* machine-gun rounds: bright streaks flying to the target, a spark where they land */
+ for(let i=PB.length-1;i>=0;i--){const b=PB[i];b.t+=dt;const k=Math.min(1,b.t/b.T);b.px=b.x;b.py=b.y;b.pz=b.z;b.x=b.sx+(b.tx-b.sx)*k;b.y=b.sy+(b.ty-b.sy)*k;b.z=b.sz+(b.tz-b.sz)*k;if(k>=1){PB.splice(i,1);puff(b.tx,b.ty,b.tz,'muzzle');if(rn()<0.4)puff(b.tx,b.ty,b.tz,'dust');}}
  /* rockets in flight */
  for(let i=PR.length-1;i>=0;i--){const r=PR[i];r.t+=dt;if(r.t<0)continue;if(!r.go){r.go=1;r.x=F.x-Math.sin(F.yaw)*r.sd*8;r.y=F.y-4;r.z=F.z+Math.cos(F.yaw)*r.sd*8;AUD.play('shot',r.x,r.z);}
   if(r.u&&!r.u.dead){r.tx=r.u.x;r.ty=r.u.y+4;r.tz=r.u.z;}const dx=r.tx-r.x,dy=r.ty-r.y,dz=r.tz-r.z,Ln=Math.hypot(dx,dy,dz)||1,sp=Math.min(1300,500+r.t*1600);
   r.vx=dx/Ln*sp;r.vy=dy/Ln*sp;r.vz=dz/Ln*sp;r.x+=r.vx*dt;r.y+=r.vy*dt;r.z+=r.vz*dt;r.tr-=dt;if(r.tr<=0){r.tr=0.03;puff(r.x,r.y,r.z,'trail');}
-  if(Ln<sp*dt*1.2||r.t>6||r.y<0){PR.splice(i,1);rocketHit(r.tx,r.tz);}}}
-function rocketHit(x,z){explode(x,0,z,1.3);const R_=PLANE.rocketR;
+  if(Ln<sp*dt*1.2||r.t>6||r.y<0){PR.splice(i,1);rocketHit(r.tx,r.tz,r.ty);}}}
+function rocketHit(x,z,y){explode(x,y||0,z,1.3);const R_=PLANE.rocketR;
  for(const u of G_.units){if(u.dead||u.s===0)continue;const d=Math.hypot(u.x-x,u.z-z);if(d<R_)dmgUnit(u,PLANE.rocketDmg*(d<R_*0.5?1:0.6),0);}
  for(const t of G_.towers){if(t.s===0||t.dead)continue;if(Math.hypot(t.x-x,t.z-z)<R_*0.6+14)dmgTower(t,PLANE.rocketDmg*2,0);}
  for(const h of G_.harv){if(h.s===0||h.dead)continue;if(Math.hypot(h.x-x,h.z-z)<R_)dmgHarv(h,PLANE.rocketDmg,0);}
@@ -989,8 +991,8 @@ function rocketHit(x,z){explode(x,0,z,1.3);const R_=PLANE.rocketR;
 /* rockets: at the target on the sight, or where the sight meets the ground */
 function planeRockets(){if(F.dead>0||F.rcd>0)return;F.rcd=PLANE.rocketCd;let tx,ty,tz,u=null;
  if(LOCKF){tx=LOCKF.x;ty=LOCKF.y;tz=LOCKF.z;if(LOCKF.tg.k==='u')u=LOCKF.tg.o;}
- else{const dv=[Math.cos(F.yaw)*Math.cos(F.pitch),Math.sin(F.pitch),Math.sin(F.yaw)*Math.cos(F.pitch)];if(dv[1]>-0.03){tx=F.x+dv[0]*900;tz=F.z+dv[2]*900;}else{const k=-F.y/dv[1];tx=F.x+dv[0]*k;tz=F.z+dv[2]*k;}ty=0;}
- for(let i=0;i<PLANE.rocketN;i++){const sd=i%2?1:-1;PR.push({id:++PRID,t:-i*0.11,sd,u:i<2?u:null,tx:tx+(i<2&&u?0:(rn()-0.5)*50),ty,tz:tz+(i<2&&u?0:(rn()-0.5)*50),x:F.x,y:F.y,z:F.z,vx:0,vy:0,vz:0,tr:0});}
+ else{const dv=[Math.cos(F.yaw)*Math.cos(F.pitch),Math.sin(F.pitch),Math.sin(F.yaw)*Math.cos(F.pitch)];let L=1100;for(let d=20;d<=1400;d+=8){const x=F.x+dv[0]*d,y=F.y+dv[1]*d,z=F.z+dv[2]*d;if(y<=0||OBS.some(o=>y<=o.h&&inRect(x,z,o,0))){L=d;break;}}tx=F.x+dv[0]*L;ty=Math.max(0,F.y+dv[1]*L);tz=F.z+dv[2]*L;}
+ for(let i=0;i<PLANE.rocketN;i++){const sd=i%2?1:-1;PR.push({id:++PRID,t:-i*0.11,sd,u:i<2?u:null,tx:tx+(i<2&&u?0:(rn()-0.5)*30),ty:ty+(i<2&&u?0:(rn()-0.5)*8),tz:tz+(i<2&&u?0:(rn()-0.5)*30),x:F.x,y:F.y,z:F.z,vx:0,vy:0,vz:0,tr:0});}
  HUD.msg('Пуск ракет!');HUD.kick();}
 function planeCam(){if(F.dead>0){const [bx,bz]=BASES[0];cam.position.set(bx-300,300,bz);cam.lookAt(bx+300,0,bz);return;}
  cam.position.set(F.x,F.y,F.z);cam.up.set(0,1,0);cam.lookAt(F.x+Math.cos(F.yaw)*Math.cos(F.pitch)*100,F.y+Math.sin(F.pitch)*100,F.z+Math.sin(F.yaw)*Math.cos(F.pitch)*100);cam.rotateZ(F.bank);
@@ -998,6 +1000,8 @@ function planeCam(){if(F.dead>0){const [bx,bz]=BASES[0];cam.position.set(bx-300,
 let PLANE_O=null;
 function syncPlane(t){if(!PLANE_O){PLANE_O=instantiate(proto('Uplane0',()=>buildUnit('plane',0)));PLANE_O.scale.setScalar(1.5);dyn.add(PLANE_O);}
  PLANE_O.visible=F.dead<=0&&CUR!=='plane';PLANE_O.position.set(F.x,F.y,F.z);PLANE_O.rotation.set(0,-F.yaw,0);PLANE_O.rotateX(-F.bank);
+ for(const b of PB)sync('B'+b.id,()=>{const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.glow,color:0xFFD27A,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}));sp.scale.set(9,9,1);return sp;},o=>o.position.set(b.x,b.y,b.z));
+ for(const b of PB)sync('b'+b.id,()=>{const g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]);return new THREE.Line(g,new THREE.LineBasicMaterial({color:0xFFE9A0,transparent:true,blending:THREE.AdditiveBlending}));},o=>{const a=o.geometry.attributes.position,L=Math.hypot(b.tx-b.sx,b.ty-b.sy,b.tz-b.sz)||1,ln=28;a.setXYZ(0,b.x,b.y,b.z);a.setXYZ(1,b.x-(b.tx-b.sx)/L*ln,b.y-(b.ty-b.sy)/L*ln,b.z-(b.tz-b.sz)/L*ln);a.needsUpdate=true;o.geometry.computeBoundingSphere();});
  for(const r of PR)if(r.t>=0)sync('R'+r.id,()=>{const g=new THREE.Group();const b=new THREE.Mesh(new THREE.CylinderGeometry(0.7,0.7,7,8),std(0xD8D8D0,0.5,0.4));b.rotation.z=Math.PI/2;g.add(b);const f=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.glow,color:0xFFB050,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}));f.scale.set(9,9,1);f.position.x=-5;g.add(f);return g;},o=>{o.position.set(r.x,r.y,r.z);o.rotation.set(0,-Math.atan2(r.vz,r.vx),Math.atan2(r.vy,Math.hypot(r.vx,r.vz)));});}
 /* plane HUD: speed and altitude, rocket ring, the sight goes red when something is on the gun */
 const PA=document.createElement('div');PA.className='b palt';PA.style.cssText='right:max(14px,env(safe-area-inset-right));top:58px;padding:0 12px;height:38px;font-size:13px;display:none';H.appendChild(PA);
