@@ -506,7 +506,7 @@ function mapImage(){const w=400,h=250,c=document.createElement('canvas');c.width
 
 /* ================== game state ================== */
 let G_=null;const BATT=[[],[]],MINE_O=[];
-function newGame(){CUR='titan';spawnPlane();PR.length=0;ART.sh.length=0;ART.cd=0;MIS.length=0;MIS_CD=0;LK.u=null;LK.t=0;spawnDrone();G_={t:0,over:null,id:1,sides:[mkSide(),mkSide()],units:[],towers:[],harv:[],mines:MINES_AT.map(([x,z],i)=>({x,z,s:x<IW/2?0:1,lives:MINE_LIVES,acc:0,dead:false,i})),marks:new Set()};
+function newGame(){CUR='titan';spawnPlane();PR.length=0;ART.sh.length=0;ART.cd=0;MIS.length=0;MIS_CD=0;LK.u=null;LK.t=0;spawnDrone();G_={t:0,over:null,id:1,sides:[mkSide(),mkSide()],units:[],towers:[],harv:[],kills:[0,0],mines:MINES_AT.map(([x,z],i)=>({x,z,s:x<IW/2?0:1,lives:MINE_LIVES,acc:0,dead:false,i})),marks:new Set()};
  for(const s of [0,1]){const [bx,bz]=BASES[s],d=s===0?1:-1;
   for(const [k,ox,oz] of [['mg',260,-120],['can',300,60],['rkt',220,170],['mg',330,220]])addTower(s,k,bx+d*ox,bz+oz);
 }
@@ -572,6 +572,7 @@ function stepGame(dt){if(G_.over)return;G_.t+=dt;
   const sl=st.air?0:slope(u.x,u.z),v=st.sp*USPK*(tg&&st.air?0.35:1)*(1-Math.min(0.6,sl*0.8))*dt;const a=Math.atan2(dz,dx);
   const ox=-Math.sin(a)*u.off*0.02,oz=Math.cos(a)*u.off*0.02;u.x+=Math.cos(a)*v+ox*v;u.z+=Math.sin(a)*v+oz*v;u.a=a;
   const gy=hgt(u.x,u.z);u.y=st.air?u.y+(Math.max(gy,0)+ALT[u.k]-u.y)*Math.min(1,dt*1.5):gy;}
+ for(const u of G_.units)if(u.dead&&!u.cnt){u.cnt=1;if(!u.breach)G_.kills[u.s]++;}
  G_.units=G_.units.filter(u=>!u.dead||(u.t_=(u.t_||0)+dt)<0.05);
  /* towers */
  for(const t of G_.towers){if(t.dead)continue;const st=TWS[t.k];t.cd-=dt;if(t.cd>0)continue;const tg=pickTarget(t.s,t.x,t.z,st.rng,st.air,st.ground);if(!tg)continue;
@@ -737,7 +738,8 @@ const HUD={msgT:0,k:0,msg(s){const m=q('.msg');m.textContent=s;m.style.display='
   q('.hurt').style.boxShadow='inset 0 0 120px rgba(200,20,10,'+(P.hurt>0?0.5:0)+')';
   q('.go').textContent=VEH().move?'Стоп':'Старт';q('.go').classList.toggle('on',VEH().move);
   for(const el of q('.units').children){const k=el.dataset.k,c=k==='harv'?HARV.cost:US[k].cost;el.lastChild.textContent=c;el.classList.toggle('dis',S.ore<c);}
-  q('.fps').textContent=Math.round(T3.fps)+' к/с · ×'+T3.q.toFixed(2);
+  {let a0=0,a1=0;for(const u of G_.units)if(!u.dead){if(u.s)a1++;else a0++;}
+  q('.fps').innerHTML=Math.round(T3.fps)+' к/с · ×'+T3.q.toFixed(2)+'<br>Враги: '+a1+' на карте · '+G_.kills[1]+' уничтожено'+(a0||G_.kills[0]?'<br>Наши: '+a0+' на карте · '+G_.kills[0]+' уничтожено':'');}
   if(this.msgT>0){this.msgT-=dt;if(this.msgT<=0)q('.msg').style.display='none';}this.k=Math.max(0,this.k-dt);}};
 const tapBtn=(el,fn)=>el.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();fn(e);});
 tapBtn(q('.go'),()=>{const v=VEH();v.move=!v.move;});tapBtn(q('.sup'),()=>CUR==='plane'?planeRockets():superShot());
