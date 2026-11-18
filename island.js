@@ -323,7 +323,7 @@ function freeRect(x,z,w,d,pad){if(x-w/2<120||x+w/2>IW-120||z-d/2<120||z+d/2>IH-1
 const CONT={L:90,H:22,W:20};
 function genYard(seed){seedR=seed;OBS.length=0;
  GAPS=[IH*0.2+rn()*250,IH*0.5+(rn()-0.5)*300,IH*0.8-rn()*250];
- MINES_AT=[[1900,1250],[1900,IH-1250],[IW-1900,1250],[IW-1900,IH-1250],[3100,IH/2+(rn()-0.5)*500],[IW-3100,IH/2+(rn()-0.5)*500],[IW/2-650,GAPS[0]],[IW/2+650,GAPS[2]]];
+ MINES_AT=[[1900,1250],[1900,IH-1250],[IW-1900,1250],[IW-1900,IH-1250],[3100,IH/2+(rn()-0.5)*500],[IW-3100,IH/2+(rn()-0.5)*500]];
  /* the spine: a double wall of stacked containers through the middle, open only at the three gaps */
  for(let z=60;z<IH-60;z+=CONT.L){if(GAPS.some(g=>Math.abs(z-g)<200))continue;for(const dx of [-CONT.W/2,CONT.W/2])OBS.push({x:IW/2+dx,z,w:CONT.W,d:CONT.L,h:CONT.H*(2+((z/96|0)%2)),k:'c',rot:1});}
  /* container yards: rows of stacks with lanes between them */
@@ -598,7 +598,18 @@ function bot(s,dt){const S=G_.sides[s];S.botT-=dt;if(S.botT>0)return;S.botT=1.2;
 /* ================== drawing the game state ================== */
 const live=new Map();let FR=0;
 function sync(key,make,place){let e=live.get(key);if(!e){e={o:make()};dyn.add(e.o);live.set(key,e);}e.seen=FR;place(e.o,e);return e.o;}
+/* a column of black smoke keeps rising from a destroyed mine or base: a fixed ring of sprites cycling upwards */
+const SMOKE=new Map();
+function smokeCol(key,x,z,y0,t){let c=SMOKE.get(key);if(!c){c={sp:[],fi:[]};for(let i=0;i<22;i++){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.smoke,transparent:true,depthWrite:false}));const g=0.05+((i*37)%10)/200;s.material.color.setRGB(g,g,g);s.userData.ph=i/22;s.userData.j=[((i*53)%17-8)*3,((i*29)%13-6)*3];scene.add(s);c.sp.push(s);}
+  for(let i=0;i<3;i++){const f=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.fire,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));f.material.color.setHSL(0.07,1,0.5);f.userData.ph=i/3;scene.add(f);c.fi.push(f);}SMOKE.set(key,c);}
+ c.seen=FR;
+ for(const s of c.sp){const k=(t*0.16+s.userData.ph)%1;const [jx,jz]=s.userData.j;s.position.set(x+jx+k*70,y0+k*230,z+jz+k*10);const r=34+k*150;s.scale.set(r,r,1);s.material.opacity=Math.min(1,k/0.06)*Math.pow(1-k,0.8);}
+ for(const f of c.fi){const k=(t*1.3+f.userData.ph)%1;f.position.set(x+(f.userData.ph-0.5)*40,y0-4+k*18,z);const r=26*(1-k*0.6);f.scale.set(r,r,1);f.material.opacity=0.8*(1-k);}}
+function smokeSweep(){for(const [k,c] of SMOKE)if(c.seen!==FR){for(const s of [...c.sp,...c.fi]){scene.remove(s);s.material.dispose();}SMOKE.delete(k);}}
 function syncAll(t,dt){FR++;const cx=cam.position.x,cz=cam.position.z,far=2600;
+ for(const m of G_.mines)if(m.dead)smokeCol('m'+m.i,m.x,m.z,8,t);
+ for(const s of [0,1])if(G_.sides[s].lives<=0){const [bx,bz]=BASES[s];smokeCol('b'+s,bx,bz,hgt(bx,bz)+30,t);}
+ smokeSweep();
  for(const u of G_.units){if(u.dead)continue;if(Math.abs(u.x-cx)+Math.abs(u.z-cz)>far*1.3)continue;
   sync('u'+u.id,()=>{const g=instantiate(proto('U'+u.k+u.s+(MIL?'m':''),()=>buildUnit(u.k,u.s)));if(u.k==='heli')g.scale.multiplyScalar(2);return g;},(o,e)=>{if(o.userData.a==null)o.userData.a=u.a;let d=u.a-o.userData.a;d=Math.atan2(Math.sin(d),Math.cos(d));o.userData.a+=d*Math.min(1,dt*6);
    o.position.set(u.x,u.y,u.z);o.rotation.y=-o.userData.a;if(o.userData.rot)o.userData.rot.rotation.y=t*28;if(o.userData.rot2)o.userData.rot2.rotation.z=t*40;if(o.userData.tur&&u.ga!=null)o.userData.tur.rotation.y=-(u.ga-o.userData.a);
@@ -714,12 +725,12 @@ document.body.appendChild(H);
 const q=s=>H.querySelector(s);
 const UK=[['jeep','Джип'],['tank','Танк'],['heli','Верт.']];
 q('.units').innerHTML=UK.map(([k,n])=>`<div class="b" data-k="${k}">${n}<span></span></div>`).join('');
-const lob=document.createElement('div');lob.id='lobby';lob.innerHTML=`<div class="card"><h1>Две базы: Полигон</h1><p>3D-прототип. У каждой стороны база и 4 рудника — рудники сами приносят кристаллы. Победа — уничтожить все рудники и базу врага. Титан, дрон и самолёт стреляют сами, когда цель в прицеле.</p><button id="bPlay">Играть</button><a href="./">← Обычная игра</a></div>`;
+const lob=document.createElement('div');lob.id='lobby';lob.innerHTML=`<div class="card"><h1>Две базы: Полигон</h1><p>3D-прототип. У каждой стороны база и 3 рудника — рудники сами приносят кристаллы. Победа — уничтожить все рудники и базу врага. Титан, дрон и самолёт стреляют сами, когда цель в прицеле.</p><button id="bPlay">Играть</button><a href="./">← Обычная игра</a></div>`;
 document.body.appendChild(lob);
 const over=document.createElement('div');over.id='over';over.innerHTML=`<div class="t"></div><button>Ещё раз</button>`;document.body.appendChild(over);
 let lastHp=P.max;
 const HUD={msgT:0,k:0,msg(s){const m=q('.msg');m.textContent=s;m.style.display='block';this.msgT=2.5;},kick(){this.k=0.12;},
- upd(dt){const S=G_.sides[0],E=G_.sides[1];q('.s1').innerHTML=`💎 ${Math.floor(S.ore)}`;{const all=LIVES+4*MINE_LIVES;for(const s of [0,1]){const L=G_.sides[s].lives,ms=G_.mines.filter(m=>m.s===s);const tot=L+ms.reduce((a,m)=>a+m.lives,0),n=ms.filter(m=>!m.dead).length;q('.sc'+s).innerHTML=s?`<small>◆${n}</small> ${L}`:`${L} <small>◆${n}</small>`;q('.sb'+s).style.width=(100*tot/all)+'%';}}q('.stm').textContent='💎 '+Math.floor(S.ore);
+ upd(dt){const S=G_.sides[0],E=G_.sides[1];q('.s1').innerHTML=`💎 ${Math.floor(S.ore)}`;{const all=LIVES+3*MINE_LIVES;for(const s of [0,1]){const L=G_.sides[s].lives,ms=G_.mines.filter(m=>m.s===s);const tot=L+ms.reduce((a,m)=>a+m.lives,0),n=ms.filter(m=>!m.dead).length;q('.sc'+s).innerHTML=s?`<small>◆${n}</small> ${L}`:`${L} <small>◆${n}</small>`;q('.sb'+s).style.width=(100*tot/all)+'%';}}q('.stm').textContent='💎 '+Math.floor(S.ore);
   q('.hp i').style.width=(100*Math.max(0,VEH().hp)/VEH().max).toFixed(1)+'%';if(CUR==='plane')q('.rl').textContent=F.dead>0?'самолёт: возрождение '+Math.ceil(F.dead)+' с':F.turn?'граница — разворот':LOCKF?'цель на мушке':'поиск цели';else if(CUR==='drone')q('.rl').textContent=LK.u&&LK.t>0.25&&D.dead<=0?'захват цели… '+Math.max(0,LOCK_T-LK.t).toFixed(1)+' с':D.dead>0?'дрон: возрождение '+Math.ceil(D.dead)+' с':ART.cd>0?'артиллерия: перезарядка '+Math.ceil(ART.cd)+' с':'тап по цели — артудар';else q('.rl').textContent=P.dead>0?'возрождение '+Math.ceil(P.dead)+' с':LOCK?'цель захвачена':'поиск цели';
   q('.rld').setAttribute('stroke-dasharray',(170*(1-P.cd/TITAN.cd)).toFixed(1)+' 170');q('.lk').setAttribute('display',LOCK?'inline':'none');{const im=q('img.sight');if(im)im.classList.toggle('lock',!!LOCK);const g=document.getElementById('tiGun');if(g&&g.offsetWidth){const r=g.getBoundingClientRect();for(const k of [0,1]){const f=document.getElementById('tiFl'+k);f.style.left=(r.left+r.width*TIPS[k][0])+'px';f.style.top=(r.top+r.height*TIPS[k][1])+'px';}}}
   q('.sup span').textContent=P.scd>0?Math.ceil(P.scd)+' с':'';q('.sup').classList.toggle('cd',P.scd>0);
@@ -1043,7 +1054,7 @@ function planeHud(){if(CUR!=='plane'){PCK.style.display='none';q('.fps').style.t
  q('.lk').setAttribute('display',LOCKF?'inline':'none');const im=q('img.sight');if(im)im.classList.toggle('lock',!!LOCKF);
  q('.rld').setAttribute('stroke-dasharray',(170*(1-F.rcd/PLANE.rocketCd)).toFixed(1)+' 170');
  q('.sup span').textContent=F.rcd>0?Math.ceil(F.rcd)+' с':'';q('.sup').classList.toggle('cd',F.rcd>0);q('.hurt').style.boxShadow='inset 0 0 120px rgba(200,20,10,'+(F.hurt>0?0.5:0)+')';}
-window.__isle.F=F;window.__isle.hitBase=hitBase;window.__isle.hitMine=hitMine;window.__isle.stepTitan=stepTitan;window.__isle.P=P;window.__isle.get_LOCK=()=>LOCK;window.__isle.stepPlane=stepPlane;window.__isle.planeRockets=planeRockets;window.__isle.PR=PR;window.__isle.get_LOCKF=()=>LOCKF;
+window.__isle.F=F;window.__isle.hitBase=hitBase;window.__isle.syncAll=syncAll;window.__isle.PART=PART;window.__isle.stepParts=stepParts;window.__isle.hitMine=hitMine;window.__isle.stepTitan=stepTitan;window.__isle.P=P;window.__isle.get_LOCK=()=>LOCK;window.__isle.stepPlane=stepPlane;window.__isle.planeRockets=planeRockets;window.__isle.PR=PR;window.__isle.get_LOCKF=()=>LOCKF;
 
 /* ================== TEST: the bot sends free waves (mostly helicopters); they don't take lives from our base ================== */
 const TESTW={on:true,t:6,n:0};try{TESTW.on=localStorage.getItem('dvebazy-testw')!=='0';}catch(_){}
