@@ -599,13 +599,26 @@ function bot(s,dt){const S=G_.sides[s];S.botT-=dt;if(S.botT>0)return;S.botT=1.2;
 /* ================== drawing the game state ================== */
 const live=new Map();let FR=0;
 /* Tripo models: red jeep and red tank, each with a blue repaint for our side; nose along +Z like the military pack */
-const XM={jeep:{f:'rjeep.glb',len:21,sides:[0,1],blue:'jeep_blue.jpg'},tank:{f:'rtank.glb',len:30,sides:[0,1],blue:'tank_blue.jpg'}};
+const XM={jeep:{f:'rjeep.glb',len:21,sides:[0,1],blue:'jeep_blue.jpg'},tank:{f:'rtank.glb',len:30,sides:[0,1],blue:'tank_blue.jpg'},
+ heli:{f:'rheli.glb',len:46,sides:[0,1],blue:'heli_blue.jpg',hub:[0,0.372,0.105],rr:0.44,dy:-7}};
 if(THREE.GLTFLoader)for(const k in XM){const m=XM[k];new THREE.GLTFLoader().load(m.f,g=>{g.scene.traverse(o=>{if(o.isMesh){o.material.envMapIntensity=0.5;if(o.material.map)o.material.map.anisotropy=4;}});
   if(m.blue)new THREE.TextureLoader().load(m.blue,t=>{t.flipY=false;t.encoding=THREE.sRGBEncoding;t.anisotropy=4;m.bt=t;});m.sc=g.scene;},undefined,e=>console.error(m.f,e));}
 const xmOK=(k,s)=>{const m=XM[k];return !!(m&&m.sc&&m.sides.includes(s)&&(s===1||!m.blue||m.bt));};
 function buildXM(k,s){const m=XM[k],root=new THREE.Group();const c=m.sc.clone(true);if(s===0&&m.blue)c.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.material.map=m.bt;}});
  c.updateMatrixWorld(true);const bb=new THREE.Box3().setFromObject(c),sz=bb.getSize(new THREE.Vector3()),sc=m.len/Math.max(sz.x,sz.z);
- const off=new THREE.Vector3(-(bb.min.x+bb.max.x)/2,-bb.min.y,-(bb.min.z+bb.max.z)/2);root.add(part('body',wrap(c,sc,off)));return root;}
+ const off=new THREE.Vector3(-(bb.min.x+bb.max.x)/2,-bb.min.y,-(bb.min.z+bb.max.z)/2);root.add(part('body',wrap(c,sc,off)));
+ if(m.hub){/* main rotor: our own spinning blades + a faint blur disc around the hub the model keeps */
+  const k=sc/Math.max(sz.x,sz.z)*Math.max(sz.x,sz.z),h=m.hub,px=(h[0]+off.x)*sc,py=(h[1]+off.y)*sc,pz=(h[2]+off.z)*sc,R_=m.rr*sc;
+  const g=new THREE.Group();g.name='rot';g.position.set(pz,py,-px);
+  const dark=new THREE.MeshStandardMaterial({color:lin(0x34363A),roughness:0.6,metalness:0.4}),tip=new THREE.MeshStandardMaterial({color:lin(s?0xD8281C:0x2F7FE0),roughness:0.5,metalness:0.2});
+  for(let i=0;i<4;i++){const b=new THREE.Group();b.rotation.y=i*Math.PI/2;
+   const bl=new THREE.Mesh(new THREE.BoxGeometry(R_*0.92,0.35,R_*0.085),dark);bl.position.x=R_*0.5;bl.rotation.x=0.06;b.add(bl);
+   const t1=new THREE.Mesh(new THREE.BoxGeometry(R_*0.09,0.4,R_*0.09),tip);t1.position.x=R_*0.9;b.add(t1);
+   const t2=new THREE.Mesh(new THREE.BoxGeometry(R_*0.05,0.4,R_*0.09),tip);t2.position.x=R_*0.72;b.add(t2);g.add(b);}
+  const disc=new THREE.Mesh(new THREE.RingGeometry(R_*0.12,R_,40),new THREE.MeshBasicMaterial({color:lin(0x2A2C30),transparent:true,opacity:0.16,depthWrite:false,side:THREE.DoubleSide}));disc.rotation.x=-Math.PI/2;disc.position.y=0.1;g.add(disc);
+  root.add(g);}
+ if(m.dy)root.children.forEach(ch=>ch.position.y+=m.dy);
+ return root;}
 function sync(key,make,place){let e=live.get(key);if(!e){e={o:make()};dyn.add(e.o);live.set(key,e);}e.seen=FR;place(e.o,e);return e.o;}
 /* a column of black smoke keeps rising from a destroyed mine or base: a fixed ring of sprites cycling upwards */
 const SMOKE=new Map();
@@ -1066,7 +1079,7 @@ function planeHud(){if(CUR!=='plane'){PCK.style.display='none';q('.fps').style.t
  q('.lk').setAttribute('display','none');const im=q('img.sight');if(im)im.classList.toggle('lock',!!LOCKF);
  q('.rld').setAttribute('stroke-dasharray',(170*(1-F.rcd/PLANE.rocketCd)).toFixed(1)+' 170');
  q('.sup span').textContent=F.rcd>0?Math.ceil(F.rcd)+' с':'';q('.sup').classList.toggle('cd',F.rcd>0);q('.hurt').style.boxShadow='inset 0 0 120px rgba(200,20,10,'+(F.hurt>0?0.5:0)+')';}
-window.__isle.F=F;window.__isle.hitBase=hitBase;window.__isle.syncAll=syncAll;window.__isle.PART=PART;window.__isle.stepParts=stepParts;window.__isle.hitMine=hitMine;window.__isle.stepTitan=stepTitan;window.__isle.P=P;window.__isle.get_LOCK=()=>LOCK;window.__isle.stepPlane=stepPlane;window.__isle.planeRockets=planeRockets;window.__isle.PR=PR;window.__isle.get_LOCKF=()=>LOCKF;
+window.__isle.F=F;window.__isle.buildXM=buildXM;window.__isle.XM=XM;window.__isle.hitBase=hitBase;window.__isle.syncAll=syncAll;window.__isle.PART=PART;window.__isle.stepParts=stepParts;window.__isle.hitMine=hitMine;window.__isle.stepTitan=stepTitan;window.__isle.P=P;window.__isle.get_LOCK=()=>LOCK;window.__isle.stepPlane=stepPlane;window.__isle.planeRockets=planeRockets;window.__isle.PR=PR;window.__isle.get_LOCKF=()=>LOCKF;
 
 /* ================== TEST: the bot sends free waves (mostly helicopters); they don't take lives from our base ================== */
 const TESTW={on:true,t:6,n:0};try{TESTW.on=localStorage.getItem('dvebazy-testw')!=='0';}catch(_){}
