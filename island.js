@@ -551,7 +551,7 @@ function stepGame(dt){if(G_.over)return;G_.t+=dt;
  for(const u of G_.units){if(u.dead)continue;const st=US[u.k];u.cd-=dt;u.scan-=dt;
   if(u.scan<=0){u.scan=0.3;u.tg=pickTarget(u.s,u.x,u.z,st.rng,st.hitAir,!st.air||true);}
   const [ex,ez]=BASES[1-u.s];
-  if(Math.hypot(u.x-ex,u.z-ez)<150){u.dead=true;u.breach=true;hitBase(1-u.s,st.lives);continue;}
+  if(Math.hypot(u.x-ex,u.z-ez)<150){u.dead=true;u.breach=true;if(!(TESTW.on&&u.s===1))hitBase(1-u.s,st.lives);continue;}
   let tg=u.tg;if(tg&&((tg.o&&tg.o.dead)||(tg.k==='p'&&P.dead>0)))tg=u.tg=null;
   if(tg){const [tx,ty,tz]=tpos(tg);u.ga=Math.atan2(tz-u.z,tx-u.x);if(u.cd<=0){u.cd=st.cd;if(st.splash){splash(u.s,tx,tz,st.splash,st.dmg,u.s);if(tg.k!=='u'&&tg.k!=='h')applyHit(tg,st.dmg,u.s);explode(tx,ty-4,tz,0.45);}else applyHit(tg,st.dmg*(tg.k==='p'?0.4:1),u.s);
     if(Math.hypot(u.x-cam.position.x,u.z-cam.position.z)<1400)tracer([u.x,u.y+8,u.z],[tx,ty,tz],u.s===0?0x9FD0FF:0xFFC070);}
@@ -576,7 +576,7 @@ function stepGame(dt){if(G_.over)return;G_.t+=dt;
    else{const v=HARV.sp*SPK*(1-Math.min(0.5,slope(h.x,h.z)*0.7))*dt;h.a=Math.atan2(dz,dx);h.x+=Math.cos(h.a)*v;h.z+=Math.sin(h.a)*v;}}
   else if(h.st==='mine'){h.t-=dt;if(h.t<=0){const take=Math.min(HARV.load,h.m.ore);h.m.ore-=take;h.load=take;h.st='back';h.path=chaikin(astar(h.x,h.z,bx+(h.s?-140:140),bz,0,0.5),2);h.pi=1;}}}
  G_.harv=G_.harv.filter(h=>!h.dead);
- bot(1,dt);}
+ bot(1,dt);testWaves(dt);}
 
 /* ---------- the bot: harvesters first, waves of mixed units, towers on its side ---------- */
 function bot(s,dt){const S=G_.sides[s];S.botT-=dt;if(S.botT>0)return;S.botT=1.2;
@@ -888,7 +888,7 @@ function syncDrone(t,dt){if(!DRONE_O){const g=new THREE.Group(),M=mats(0);g.add(
 #drHud .tape{position:absolute;left:50%;top:58px;transform:translateX(-50%);width:360px;height:22px;overflow:hidden;border-bottom:1px solid rgba(232,240,232,.7)}
 #drHud .tape i{position:absolute;top:0;font-style:normal;transform:translateX(-50%)}
 #drHud .tape b{position:absolute;left:50%;bottom:-1px;width:0;height:0;border:6px solid transparent;border-bottom-color:#E8F0E8;transform:translateX(-50%)}
-#drHud .zl{position:absolute;left:max(14px,env(safe-area-inset-left));top:116px;line-height:1.5;background:rgba(0,0,0,.35);padding:4px 8px;border-radius:6px}
+#drHud .zl{position:absolute;left:max(14px,env(safe-area-inset-left));top:152px;line-height:1.5;background:rgba(0,0,0,.35);padding:4px 8px;border-radius:6px}
 #drHud .art{position:absolute;right:max(20px,env(safe-area-inset-right));bottom:30px;width:92px;height:92px;border-radius:50%;border:2px solid rgba(232,240,232,.7);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-size:12px;line-height:1.2;background:rgba(0,0,0,.35)}
 #drHud .art.ready{border-color:#FF5A40;color:#FFB0A0}
 #drTgt{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;border:2px dashed #FF5A40;border-radius:50%;display:none}
@@ -1014,6 +1014,14 @@ function planeHud(){if(CUR!=='plane'){PCK.style.display='none';q('.fps').style.t
  q('.rld').setAttribute('stroke-dasharray',(170*(1-F.rcd/PLANE.rocketCd)).toFixed(1)+' 170');
  q('.sup span').textContent=F.rcd>0?Math.ceil(F.rcd)+' с':'';q('.sup').classList.toggle('cd',F.rcd>0);q('.hurt').style.boxShadow='inset 0 0 120px rgba(200,20,10,'+(F.hurt>0?0.5:0)+')';}
 window.__isle.F=F;window.__isle.stepPlane=stepPlane;window.__isle.planeRockets=planeRockets;window.__isle.PR=PR;window.__isle.get_LOCKF=()=>LOCKF;
+
+/* ================== TEST: the bot sends free waves (mostly helicopters); they don't take lives from our base ================== */
+const TESTW={on:true,t:6,n:0};try{TESTW.on=localStorage.getItem('dvebazy-testw')!=='0';}catch(_){}
+function testWaves(dt){if(!TESTW.on)return;TESTW.t-=dt;if(TESTW.t>0)return;TESTW.t=20;TESTW.n++;
+ const S=G_.sides[1],w=['heli','heli','heli','heli','jeep','inf','inf'];if(TESTW.n%2===0)w.push('heli','heli','tank');for(const k of w)S.queue.push(k);}
+{const tb=document.createElement('div');tb.className='b testw';tb.style.cssText='left:max(14px,env(safe-area-inset-left));top:112px;padding:0 10px;height:32px;font-size:12px';
+ const upd=()=>{tb.textContent='Тест-волны: '+(TESTW.on?'вкл':'выкл');tb.style.background=TESTW.on?'rgba(160,60,40,.7)':'';};upd();H.appendChild(tb);
+ tapBtn(tb,()=>{TESTW.on=!TESTW.on;TESTW.t=3;upd();try{localStorage.setItem('dvebazy-testw',TESTW.on?'1':'0');}catch(_){}});}
 
 function onMil(){if(BUILT){MIL_DIRTY=false;buildWorld();}else MIL_DIRTY=true;}
 cam.far=9000;cam.updateProjectionMatrix();{const c=sun.shadow.camera;c.left=-330;c.right=330;c.top=330;c.bottom=-330;c.far=1600;c.updateProjectionMatrix();}
