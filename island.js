@@ -568,10 +568,18 @@ function stepGame(dt){if(G_.over)return;G_.t+=dt;
     if(Math.hypot(u.x-cam.position.x,u.z-cam.position.z)<1400)tracer([u.x,u.y+8,u.z],[tx,ty,tz],u.s===0?0x9FD0FF:0xFFC070);}
    if(!st.air)continue;}
   /* follow the path */
-  const p=u.path,t=p[Math.min(u.pi,p.length-1)];const dx=t[0]-u.x,dz=t[1]-u.z,d=Math.hypot(dx,dz);if(d<20&&u.pi<p.length-1){u.pi++;continue;}
-  const sl=st.air?0:slope(u.x,u.z),v=st.sp*USPK*(tg&&st.air?0.35:1)*(1-Math.min(0.6,sl*0.8))*dt;const a=Math.atan2(dz,dx);
-  const ox=-Math.sin(a)*u.off*0.02,oz=Math.cos(a)*u.off*0.02;u.x+=Math.cos(a)*v+ox*v;u.z+=Math.sin(a)*v+oz*v;u.a=a;
+  const p=u.path,last=u.pi>=p.length-1;let t=p[Math.min(u.pi,p.length-1)];
+  /* at the end of the route helicopters spread into their own hover slots instead of all sitting on one point */
+  if(last&&st.air){const h=u.id*2.39996,r=45+(u.id%5)*28;t=[t[0]+Math.cos(h)*r,t[1]+Math.sin(h)*r];}
+  const dx=t[0]-u.x,dz=t[1]-u.z,d=Math.hypot(dx,dz);if(d<20&&!last){u.pi++;continue;}
+  const sl=st.air?0:slope(u.x,u.z);let v=st.sp*USPK*(tg&&st.air?0.35:1)*(1-Math.min(0.6,sl*0.8))*dt;const a=Math.atan2(dz,dx);
+  if(last){v*=Math.min(1,d/70);if(d<4)v=0;}/* arrive and stop: no overshooting back and forth around the last point */
+  const ox=last?0:-Math.sin(a)*u.off*0.02,oz=last?0:Math.cos(a)*u.off*0.02;u.x+=Math.cos(a)*v+ox*v;u.z+=Math.sin(a)*v+oz*v;
+  if(tg&&st.air&&u.ga!=null)u.a=u.ga;else if(v>dt*4)u.a=a;
   const gy=hgt(u.x,u.z);u.y=st.air?u.y+(Math.max(gy,0)+ALT[u.k]-u.y)*Math.min(1,dt*1.5):gy;}
+ /* helicopters keep a little room between each other instead of overlapping */
+ {const hs=G_.units.filter(u=>!u.dead&&US[u.k].air);for(let i=0;i<hs.length;i++)for(let j=i+1;j<hs.length;j++){const A=hs[i],B=hs[j];const dx=B.x-A.x,dz=B.z-A.z,d=Math.hypot(dx,dz);
+  if(d<70){const k=Math.min(25,(70-d)*1.2)*dt/(d||1),px=(d?dx:1)*k,pz=(d?dz:0)*k;A.x-=px;A.z-=pz;B.x+=px;B.z+=pz;}}}
  for(const u of G_.units)if(u.dead&&!u.cnt){u.cnt=1;if(!u.breach)G_.kills[u.s]++;}
  G_.units=G_.units.filter(u=>!u.dead||(u.t_=(u.t_||0)+dt)<0.05);
  /* towers */
