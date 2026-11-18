@@ -598,6 +598,11 @@ function bot(s,dt){const S=G_.sides[s];S.botT-=dt;if(S.botT>0)return;S.botT=1.2;
 
 /* ================== drawing the game state ================== */
 const live=new Map();let FR=0;
+/* the enemy's red jeep: its own model (rjeep.glb), nose along +Z like the military pack */
+let RJEEP=null;
+if(THREE.GLTFLoader)new THREE.GLTFLoader().load('rjeep.glb',g=>{g.scene.traverse(o=>{if(o.isMesh){o.material.envMapIntensity=0.5;if(o.material.map)o.material.map.anisotropy=4;}});RJEEP=g.scene;},undefined,e=>console.error('rjeep.glb',e));
+function buildRJeep(){const root=new THREE.Group();const c=RJEEP.clone(true);c.updateMatrixWorld(true);const bb=new THREE.Box3().setFromObject(c),sz=bb.getSize(new THREE.Vector3()),s=21/Math.max(sz.x,sz.z);
+ const off=new THREE.Vector3(-(bb.min.x+bb.max.x)/2,-bb.min.y,-(bb.min.z+bb.max.z)/2);root.add(part('body',wrap(c,s,off)));return root;}
 function sync(key,make,place){let e=live.get(key);if(!e){e={o:make()};dyn.add(e.o);live.set(key,e);}e.seen=FR;place(e.o,e);return e.o;}
 /* a column of black smoke keeps rising from a destroyed mine or base: a fixed ring of sprites cycling upwards */
 const SMOKE=new Map();
@@ -612,7 +617,7 @@ function syncAll(t,dt){FR++;const cx=cam.position.x,cz=cam.position.z,far=2600;
  for(const s of [0,1])if(G_.sides[s].lives<=0){const [bx,bz]=BASES[s];smokeCol('b'+s,bx,bz,hgt(bx,bz)+30,t);}
  smokeSweep();
  for(const u of G_.units){if(u.dead)continue;if(Math.abs(u.x-cx)+Math.abs(u.z-cz)>far*1.3)continue;
-  sync('u'+u.id,()=>{const g=instantiate(proto('U'+u.k+u.s+(MIL?'m':''),()=>buildUnit(u.k,u.s)));{const k=u.k==='heli'?3:u.k==='tank'||u.k==='jeep'?4:1;if(k!==1)g.scale.multiplyScalar(k);}return g;},(o,e)=>{if(o.userData.a==null)o.userData.a=u.a;let d=u.a-o.userData.a;d=Math.atan2(Math.sin(d),Math.cos(d));o.userData.a+=d*Math.min(1,dt*6);
+  sync('u'+u.id+(u.k==='jeep'&&u.s===1&&RJEEP?'r':''),()=>{const g=instantiate(proto('U'+u.k+u.s+(MIL?'m':'')+(u.k==='jeep'&&u.s===1&&RJEEP?'r':''),()=>u.k==='jeep'&&u.s===1&&RJEEP?buildRJeep():buildUnit(u.k,u.s)));{const k=u.k==='heli'?3:u.k==='tank'||u.k==='jeep'?4:1;if(k!==1)g.scale.multiplyScalar(k);}return g;},(o,e)=>{if(o.userData.a==null)o.userData.a=u.a;let d=u.a-o.userData.a;d=Math.atan2(Math.sin(d),Math.cos(d));o.userData.a+=d*Math.min(1,dt*6);
    o.position.set(u.x,u.y,u.z);o.rotation.y=-o.userData.a;if(o.userData.rot)o.userData.rot.rotation.y=t*28;if(o.userData.rot2)o.userData.rot2.rotation.z=t*40;if(o.userData.tur&&u.ga!=null)o.userData.tur.rotation.y=-(u.ga-o.userData.a);
    if(!US[u.k].air&&u.k!=='inf'&&!u.tg){e.dust=(e.dust||0)-dt;if(e.dust<=0){e.dust=0.3;puff(u.x-Math.cos(u.a)*14,u.y+1.5,u.z-Math.sin(u.a)*14,'dust');}}});}
  for(const h of G_.harv){if(Math.abs(h.x-cx)+Math.abs(h.z-cz)>far*1.3)continue;sync('h'+h.id,()=>instantiate(proto('H'+h.s,()=>buildHarv(h.s))),o=>{o.position.set(h.x,hgt(h.x,h.z)+0.4,h.z);if(o.userData.a==null)o.userData.a=h.a;let d=h.a-o.userData.a;d=Math.atan2(Math.sin(d),Math.cos(d));o.userData.a+=d*Math.min(1,dt*5);o.rotation.y=-o.userData.a;});}
