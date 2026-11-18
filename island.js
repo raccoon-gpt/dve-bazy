@@ -957,7 +957,7 @@ window.__isle.setVeh=setVeh;window.__isle.LK=LK;window.__isle.MIS=MIS;window.__i
 
 /* ================== the plane: always flying, machine gun fires by itself, rockets on demand, turns back smoothly past the limit ================== */
 const F={x:0,z:0,y:0,yaw:0,ty:0,pitch:-0.18,hp:2500,max:2500,dead:0,zoom:1,alt:200,sp:225,cd:0,rcd:0,bank:0,turn:false,hurt:0,move:true};
-const PLANE={limit:450,maxRate:0.75,mgCd:0.09,mgDmg:32,range:900,cone:0.05,rocketCd:5,rocketN:6,rocketDmg:300,rocketR:48};
+const PLANE={limit:450,maxRate:0.75,mgCd:0.09,mgDmg:32,range:1400,cone:0.05,rocketCd:5,rocketN:6,rocketDmg:300,rocketR:48};
 let LOCKF=null;const PR=[],PB=[];let PRID=0;
 function spawnPlane(){const [bx,bz]=BASES[0];F.x=bx-300;F.z=bz;F.yaw=0;F.ty=0;F.pitch=-0.18;F.hp=F.max;F.dead=0;F.bank=0;F.turn=false;F.zoom=1;}
 function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0)spawnPlane();return;}
@@ -969,10 +969,10 @@ function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0)spawnPlane();return;
  let d=F.ty-F.yaw;const rate=Math.max(-PLANE.maxRate,Math.min(PLANE.maxRate,d*1.6));F.yaw+=rate*dt;F.bank+=(-rate*0.75-F.bank)*Math.min(1,dt*3);
  F.x+=Math.cos(F.yaw)*F.sp*dt;F.z+=Math.sin(F.yaw)*F.sp*dt;F.y+=(F.alt-F.y)*Math.min(1,dt*1.2);
  /* machine gun: the first enemy near the centre of the sight */
- if(CUR==='plane')for(const u of G_.units){if(u.dead||u.s===0||!US[u.k].air||u.mk)continue;const dx=u.x-F.x,dz=u.z-F.z,d=Math.hypot(dx,dz);if(d<1300){let a=Math.atan2(dz,dx)-F.yaw;a=Math.atan2(Math.sin(a),Math.cos(a));if(Math.abs(a)<0.75)u.mk=1;}}
+ if(CUR==='plane')for(const u of G_.units){if(u.dead||u.s===0||!US[u.k].air||u.mk)continue;const dx=u.x-F.x,dz=u.z-F.z,d=Math.hypot(dx,dz);if(d<2000){let a=Math.atan2(dz,dx)-F.yaw;a=Math.atan2(Math.sin(a),Math.cos(a));if(Math.abs(a)<0.75)u.mk=1;}}
  LOCKF=null;if(CUR==='plane'&&!G_.over){const o=new THREE.Vector3(F.x,F.y,F.z),dv=new THREE.Vector3(Math.cos(F.yaw)*Math.cos(F.pitch),Math.sin(F.pitch),Math.sin(F.yaw)*Math.cos(F.pitch));let best=PLANE.cone/F.zoom;
-  const test=(x,y,z,tg)=>{const vx=x-o.x,vy=y-o.y,vz=z-o.z,Ln=Math.hypot(vx,vy,vz);if(Ln>PLANE.range||Ln<25)return;const a=Math.acos(Math.max(-1,Math.min(1,(vx*dv.x+vy*dv.y+vz*dv.z)/Ln)))-Math.atan(10/Ln);if(a<best){best=a;LOCKF={tg,x,y,z};}};
-  for(const u of G_.units){if(u.dead||u.s===0)continue;test(u.x,u.y+5,u.z,{k:'u',o:u});}
+  const test=(x,y,z,tg,sz=10)=>{const vx=x-o.x,vy=y-o.y,vz=z-o.z,Ln=Math.hypot(vx,vy,vz);if(Ln>PLANE.range||Ln<25)return;const a=Math.acos(Math.max(-1,Math.min(1,(vx*dv.x+vy*dv.y+vz*dv.z)/Ln)))-Math.atan(sz/Ln);if(a<best){best=a;LOCKF={tg,x,y,z};}};
+  for(const u of G_.units){if(u.dead||u.s===0)continue;test(u.x,u.y+5,u.z,{k:'u',o:u},u.k==='heli'?20:10);}
   for(const t of G_.towers){if(t.s===0)continue;test(t.x,14,t.z,{k:'t',o:t});}
   for(const h of G_.harv){if(h.s===0)continue;test(h.x,7,h.z,{k:'h',o:h});}
   if(LOCKF&&F.cd<=0){F.cd=PLANE.mgCd;const tg=LOCKF.tg;applyHit(tg,PLANE.mgDmg*(tg.k==='t'?0.5:1),0);
