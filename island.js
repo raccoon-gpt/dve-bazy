@@ -612,7 +612,7 @@ function syncAll(t,dt){FR++;const cx=cam.position.x,cz=cam.position.z,far=2600;
  for(const s of [0,1])if(G_.sides[s].lives<=0){const [bx,bz]=BASES[s];smokeCol('b'+s,bx,bz,hgt(bx,bz)+30,t);}
  smokeSweep();
  for(const u of G_.units){if(u.dead)continue;if(Math.abs(u.x-cx)+Math.abs(u.z-cz)>far*1.3)continue;
-  sync('u'+u.id,()=>{const g=instantiate(proto('U'+u.k+u.s+(MIL?'m':''),()=>buildUnit(u.k,u.s)));if(u.k==='heli')g.scale.multiplyScalar(2);return g;},(o,e)=>{if(o.userData.a==null)o.userData.a=u.a;let d=u.a-o.userData.a;d=Math.atan2(Math.sin(d),Math.cos(d));o.userData.a+=d*Math.min(1,dt*6);
+  sync('u'+u.id,()=>{const g=instantiate(proto('U'+u.k+u.s+(MIL?'m':''),()=>buildUnit(u.k,u.s)));{const k=u.k==='heli'?2.5:u.k==='tank'||u.k==='jeep'?2:1;if(k!==1)g.scale.multiplyScalar(k);}return g;},(o,e)=>{if(o.userData.a==null)o.userData.a=u.a;let d=u.a-o.userData.a;d=Math.atan2(Math.sin(d),Math.cos(d));o.userData.a+=d*Math.min(1,dt*6);
    o.position.set(u.x,u.y,u.z);o.rotation.y=-o.userData.a;if(o.userData.rot)o.userData.rot.rotation.y=t*28;if(o.userData.rot2)o.userData.rot2.rotation.z=t*40;if(o.userData.tur&&u.ga!=null)o.userData.tur.rotation.y=-(u.ga-o.userData.a);
    if(!US[u.k].air&&u.k!=='inf'&&!u.tg){e.dust=(e.dust||0)-dt;if(e.dust<=0){e.dust=0.3;puff(u.x-Math.cos(u.a)*14,u.y+1.5,u.z-Math.sin(u.a)*14,'dust');}}});}
  for(const h of G_.harv){if(Math.abs(h.x-cx)+Math.abs(h.z-cz)>far*1.3)continue;sync('h'+h.id,()=>instantiate(proto('H'+h.s,()=>buildHarv(h.s))),o=>{o.position.set(h.x,hgt(h.x,h.z)+0.4,h.z);if(o.userData.a==null)o.userData.a=h.a;let d=h.a-o.userData.a;d=Math.atan2(Math.sin(d),Math.cos(d));o.userData.a+=d*Math.min(1,dt*5);o.rotation.y=-o.userData.a;});}
@@ -639,8 +639,8 @@ function stepTitan(dt){if(P.dead>0){P.dead-=dt;if(P.dead<=0)spawnTitan();return;
  P.x=Math.max(50,Math.min(IW-50,P.x));P.z=Math.max(50,Math.min(IH-50,P.z));
  /* automatic fire: the first enemy close to the centre of the sight */
  const o=new THREE.Vector3(P.x,Math.max(hgt(P.x,P.z),0)+26,P.z),d=new THREE.Vector3(Math.cos(P.yaw)*Math.cos(P.pitch),Math.sin(P.pitch),Math.sin(P.yaw)*Math.cos(P.pitch));const cone=TITAN.cone/P.zoom;LOCK=null;let best=cone;
- const test=(x,y,z,tg)=>{const vx=x-o.x,vy=y-o.y,vz=z-o.z,L=Math.hypot(vx,vy,vz);if(L>TITAN.range||L<20)return;const a=Math.acos(Math.max(-1,Math.min(1,(vx*d.x+vy*d.y+vz*d.z)/L)))-Math.atan(12/L);if(a<best){best=a;LOCK={tg,x,y,z};}};
- for(const u of G_.units){if(u.dead||u.s===0||US[u.k].air)continue;test(u.x,u.y+6,u.z,{k:'u',o:u});}
+ const test=(x,y,z,tg,sz=12)=>{const vx=x-o.x,vy=y-o.y,vz=z-o.z,L=Math.hypot(vx,vy,vz);if(L>TITAN.range||L<20)return;const a=Math.acos(Math.max(-1,Math.min(1,(vx*d.x+vy*d.y+vz*d.z)/L)))-Math.atan(sz/L);if(a<best){best=a;LOCK={tg,x,y,z};}};
+ for(const u of G_.units){if(u.dead||u.s===0||US[u.k].air)continue;test(u.x,u.y+(u.k==='heli'?6:10),u.z,{k:'u',o:u},u.k==='inf'?12:24);}
  for(const t of G_.towers){if(t.s===0)continue;test(t.x,hgt(t.x,t.z)+12,t.z,{k:'t',o:t});}
  for(const h of G_.harv){if(h.s===0)continue;test(h.x,hgt(h.x,h.z)+7,h.z,{k:'h',o:h});}
  if(G_.sides[1].lives>0){const [bx,bz]=BASES[1];test(bx,hgt(bx,bz)+20,bz,{k:'b'});}
@@ -964,7 +964,7 @@ function droneHud(t){if(CUR!=='drone')return;const g=document.getElementById('ti
  const m=document.getElementById('drTgt');if(m.dataset.t&&performance.now()<+m.dataset.t){const v=new THREE.Vector3(+m.dataset.x,0,+m.dataset.z).project(cam);if(v.z<1){m.style.display='block';m.style.left=((v.x+1)/2*innerWidth)+'px';m.style.top=((1-v.y)/2*innerHeight)+'px';}else m.style.display='none';}else m.style.display='none';}
 /* red brackets over every marked enemy that is on screen, in either view */
 function markHud(){const L_=document.getElementById('mkLayer').children,v=new THREE.Vector3();let n=0;const put=(x,y,z,big,cls)=>{if(n>=L_.length)return;v.set(x,y,z).project(cam);if(v.z>1||Math.abs(v.x)>1.05||Math.abs(v.y)>1.05)return;const el=L_[n++];el.style.display='block';el.className=(big?'t ':'')+(cls||'');el.style.left=((v.x+1)/2*innerWidth)+'px';el.style.top=((1-v.y)/2*innerHeight)+'px';};
- for(const u of G_.units)if(u.mk&&!u.dead)put(u.x,u.y+8,u.z,u.k==='tank'||u.k==='heli',(US[u.k].air?'air ':'')+(u.lk?'lk':LK.u===u&&LK.t>0.25?'lp':''));for(const t of G_.towers)if(t.mk&&!t.dead)put(t.x,22,t.z,true);for(const h of G_.harv)if(h.mk&&!h.dead)put(h.x,10,h.z,false);
+ for(const u of G_.units)if(u.mk&&!u.dead)put(u.x,u.y+(u.k==='heli'?8:14),u.z,u.k!=='inf',(US[u.k].air?'air ':'')+(u.lk?'lk':LK.u===u&&LK.t>0.25?'lp':''));for(const t of G_.towers)if(t.mk&&!t.dead)put(t.x,22,t.z,true);for(const h of G_.harv)if(h.mk&&!h.dead)put(h.x,10,h.z,false);
  for(let i=n;i<L_.length;i++)if(L_[i].style.display!=='none')L_[i].style.display='none';}
 {const p0=AUD.play.bind(AUD);AUD.play=function(kind,x,z,k){if(kind==='mark'){if(!this.ctx||!this.on)return;const C=this.ctx,now=C.currentTime;if(this.last.mark&&now-this.last.mark<0.25)return;this.last.mark=now;const o=C.createOscillator(),g=C.createGain();o.type='square';o.frequency.setValueAtTime(1400,now);o.frequency.setValueAtTime(1900,now+0.05);g.gain.setValueAtTime(0.05,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.12);o.connect(g).connect(this.out);o.start(now);o.stop(now+0.13);return;}return p0(kind,x,z,k);};}
 window.__isle.D=D;window.__isle.cam=cam;window.__isle.DL=DL;window.__isle.stepArt=stepArt;window.__isle.stepDrone=stepDrone;window.__isle.setVeh=setVeh;window.__isle.fireArt=fireArt;window.__isle.ART=ART;window.__isle.artTap=artTap;
@@ -1011,7 +1011,7 @@ function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0)spawnPlane();return;
  if(CUR==='plane')for(const u of G_.units){if(u.dead||u.s===0||!US[u.k].air||u.mk)continue;const dx=u.x-F.x,dz=u.z-F.z,d=Math.hypot(dx,dz);if(d<2000){let a=Math.atan2(dz,dx)-F.yaw;a=Math.atan2(Math.sin(a),Math.cos(a));if(Math.abs(a)<0.75)u.mk=1;}}
  LOCKF=null;if(CUR==='plane'&&!G_.over){const o=new THREE.Vector3(F.x,F.y,F.z),dv=new THREE.Vector3(Math.cos(F.yaw)*Math.cos(F.pitch),Math.sin(F.pitch),Math.sin(F.yaw)*Math.cos(F.pitch));let best=PLANE.cone/F.zoom;
   const test=(x,y,z,tg,sz=10)=>{const vx=x-o.x,vy=y-o.y,vz=z-o.z,Ln=Math.hypot(vx,vy,vz);if(Ln>PLANE.range||Ln<25)return;const a=Math.acos(Math.max(-1,Math.min(1,(vx*dv.x+vy*dv.y+vz*dv.z)/Ln)))-Math.atan(sz/Ln);if(a<best){best=a;LOCKF={tg,x,y,z};}};
-  for(const u of G_.units){if(u.dead||u.s===0)continue;test(u.x,u.y+5,u.z,{k:'u',o:u},u.k==='heli'?20:10);}
+  for(const u of G_.units){if(u.dead||u.s===0)continue;test(u.x,u.y+5,u.z,{k:'u',o:u},u.k==='heli'?25:u.k==='inf'?10:20);}
   for(const t of G_.towers){if(t.s===0)continue;test(t.x,14,t.z,{k:'t',o:t});}
   for(const h of G_.harv){if(h.s===0)continue;test(h.x,7,h.z,{k:'h',o:h});}
   for(const m of G_.mines){if(m.s===0||m.dead)continue;test(m.x,8,m.z,{k:'m',o:m},55);}
