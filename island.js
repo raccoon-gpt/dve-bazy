@@ -961,7 +961,7 @@ const LD=document.createElement('div');LD.id='isleLoad';LD.innerHTML='<div class
 #isleLoad .s{margin-top:10px;font-size:12px;font-weight:600;opacity:.6}`;document.head.appendChild(st);}
 const WU={on:false,t:0,ph:0,g:null,t0:0};
 function assetsReady(){const xs=Object.values(XM);const all=2+xs.length+xs.filter(m=>m.blue).length;let n=(MIL?1:0)+(THREE.GLTFLoader?1:0)+xs.filter(m=>m.sc).length+xs.filter(m=>m.blue&&m.bt).length;return [n,all];}
-function warmBegin(){WU.on=true;WU.t=0;WU.ph=0;WU.t0=performance.now();LD.style.display='flex';LD.querySelector('i').style.width='0%';running=true;}
+function warmBegin(){if(PAUSE.on)PAUSE.set(false);WU.on=true;WU.t=0;WU.ph=0;WU.t0=performance.now();LD.style.display='flex';LD.querySelector('i').style.width='0%';running=true;}
 function warmBuild(){/* one of every machine (both sides, wreck and ash variants), a blast, smoke, rings and debris in front of the camera */
  const g=new THREE.Group();let i=0;const put=o=>{o.position.set((i%4-1.5)*70,0,Math.floor(i/4)*60);g.add(o);i++;};
  for(const k of ['jeep','tank','heli','inf'])for(const s of [0,1]){const xm=xmOK(k,s);const o=instantiate(proto('U'+k+s+(MIL?'m':'')+(xm?'x':''),()=>xm?buildXM(k,s):buildUnit(k,s)));put(o);}
@@ -981,7 +981,7 @@ function warmEnd(){WU.on=false;WU.fx=0;if(WU.g){scene.remove(WU.g);WU.g=null;}fx
  newGame();for(const e of live.values())dyn.remove(e.o);live.clear();CUR='drone';setVeh('titan');
  T3.warm=0;T3.fpsN=0;T3.fpsT=0;T3.lowN=0;T3.hiN=0;LD.style.display='none';}
 let running=false,MIL_DIRTY=false,last=performance.now();
-function loop(now_){requestAnimationFrame(loop);const dt=Math.min(0.05,(now_-last)/1000);last=now_;if(!running)return;
+function loop(now_){requestAnimationFrame(loop);const dt=Math.min(0.05,(now_-last)/1000);last=now_;if(!running||PAUSE.on)return;
  if(T3.map){mapLoop();stepGame(dt);stepTitan(dt);stepDrone(dt);stepPlane(dt);stepArt(dt);stepShells(dt);return;}
  if(T3.applyQ){T3.applyQ=false;R.setPixelRatio(T3.q);size();}/* resolution changes happen before drawing, so the canvas is never shown cleared */
  if(CUR==='plane'){if(keys.has('KeyA'))F.ty-=1.4*dt;if(keys.has('KeyD'))F.ty+=1.4*dt;}else{if(keys.has('KeyA'))VEH().yaw-=1.6*dt;if(keys.has('KeyD'))VEH().yaw+=1.6*dt;}
@@ -1046,8 +1046,18 @@ const AUD={ctx:null,on:true,last:{},
   else if(kind==='shot'){f.type='bandpass';f.frequency.value=700;g.gain.setValueAtTime(0.35*g0,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.18);src.start(now,off,0.2);}}};
 try{AUD.on=localStorage.getItem('dvebazy-islesnd')!=='0';}catch(_){}
 {const ex0=explode;explode=function(x,y,z,k){ex0(x,y,z,k);if(!AUD.mute)AUD.play('boom',x,z,k);};const tr0=tracer;tracer=function(a,b,c){tr0(a,b,c);AUD.play(c===0xFF9050?'shot':'mg',a[0],a[2]);};const sh0=shoot;shoot=function(x,y,z,tg,sup){sh0(x,y,z,tg,sup);AUD.play('cannon');};}
-{const sb=document.createElement('div');sb.className='b snd';sb.style.cssText='right:max(14px,env(safe-area-inset-right));top:8px;width:44px;height:40px;font-size:18px';const upd=()=>sb.textContent=AUD.on?'🔊':'🔇';upd();H.appendChild(sb);
- tapBtn(sb,()=>{AUD.setOn(!AUD.on);upd();});}
+/* pause: the world freezes on the last frame, sound stops; the sound switch lives in the pause menu */
+const PAUSE={on:false};
+{const sb=document.createElement('div');sb.className='b pz';sb.style.cssText='right:max(14px,env(safe-area-inset-right));top:8px;width:44px;height:40px;font-size:16px;letter-spacing:-1px';sb.textContent='❚❚';H.appendChild(sb);
+ const pm=document.createElement('div');pm.id='isPause';pm.innerHTML='<div class="c"><div class="t">Пауза</div><button class="go">Продолжить</button><button class="snd"></button></div>';document.body.appendChild(pm);
+ const st=document.createElement('style');st.textContent=`#isPause{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:rgba(8,10,14,.62);backdrop-filter:blur(3px);font-family:'Rubik',system-ui,sans-serif}
+#isPause .c{display:flex;flex-direction:column;gap:12px;align-items:center}#isPause .t{color:#F2E8D6;font-size:30px;font-weight:900;letter-spacing:3px;text-transform:uppercase;margin-bottom:6px}
+#isPause button{min-width:210px;height:48px;border-radius:14px;border:2px solid #0C120B;font:900 17px 'Rubik',system-ui,sans-serif;cursor:pointer}
+#isPause .go{background:linear-gradient(#F2C232,#C99A1A);color:#1C2416}#isPause .snd{background:rgba(30,36,44,.9);color:#E8EEF4;border-color:rgba(255,255,255,.25);font-size:15px;height:42px}`;document.head.appendChild(st);
+ const su=()=>pm.querySelector('.snd').textContent='Звук: '+(AUD.on?'вкл':'выкл');
+ const set=v=>{PAUSE.on=v;pm.style.display=v?'flex':'none';su();try{if(AUD.ctx){if(v)AUD.ctx.suspend();else AUD.ctx.resume();}if(AUD.music&&AUD.on){if(v)AUD.music.pause();else AUD.music.play().catch(()=>{});}}catch(_){}};PAUSE.set=set;
+ tapBtn(sb,()=>set(true));pm.querySelector('.go').addEventListener('click',()=>set(false));pm.querySelector('.snd').addEventListener('click',()=>{AUD.setOn(!AUD.on);if(AUD.music)AUD.music.pause();su();});
+ document.addEventListener('visibilitychange',()=>{if(document.hidden&&running&&!G_?.over&&!WU.on)set(true);});}
 {const kb=document.createElement('div');kb.className='b skin';kb.style.cssText='right:calc(max(14px,env(safe-area-inset-right)) + 52px);top:8px;padding:0 12px;height:40px;font-size:13px';const upd=()=>kb.textContent='Скин '+(SKIN+1)+'/'+SKINS.length;upd();H.appendChild(kb);
  tapBtn(kb,()=>{setSkin(SKIN+1);upd();});setSkin(SKIN);}
 P.fov=90;
