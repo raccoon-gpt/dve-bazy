@@ -610,8 +610,12 @@ const live=new Map();let FR=0;
 /* Tripo models: red jeep and red tank, each with a blue repaint for our side; nose along +Z like the military pack */
 const XM={jeep:{f:'rjeep.glb',len:21,sides:[0,1],blue:'jeep_blue.jpg'},tank:{f:'rtank.glb',len:30,sides:[0,1],blue:'tank_blue.jpg'},
  heli:{f:'rheli.glb',len:46,sides:[0,1],blue:'heli_blue.jpg',hub:[0,0.372,0.105],rr:0.44,dy:-7}};
-if(THREE.GLTFLoader)for(const k in XM){const m=XM[k];new THREE.GLTFLoader().load(m.f,g=>{g.scene.traverse(o=>{if(o.isMesh){o.material.envMapIntensity=0.5;if(o.material.map)o.material.map.anisotropy=4;}});
-  if(m.blue)new THREE.TextureLoader().load(m.blue,t=>{t.flipY=false;t.encoding=THREE.sRGBEncoding;t.anisotropy=4;m.bt=t;});m.sc=g.scene;},undefined,e=>console.error(m.f,e));}
+/* each file carries its content hash (so a phone never keeps a stale copy), and a failed download is retried a few times */
+const XMV={"rjeep.glb": "8aedd0df", "rtank.glb": "7fe57172", "rheli.glb": "94a7bb34", "jeep_blue.jpg": "35b1e580", "tank_blue.jpg": "fdfbbf96", "heli_blue.jpg": "374acf1f"};
+function xmLoad(m,tries){new THREE.GLTFLoader().load(m.f+'?v='+(XMV[m.f]||'0')+(tries?'&r='+tries:''),g=>{g.scene.traverse(o=>{if(o.isMesh){o.material.envMapIntensity=0.5;if(o.material.map)o.material.map.anisotropy=4;}});m.sc=g.scene;},undefined,
+  e=>{console.error(m.f,e);if(tries<4)setTimeout(()=>xmLoad(m,tries+1),1500*(tries+1));});}
+function xmTex(m,tries){new THREE.TextureLoader().load(m.blue+'?v='+(XMV[m.blue]||'0')+(tries?'&r='+tries:''),t=>{t.flipY=false;t.encoding=THREE.sRGBEncoding;t.anisotropy=4;m.bt=t;},undefined,()=>{if(tries<4)setTimeout(()=>xmTex(m,tries+1),1500*(tries+1));});}
+if(THREE.GLTFLoader)for(const k in XM){const m=XM[k];xmLoad(m,0);if(m.blue)xmTex(m,0);}
 const xmOK=(k,s)=>{const m=XM[k];return !!(m&&m.sc&&m.sides.includes(s)&&(s===1||!m.blue||m.bt));};
 function buildXM(k,s){const m=XM[k],root=new THREE.Group();const c=m.sc.clone(true);if(s===0&&m.blue)c.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.material.map=m.bt;}});
  c.updateMatrixWorld(true);const bb=new THREE.Box3().setFromObject(c),sz=bb.getSize(new THREE.Vector3()),sc=m.len/Math.max(sz.x,sz.z);
