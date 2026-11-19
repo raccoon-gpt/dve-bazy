@@ -1318,27 +1318,23 @@ const PCK=document.createElement('img');PCK.src='pl_cockpit.webp';PCK.alt='';PCK
    The canopy bulges forward, so lines bow outwards and thin out towards its edges */
 const CRK={peak:0,a:0,calm:0,hp:null,lvl:-1,imp:null,cv:null};
 {const cv=document.createElement('canvas');cv.id='plCrack';cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none;display:none;opacity:0';PCK.parentNode.insertBefore(cv,PCK);CRK.cv=cv;}
-function crackGen(){const imp=[];for(let i=0;i<9;i++){const x=0.18+rn()*0.64,y=0.2+rn()*0.48,rays=[];const n=7+Math.floor(rn()*5);
-  for(let k=0;k<n;k++){let a=k/n*6.283+(rn()-0.5)*0.5,L=0.07+rn()*0.16,pts=[[0,0]],px=0,py=0;const seg=6+Math.floor(rn()*4);
-   for(let j=1;j<=seg;j++){a+=(rn()-0.5)*0.45;px+=Math.cos(a)*L/seg;py+=Math.sin(a)*L/seg*1.15;pts.push([px,py]);}
-   const br=rn()<0.55?{at:2+Math.floor(rn()*(seg-2)),a:a+(rn()<0.5?1:-1)*(0.5+rn()*0.6),L:L*(0.25+rn()*0.3)}:null;rays.push({pts,br});}
-  const rings=[];for(let r=0;r<2;r++)rings.push({r:0.018+r*0.03+rn()*0.012,jit:Array.from({length:n},()=>0.75+rn()*0.5)});
-  imp.push({x,y,rays,rings,n});}return imp;}
-function crackDraw(level){const cv=CRK.cv,W=Math.round(innerWidth*Math.min(1.5,devicePixelRatio||1)),H=Math.round(innerHeight*Math.min(1.5,devicePixelRatio||1));if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}
- const c=cv.getContext('2d');c.clearRect(0,0,W,H);if(!CRK.imp)CRK.imp=crackGen();const S=Math.min(W,H)*1.1;
- /* bulging glass: barrel bend around the canopy centre, foreshortening towards its rim */
- const P_=(x,y)=>{const u=(x-0.5)/0.46,v=(y-0.44)/0.36,r2=u*u+v*v,k=1-0.16*r2;return [W*(0.5+u*0.46*k),H*(0.44+v*0.36*k),Math.max(0.25,1-0.55*r2)];};
- c.lineCap='round';c.lineJoin='round';
- CRK.imp.forEach((m,i)=>{const g=Math.max(0,Math.min(1,(level-i*0.1)/0.3));if(g<=0)return;const [cx0,cy0,f0]=P_(m.x,m.y);
-  const fr=c.createRadialGradient(cx0,cy0,0,cx0,cy0,S*0.05*f0*(0.4+g));fr.addColorStop(0,`rgba(235,245,255,${0.5*f0})`);fr.addColorStop(1,'rgba(235,245,255,0)');c.fillStyle=fr;c.beginPath();c.arc(cx0,cy0,S*0.05*f0*(0.4+g),0,7);c.fill();
-  const path=(pts,ox,oy,frac)=>{const n=Math.max(1,Math.round((pts.length-1)*frac));c.beginPath();for(let j=0;j<=n;j++){const [X,Y]=P_(m.x+(ox+pts[j][0])*S/W,m.y+(oy+pts[j][1])*S/H);j?c.lineTo(X,Y):c.moveTo(X,Y);}c.stroke();};
-  for(const pass of [0,1]){c.strokeStyle=pass?`rgba(240,248,255,${0.85*f0})`:`rgba(10,14,20,${0.35*f0})`;c.lineWidth=(pass?1.3:2.4)*f0*(W/1400+0.6);
-   for(const ry of m.rays){path(ry.pts,pass?0:0.0015,pass?0:0.0015,g);if(ry.br&&g>0.6){const b=ry.pts[ry.br.at];const pts=[[b[0],b[1]],[b[0]+Math.cos(ry.br.a)*ry.br.L*0.5,b[1]+Math.sin(ry.br.a)*ry.br.L*0.5],[b[0]+Math.cos(ry.br.a+0.2)*ry.br.L,b[1]+Math.sin(ry.br.a+0.2)*ry.br.L]];path(pts,0,0,(g-0.6)/0.4);}}
-   if(g>0.45)for(const rg of m.rings){const n=m.n;c.beginPath();for(let k=0;k<=n;k++){const kk=k%n,a=kk/n*6.283,rr=rg.r*rg.jit[kk]*Math.min(1,(g-0.45)/0.4);const [X,Y]=P_(m.x+Math.cos(a)*rr*S/W,m.y+Math.sin(a)*rr*1.15*S/H);k?c.lineTo(X,Y):c.moveTo(X,Y);}c.stroke();}}});}
+/* the photo of cracked glass (already bowed for the bulging canopy) is revealed from impact points: a soft disc around each grows with the fire taken */
+const CRIMG=new Image();CRIMG.src='pl_crack.webp';
+const CRPTS=[[0.491,0.628],[0.446,0.352],[0.712,0.354],[0.302,0.396],[0.338,0.721],[0.854,0.779],[0.451,0.14],[0.689,0.14],[0.122,0.365]];
+let CRM=null;
+function crackDraw(level){if(!CRIMG.complete||!CRIMG.naturalWidth){CRK.lvl=-1;return;}const cv=CRK.cv,W=Math.round(innerWidth*Math.min(1.5,devicePixelRatio||1)),H=Math.round(innerHeight*Math.min(1.5,devicePixelRatio||1));if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}
+ const c=cv.getContext('2d');c.globalCompositeOperation='source-over';c.clearRect(0,0,W,H);
+ CRPTS.forEach(([x,y],i)=>{const g=Math.max(0,Math.min(1,(level-i*0.085)/0.32));if(g<=0)return;const R=Math.max(W,H)*(0.05+0.33*g*g*(3-2*g)),X=x*W,Y=y*H;
+  const gr=c.createRadialGradient(X,Y,0,X,Y,R);gr.addColorStop(0,'rgba(0,0,0,1)');gr.addColorStop(0.62,'rgba(0,0,0,0.9)');gr.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=gr;c.fillRect(X-R,Y-R,2*R,2*R);
+  /* a frosted star where the round struck */
+  const fr=c.createRadialGradient(X,Y,0,X,Y,R*0.18);fr.addColorStop(0,'rgba(0,0,0,1)');fr.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=fr;c.fillRect(X-R,Y-R,2*R,2*R);});
+ c.globalCompositeOperation='source-in';c.drawImage(CRIMG,0,0,W,H);
+ c.globalCompositeOperation='source-over';
+ CRPTS.forEach(([x,y],i)=>{const g=Math.max(0,Math.min(1,(level-i*0.085)/0.32));if(g<=0)return;const X=x*W,Y=y*H,r=Math.max(W,H)*0.022*(0.6+g*0.6);const fr=c.createRadialGradient(X,Y,0,X,Y,r);fr.addColorStop(0,'rgba(240,248,255,0.55)');fr.addColorStop(1,'rgba(240,248,255,0)');c.fillStyle=fr;c.beginPath();c.arc(X,Y,r,0,7);c.fill();});}
 function crackStep(dt){if(CRK.hp==null)CRK.hp=F.hp;const lost=CRK.hp-F.hp;CRK.hp=F.hp;
- if(F.dead>0||lost<0){CRK.peak=0;CRK.a=0;CRK.imp=null;}
+ if(F.dead>0||lost<0){CRK.peak=0;CRK.a=0;}
  else if(lost>0){CRK.peak=Math.min(1,CRK.peak+lost/650);CRK.a=1;CRK.calm=0;}
- else{CRK.calm+=dt;if(CRK.calm>1.2)CRK.a=Math.max(0,CRK.a-dt*0.4);if(CRK.a<=0&&CRK.peak>0){CRK.peak=0;CRK.imp=null;}}
+ else{CRK.calm+=dt;if(CRK.calm>1.2)CRK.a=Math.max(0,CRK.a-dt*0.4);if(CRK.a<=0&&CRK.peak>0){CRK.peak=0;}}
  const show=CUR==='plane'&&CRK.a>0&&PCK.style.display!=='none';CRK.cv.style.display=show?'block':'none';if(!show)return;
  const lv=Math.round(CRK.peak*60);if(lv!==CRK.lvl){CRK.lvl=lv;crackDraw(CRK.peak);}CRK.cv.style.opacity=CRK.a.toFixed(3);}
 let CRKT=0;addEventListener('resize',()=>CRK.lvl=-1);
