@@ -1331,11 +1331,21 @@ function crackDraw(level){if(!CRIMG.complete||!CRIMG.naturalWidth){CRK.lvl=-1;re
  c.globalCompositeOperation='source-in';c.drawImage(CRIMG,0,0,W,H);
  c.globalCompositeOperation='source-over';
  CRPTS.forEach(([x,y],i)=>{const g=Math.max(0,Math.min(1,(level-i*0.085)/0.32));if(g<=0)return;const X=x*W,Y=y*H,r=Math.max(W,H)*0.022*(0.6+g*0.6);const fr=c.createRadialGradient(X,Y,0,X,Y,r);fr.addColorStop(0,'rgba(240,248,255,0.55)');fr.addColorStop(1,'rgba(240,248,255,0)');c.fillStyle=fr;c.beginPath();c.arc(X,Y,r,0,7);c.fill();});}
-function crackStep(dt){if(CRK.hp==null)CRK.hp=F.hp;const lost=CRK.hp-F.hp;CRK.hp=F.hp;
+/* glass cracking sound lasts as long as the hits keep coming: one hit gives a short crackle that fades out,
+   steady fire keeps it going and starts it again when the recording runs out */
+const GLS={src:null,g:null,hitT:0,fade:false,kill:0};
+function glassOn(){GLS.hitT=performance.now();const C=AUD.ctx,b=AUD.buf.glass;if(!C||!AUD.on||!b)return;
+ if(GLS.src){if(GLS.fade){GLS.fade=false;clearTimeout(GLS.kill);GLS.g.gain.cancelScheduledValues(C.currentTime);GLS.g.gain.setTargetAtTime(2.2,C.currentTime,0.04);}return;}
+ const s=C.createBufferSource();s.buffer=b;const g=C.createGain();g.gain.value=2.2;s.connect(g).connect(AUD.out);s.start();GLS.src=s;GLS.g=g;GLS.fade=false;
+ s.onended=()=>{if(GLS.src!==s)return;GLS.src=null;const again=!GLS.fade&&performance.now()-GLS.hitT<600&&CUR==='plane'&&F.dead<=0;GLS.fade=false;if(again)glassOn();};}
+/* no hits for a moment: fade out; a hit during the fade brings the same crackle back instead of restarting it */
+function glassTick(){if(!GLS.src||!AUD.ctx||GLS.fade)return;const quiet=performance.now()-GLS.hitT;
+ if(quiet>550||CUR!=='plane'||F.dead>0||PAUSE.on){const C=AUD.ctx,s=GLS.src;GLS.fade=true;GLS.g.gain.cancelScheduledValues(C.currentTime);GLS.g.gain.setTargetAtTime(0,C.currentTime,0.09);
+  GLS.kill=setTimeout(()=>{if(GLS.src===s&&GLS.fade){GLS.src=null;GLS.fade=false;try{s.stop();}catch(_){}}},900);}}
+function crackStep(dt){glassTick();if(CRK.hp==null)CRK.hp=F.hp;const lost=CRK.hp-F.hp;CRK.hp=F.hp;
  if(F.dead>0||lost<0){CRK.peak=0;CRK.a=0;}
  else if(lost>0){const was=CRK.peak,wasA=CRK.a;CRK.peak=Math.min(1,CRK.peak+lost/650);CRK.a=1;CRK.calm=0;
-  /* glass cracking: at the first hit on clean (or faded) glass, and whenever a new impact point opens up */
-  const st=v=>Math.floor((v+0.085)/0.085);if(CUR==='plane'&&(wasA<0.3||st(CRK.peak)>st(was))){const now=performance.now();if(now-(CRK.snd||0)>900){CRK.snd=now;AUD.sample('glass',null,null,2.2);}}}
+  if(CUR==='plane')glassOn();}
  else{CRK.calm+=dt;if(CRK.calm>1.2)CRK.a=Math.max(0,CRK.a-dt*0.4);if(CRK.a<=0&&CRK.peak>0){CRK.peak=0;}}
  const show=CUR==='plane'&&CRK.a>0&&PCK.style.display!=='none';CRK.cv.style.display=show?'block':'none';if(!show)return;
  const lv=Math.round(CRK.peak*60);if(lv!==CRK.lvl){CRK.lvl=lv;crackDraw(CRK.peak);}CRK.cv.style.opacity=CRK.a.toFixed(3);}
