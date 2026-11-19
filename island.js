@@ -1007,7 +1007,7 @@ const ART={cd:0,sh:[],CD:5,R:60,DMG:700,id:0};
 const VEH=()=>CUR==='drone'?D:CUR==='plane'?F:P;
 function spawnDrone(){D.fall=null;const [bx,bz]=BASES[0];D.x=bx+120;D.z=bz;D.yaw=0;D.pitch=-0.95;D.hp=D.max;D.dead=0;D.move=false;D.zoom=1;}
 function droneLook(){const k=1/Math.tan(-D.pitch),h=D.alt;return[D.x+Math.cos(D.yaw)*h*k,D.z+Math.sin(D.yaw)*h*k];}
-function stepDrone(dt){if(D.fall){stepFall(dt);return;}if(D.dead>0){D.dead-=dt;if(D.dead<=0)spawnDrone();return;}
+function stepDrone(dt){if(D.fall){stepFall(dt);return;}if(D.dead>0){D.dead-=dt;if(D.dead<=0){spawnDrone();DST.in=1.1;}return;}
  D.hurt=Math.max(0,D.hurt-dt);
  /* real velocity of enemy units (smoothed), for leading the artillery */
  if(dt>0)for(const u of G_.units){if(u.s!==1||u.dead)continue;if(u.px!=null){const k=Math.min(1,dt*4);u.vx=(u.vx||0)+(((u.x-u.px)/dt)-(u.vx||0))*k;u.vz=(u.vz||0)+(((u.z-u.pz)/dt)-(u.vz||0))*k;}u.px=u.x;u.pz=u.z;}
@@ -1032,12 +1032,17 @@ function droneCam(dt){const [lx,lz]=[DL.x,DL.z];if(D.dead>0){const [bx,bz]=BASES
  else{cam.position.set(D.x,D.y,D.z);cam.lookAt(D.x+Math.cos(D.yaw)*Math.cos(D.pitch)*100,D.y+Math.sin(D.pitch)*100,D.z+Math.sin(D.yaw)*Math.cos(D.pitch)*100);if(D.fall)cam.rotateZ(D.fall.roll);}
  const fov=56/D.zoom;if(Math.abs(cam.fov-fov)>0.01){cam.fov=fov;cam.updateProjectionMatrix();}}
 /* ---------- lost signal: video static over the drone camera while it falls, a burst at the crash ---------- */
-const DST={t:0,cv:null,c:null,img:null,btn:null};
+const DST={t:0,in:0,cv:null,c:null,img:null,btn:null,bk:null};
 {const cv=document.createElement('canvas');cv.width=192;cv.height=108;cv.id='drStatic';cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none;image-rendering:pixelated;display:none;z-index:3';H.appendChild(cv);DST.cv=cv;DST.c=cv.getContext('2d');DST.img=DST.c.createImageData(192,108);
+ const bk=document.createElement('div');bk.style.cssText='position:absolute;inset:0;background:#000;pointer-events:none;opacity:0;display:none;z-index:4';H.appendChild(bk);DST.bk=bk;
  const b=document.createElement('div');b.className='b';b.style.cssText='right:max(14px,env(safe-area-inset-right));top:56px;padding:0 12px;height:40px;font-size:13px;display:none;background:rgba(150,40,30,.85)';b.textContent='Сбить дрон';H.appendChild(b);DST.btn=b;
  tapBtn(b,()=>{if(!D.fall&&D.dead<=0)D.hp=0;});}
-function drawStatic(dt){DST.btn.style.display=CUR==='drone'&&!G_.over?'block':'none';DST.t=Math.max(0,DST.t-dt);
- let a=0;if(CUR==='drone'){if(D.fall){const k=Math.min(1,D.fall.t/DFALL);a=0.12+0.55*k*k+(rn()<0.15?0.3:0);}else if(DST.t>0)a=0.5+DST.t*0.55;else if(D.dead>0)a=0.18;}
+function drawStatic(dt){DST.btn.style.display=CUR==='drone'&&!G_.over?'block':'none';DST.t=Math.max(0,DST.t-dt);DST.in=Math.max(0,DST.in-dt);
+ /* crash: full static that fades to black; black while waiting; the new drone fades in from black with a light ripple */
+ let a=0,blk=0;if(CUR==='drone'){if(D.fall){const k=Math.min(1,D.fall.t/DFALL);a=0.12+0.55*k*k+(rn()<0.15?0.3:0);}
+  else if(D.dead>0){a=DST.t>0?1:0;blk=DST.t>0?Math.min(1,(1-DST.t/0.9)*1.15):1;}
+  else if(DST.in>0){const k=DST.in/1.1;blk=k*k;a=0.1+0.3*k;}}
+ if(blk>0){DST.bk.style.display='block';DST.bk.style.opacity=blk.toFixed(3);}else if(DST.bk.style.display!=='none')DST.bk.style.display='none';
  if(a<=0){if(DST.cv.style.display!=='none')DST.cv.style.display='none';return;}DST.cv.style.display='block';DST.cv.style.opacity=Math.min(1,a).toFixed(2);
  const d=DST.img.data;let band=-1,bh=0;if(rn()<0.5){band=Math.floor(rn()*108);bh=2+Math.floor(rn()*10);}
  for(let y=0;y<108;y++){const tear=y>=band&&y<band+bh;for(let x=0;x<192;x++){const i=(y*192+x)*4,v=tear?(rn()<0.5?235:20):Math.floor(rn()*255);d[i]=d[i+1]=d[i+2]=v;d[i+3]=255;}}
