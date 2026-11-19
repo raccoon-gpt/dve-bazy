@@ -1022,7 +1022,7 @@ const AUD={ctx:null,on:true,last:{},
   this.eng=C.createGain();this.eng.gain.value=0;src.connect(lp).connect(this.eng);o.connect(og).connect(this.eng);this.eng.connect(this.out);src.start();o.start();this.engO=o;
   this.loadS();
   this.music=new Audio('desert.mp3');this.music.loop=true;this.music.volume=0.32;if(this.on)this.music.play().catch(()=>{});}catch(e){console.error(e);}},
- SF:{boom1:'isle_boom1.mp3',boomM:'isle_boom_mass.mp3',dfall:'isle_drone_fall.mp3',whoosh:'isle_art_whoosh.mp3'},buf:{},
+ SF:{boom1:'isle_boom1.mp3',boomM:'isle_boom_mass.mp3',dfall:'isle_drone_fall.mp3',whoosh:'isle_art_whoosh.mp3',glass:'isle_glass.mp3'},buf:{},
  loadS(){for(const [k,f] of Object.entries(this.SF))fetch(f).then(r=>r.arrayBuffer()).then(a=>new Promise((ok,no)=>this.ctx.decodeAudioData(a,ok,no))).then(b=>{this.buf[k]=b;}).catch(e=>console.error(f,e));},
  /* a recorded sound: distance-scaled unless x is null; `delay` seconds from now, starting `off` seconds into the file */
  sample(k,x,z,vol,delay,off){if(!this.ctx||!this.on||!this.buf[k])return false;const g0=x==null?1:this.gainAt(x,z);if(g0<0.01)return true;const C=this.ctx,now=C.currentTime;
@@ -1333,7 +1333,9 @@ function crackDraw(level){if(!CRIMG.complete||!CRIMG.naturalWidth){CRK.lvl=-1;re
  CRPTS.forEach(([x,y],i)=>{const g=Math.max(0,Math.min(1,(level-i*0.085)/0.32));if(g<=0)return;const X=x*W,Y=y*H,r=Math.max(W,H)*0.022*(0.6+g*0.6);const fr=c.createRadialGradient(X,Y,0,X,Y,r);fr.addColorStop(0,'rgba(240,248,255,0.55)');fr.addColorStop(1,'rgba(240,248,255,0)');c.fillStyle=fr;c.beginPath();c.arc(X,Y,r,0,7);c.fill();});}
 function crackStep(dt){if(CRK.hp==null)CRK.hp=F.hp;const lost=CRK.hp-F.hp;CRK.hp=F.hp;
  if(F.dead>0||lost<0){CRK.peak=0;CRK.a=0;}
- else if(lost>0){CRK.peak=Math.min(1,CRK.peak+lost/650);CRK.a=1;CRK.calm=0;}
+ else if(lost>0){const was=CRK.peak,wasA=CRK.a;CRK.peak=Math.min(1,CRK.peak+lost/650);CRK.a=1;CRK.calm=0;
+  /* glass cracking: at the first hit on clean (or faded) glass, and whenever a new impact point opens up */
+  const st=v=>Math.floor((v+0.085)/0.085);if(CUR==='plane'&&(wasA<0.3||st(CRK.peak)>st(was))){const now=performance.now();if(now-(CRK.snd||0)>900){CRK.snd=now;AUD.sample('glass',null,null,2.2);}}}
  else{CRK.calm+=dt;if(CRK.calm>1.2)CRK.a=Math.max(0,CRK.a-dt*0.4);if(CRK.a<=0&&CRK.peak>0){CRK.peak=0;}}
  const show=CUR==='plane'&&CRK.a>0&&PCK.style.display!=='none';CRK.cv.style.display=show?'block':'none';if(!show)return;
  const lv=Math.round(CRK.peak*60);if(lv!==CRK.lvl){CRK.lvl=lv;crackDraw(CRK.peak);}CRK.cv.style.opacity=CRK.a.toFixed(3);}
