@@ -598,7 +598,7 @@ function pickTarget(s,x,z,rng,hitAir,hitGround,mines){let best=null,bd=rng;
  if(!best&&mines)for(const m of G_.mines){if(m.dead||m.s===s)continue;const d=Math.hypot(m.x-x,m.z-z)-60;if(d<bd){bd=d;best={k:'m',o:m};}}
  return best;}
 const tpos=tg=>tg.k==='et'?[ET.x,26,ET.z]:tg.k==='ed'?[ED.x,ED.y,ED.z]:tg.k==='ef'?[EF.x,EF.y,EF.z]:tg.k==='f'?[F.x,F.y,F.z]:tg.k==='d'?[D.x,D.y,D.z]:tg.k==='p'?[P.x,hgt(P.x,P.z)+14,P.z]:tg.k==='u'?[tg.o.x,tg.o.y+6,tg.o.z]:tg.k==='t'?[tg.o.x,hgt(tg.o.x,tg.o.z)+14,tg.o.z]:tg.k==='m'?[tg.o.x+(rn()-0.5)*60,10,tg.o.z+(rn()-0.5)*50]:[tg.o.x,hgt(tg.o.x,tg.o.z)+7,tg.o.z];
-function applyHit(tg,d,by){if(tg.k==='u')dmgUnit(tg.o,d,by);else if(tg.k==='t')dmgTower(tg.o,d,by);else if(tg.k==='h')dmgHarv(tg.o,d,by);else if(tg.k==='m'){if(!(TESTW.on&&by===1))dmgMine(tg.o,d);}else if(tg.k==='p'){P.hp-=d;P.hurt=0.25;}else if(tg.k==='d'){D.hp-=d;D.hurt=0.25;}else if(tg.k==='f'){F.hp-=d;F.hurt=0.25;}else if(tg.k==='et')ET.hp-=d;else if(tg.k==='ed')ED.hp-=d;else if(tg.k==='ef')EF.hp-=d;}
+function applyHit(tg,d,by){if(tg.k==='u')dmgUnit(tg.o,d,by);else if(tg.k==='t')dmgTower(tg.o,d,by);else if(tg.k==='h')dmgHarv(tg.o,d,by);else if(tg.k==='m')dmgMine(tg.o,d);else if(tg.k==='p'){P.hp-=d;P.hurt=0.25;}else if(tg.k==='d'){D.hp-=d;D.hurt=0.25;}else if(tg.k==='f'){F.hp-=d;F.hurt=0.25;}else if(tg.k==='et')ET.hp-=d;else if(tg.k==='ed')ED.hp-=d;else if(tg.k==='ef')EF.hp-=d;}
 function splash(s,x,z,r,d,by){for(const u of G_.units){if(u.dead||u.s===s||US[u.k].air)continue;const k=Math.hypot(u.x-x,u.z-z);if(k<r)dmgUnit(u,d*(k<r*0.5?1:0.6),by);}
  for(const h of G_.harv){if(!h.dead&&h.s!==s&&Math.hypot(h.x-x,h.z-z)<r)dmgHarv(h,d,by);}}
 
@@ -612,7 +612,7 @@ function stepGame(dt){if(G_.over)return;G_.t+=dt;
   if(u.scan<=0){u.scan=0.3;/* stay on the current target while it is alive and in range, so units don't flick between two */
    const o=u.tg,keep=o&&o.k==='u'&&!o.o.dead&&Math.hypot(o.o.x-u.x,o.o.z-u.z)<st.rng+20;if(!keep)u.tg=pickTarget(u.s,u.x,u.z,st.rng,st.hitAir,true,true);}
   const [ex,ez]=BASES[1-u.s];
-  if(G_.sides[1-u.s].lives>0&&Math.hypot(u.x-ex,u.z-ez)<150){u.dead=true;u.breach=true;if(!(TESTW.on&&u.s===1))hitBase(1-u.s,st.lives);continue;}
+  if(G_.sides[1-u.s].lives>0&&Math.hypot(u.x-ex,u.z-ez)<150){u.dead=true;u.breach=true;hitBase(1-u.s,st.lives);continue;}
   if(u.goal&&(u.goal.k==='m'?u.goal.m.dead:G_.sides[1-u.s].lives<=0)&&G_.mines.some(m=>m.s!==u.s&&!m.dead)){u.rp=(u.rp==null?rn()*0.8:u.rp)-dt;if(u.rp<=0){u.rp=null;repath(u);}}
   let tg=u.tg;if(tg&&((tg.o&&tg.o.dead)||(tg.k==='p'&&P.dead>0)||(tg.k==='et'&&ET.dead>0)||(tg.k==='ed'&&ED.dead>0)||(tg.k==='ef'&&EF.dead>0)))tg=u.tg=null;
   if(tg){const [tx,ty,tz]=tpos(tg);{const ax=tg.o&&tg.o.x!=null?tg.o.x:tx,az=tg.o&&tg.o.z!=null?tg.o.z:tz;if(Math.hypot(ax-u.x,az-u.z)>25)u.ga=Math.atan2(az-u.z,ax-u.x);}if(u.cd<=0){u.cd=st.cd;if(st.splash){splash(u.s,tx,tz,st.splash,st.dmg,u.s);if(tg.k!=='u'&&tg.k!=='h')applyHit(tg,st.dmg,u.s);explode(tx,ty-4,tz,0.45);}else applyHit(tg,st.dmg*(tg.k==='p'?0.4:1),u.s);
@@ -782,7 +782,7 @@ const cock=new THREE.Group();cockRoot.add(cock);const barrel=new THREE.Group();c
 function spawnTitan(){const [bx,bz]=BASES[0];P.x=bx+240;P.z=bz+10;P.yaw=0;P.pitch=-0.05;P.hp=P.max;P.move=false;P.dead=0;P.cd=0;}
 function titanBlocked(x,z){if(x<70||z<70||x>IW-70||z>IH-70||blockedAt(x,z,16))return true;for(const t of G_.towers)if(Math.hypot(t.x-x,t.z-z)<30)return true;for(const [bx,bz] of BASES)if(Math.hypot(bx-x,bz-z)<110)return true;for(const m of G_.mines)if(Math.hypot(m.x-x,m.z-z)<80)return true;return false;}
 let LOCK=null;
-function stepTitan(dt){if(P.dead>0){P.dead-=dt;if(P.dead<=0)spawnTitan();return;}
+function stepTitan(dt){if(P.dead>0){P.dead-=dt;if(P.dead<=0){if(RSP.P>0){RSP.P--;spawnTitan();}else P.dead=1e9;}return;}
  P.cd=Math.max(0,P.cd-dt);P.scd=Math.max(0,P.scd-dt);P.rec=Math.max(0,P.rec-dt*4);P.shake=Math.max(0,P.shake-dt*2);P.hurt=Math.max(0,(P.hurt||0)-dt);
  if(P.move){const sl=slope(P.x,P.z),v=TITAN.sp*(1-Math.min(0.5,sl*0.6))*dt,nx=P.x+Math.cos(P.yaw)*v,nz=P.z+Math.sin(P.yaw)*v;if(!titanBlocked(nx,nz)){P.x=nx;P.z=nz;}else if(!titanBlocked(nx,P.z))P.x=nx;else if(!titanBlocked(P.x,nz))P.z=nz;P.bob+=dt*7;}
  P.x=Math.max(50,Math.min(IW-50,P.x));P.z=Math.max(50,Math.min(IH-50,P.z));
@@ -819,7 +819,7 @@ function rayHit(ox,oy,oz,dx,dy,dz,maxL,side){let L=maxL,gnd=false;for(let d=10;d
  let bu=null;for(const u of G_.units){if(u.dead||u.s===side)continue;const r=HITR[u.k]||30,cy=u.y+(US[u.k].air?0:14),vx=u.x-ox,vy=cy-oy,vz=u.z-oz,t=vx*dx+vy*dy+vz*dz;if(t<10||t>L+r)continue;
   const px=vx-dx*t,py=vy-dy*t,pz=vz-dz*t;if(px*px+py*py+pz*pz<r*r){const tt=Math.max(10,t-r*0.4);if(tt<L){L=tt;bu=u;gnd=true;}}}
  return {x:ox+dx*L,y:oy+dy*L,z:oz+dz*L,u:bu,hit:gnd};}
-function superShot(){if(P.dead>0||P.scd>0)return;P.scd=TITAN.superCd;cam.updateMatrixWorld();const o=new THREE.Vector3(),d=new THREE.Vector3();cam.getWorldPosition(o);cam.getWorldDirection(d);
+function superShot(){if(P.dead>0||P.scd>0)return;P.scd=5;cam.updateMatrixWorld();const o=new THREE.Vector3(),d=new THREE.Vector3();cam.getWorldPosition(o);cam.getWorldDirection(d);
  const rh=rayHit(o.x,o.y,o.z,d.x,d.y,d.z,1200,0);const hit=rh.hit?rh:rayHit(o.x,o.y,o.z,d.x,d.y,d.z,700,0);
  for(let i=0;i<TITAN.superN;i++){const a=i/TITAN.superN*6.28,r=i?40+rn()*30:0,x=hit.x+Math.cos(a)*r,z=hit.z+Math.sin(a)*r,y=i?Math.max(hgt(x,z),rh.u?hit.y-20:0):hit.y;setTimeout(()=>shoot(x,y,z,i===0&&rh.u?{k:'u',o:rh.u}:null,true),i*90);}
  puff(muzzle().x,muzzle().y,muzzle().z,'muzzle');P.rec=1;HUD.kick();HUD.msg('Залп!');}
@@ -895,7 +895,7 @@ const HUD={msgT:0,k:0,msg(s){},kick(){this.k=0.12;},
   q('.go').textContent=VEH().move?'Стоп':'Старт';q('.go').classList.toggle('on',VEH().move);
   for(const el of q('.units').children){const k=el.dataset.k,c=k==='harv'?HARV.cost:US[k].cost;el.lastChild.textContent=c;el.classList.toggle('dis',S.ore<c);}
   {let a0=0,a1=0;for(const u of G_.units)if(!u.dead){if(u.s)a1++;else a0++;}
-  q('.fps').innerHTML=Math.round(T3.fps)+' к/с · ×'+T3.q.toFixed(2)+'<br>Враги: '+a1+' на карте · '+G_.kills[1]+' уничтожено'+(a0||G_.kills[0]?'<br>Наши: '+a0+' на карте · '+G_.kills[0]+' уничтожено':'');}
+  q('.fps').innerHTML=Math.round(T3.fps)+' к/с · ×'+T3.q.toFixed(2)+'<br>Бот: титан '+(ET.dead>1e8?'✕':RSP.ET)+' · дрон '+(ED.dead>1e8?'✕':RSP.ED)+' · самолёт '+(EF.dead>1e8?'✕':RSP.EF)+'<br>Враги: '+a1+' на карте · '+G_.kills[1]+' уничтожено'+(a0||G_.kills[0]?'<br>Наши: '+a0+' на карте · '+G_.kills[0]+' уничтожено':'');}
   if(this.msgT>0){this.msgT-=dt;if(this.msgT<=0)q('.msg').style.display='none';}this.k=Math.max(0,this.k-dt);}};
 const tapBtn=(el,fn)=>el.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();fn(e);});
 tapBtn(q('.go'),()=>{const v=VEH();v.move=!v.move;});tapBtn(q('.sup'),()=>CUR==='plane'?planeRockets():superShot());
@@ -1064,7 +1064,7 @@ const ART={cd:0,sh:[],CD:5,R:60,DMG:700,id:0};
 const VEH=()=>CUR==='drone'?D:CUR==='plane'?F:P;
 function spawnDrone(){D.fall=null;const [bx,bz]=BASES[0];D.x=bx+120;D.z=bz;D.yaw=0;D.pitch=-0.95;D.hp=D.max;D.dead=0;D.move=false;D.zoom=1;}
 function droneLook(){const k=1/Math.tan(-D.pitch),h=D.alt;return[D.x+Math.cos(D.yaw)*h*k,D.z+Math.sin(D.yaw)*h*k];}
-function stepDrone(dt){if(D.fall){stepFall(dt);return;}if(D.dead>0){D.dead-=dt;if(D.dead<=0){spawnDrone();DST.in=1.1;}return;}
+function stepDrone(dt){if(D.fall){stepFall(dt);return;}if(D.dead>0){D.dead-=dt;if(D.dead<=0){if(RSP.D>0){RSP.D--;spawnDrone();DST.in=1.1;}else D.dead=1e9;}return;}
  D.hurt=Math.max(0,D.hurt-dt);
  /* real velocity of enemy units (smoothed), for leading the artillery */
  if(dt>0)for(const u of G_.units){if(u.s!==1||u.dead)continue;if(u.px!=null){const k=Math.min(1,dt*4);u.vx=(u.vx||0)+(((u.x-u.px)/dt)-(u.vx||0))*k;u.vz=(u.vz||0)+(((u.z-u.pz)/dt)-(u.vz||0))*k;}u.px=u.x;u.pz=u.z;}
@@ -1094,7 +1094,11 @@ const DST={t:0,in:0,cv:null,c:null,img:null,btn:null,bk:null};
  const bk=document.createElement('div');bk.style.cssText='position:absolute;inset:0;background:#000;pointer-events:none;opacity:0;display:none;z-index:4';H.appendChild(bk);DST.bk=bk;
  const b=document.createElement('div');b.className='b';b.style.cssText='right:max(14px,env(safe-area-inset-right));top:56px;padding:0 12px;height:40px;font-size:13px;display:none;background:rgba(150,40,30,.85)';b.textContent='Сбить дрон';H.appendChild(b);DST.btn=b;
  tapBtn(b,()=>{if(!D.fall&&D.dead<=0)D.hp=0;});}
-function drawStatic(dt){DST.btn.style.display=CUR==='drone'&&!G_.over?'block':'none';DST.t=Math.max(0,DST.t-dt);DST.in=Math.max(0,DST.in-dt);
+/* respawns left on the vehicle buttons; a vehicle that is gone for good is greyed out and we leave it */
+function vehBadges(){const vb=document.querySelectorAll('#h3 .veh .b');const m={titan:[P,'P'],drone:[D,'D'],plane:[F,'F']};
+ vb.forEach(b=>{const [o,k]=m[b.dataset.v];let n=b.querySelector('.n');if(!n){n=document.createElement('span');n.className='n';b.appendChild(n);}const gone=o.dead>1e8;n.textContent=gone?'✕':RSP[k];b.classList.toggle('gone',gone);});
+ const cur=m[CUR];if(cur&&cur[0].dead>1e8&&!G_.over){for(const v of ['titan','plane','drone'])if(m[v][0].dead<1e8){setVeh(v);break;}}}
+function drawStatic(dt){vehBadges();DST.btn.style.display=CUR==='drone'&&!G_.over?'block':'none';DST.t=Math.max(0,DST.t-dt);DST.in=Math.max(0,DST.in-dt);
  /* crash: full static that fades to black; black while waiting; the new drone fades in from black with a light ripple */
  let a=0,blk=0;if(CUR==='drone'){if(D.fall){const k=Math.min(1,D.fall.t/DFALL);a=0.12+0.55*k*k+(rn()<0.15?0.3:0);}
   else if(D.dead>0){a=DST.t>0?1:0;blk=DST.t>0?Math.min(1,(1-DST.t/0.9)*1.15):1;}
@@ -1147,6 +1151,8 @@ function syncDrone(t,dt){if(!DRONE_O){const g=new THREE.Group(),M=mats(0);g.add(
 #h3 .veh .b svg{width:21px;height:21px;fill:#BFE0FF}
 #h3 .veh .b.on{border-color:#F2C232;background:radial-gradient(circle,rgba(90,70,10,.8),rgba(30,22,4,.85));box-shadow:0 0 14px rgba(242,194,50,.7)}
 #h3 .veh .b.on svg{fill:#FFE38A}
+#h3 .veh .b{position:relative}#h3 .veh .b .n{position:absolute;right:-5px;bottom:-5px;min-width:15px;height:15px;border-radius:8px;background:#0C141E;border:1px solid rgba(255,255,255,.5);color:#fff;font:800 10px/14px 'Rubik',system-ui,sans-serif;text-align:center}
+#h3 .veh .b.gone{opacity:.35;filter:grayscale(1)}
 #h3 .score{position:absolute;left:50%;top:6px;transform:translateX(-50%);display:flex;align-items:stretch;height:24px;pointer-events:none;font:900 15px 'Rubik',system-ui,sans-serif}
 #h3 .score .sd{display:flex;align-items:center;gap:8px;width:min(150px,17vw);padding:0 8px;background:rgba(8,14,22,.7);border:1.5px solid rgba(255,255,255,.18)}
 #h3 .score .l{border-radius:10px 0 0 10px;color:#5DB8FF;clip-path:polygon(0 0,100% 0,100% 100%,0 100%)}
@@ -1177,7 +1183,9 @@ function syncDrone(t,dt){if(!DRONE_O){const g=new THREE.Group(),M=mats(0);g.add(
  linear-gradient(var(--c),var(--c)) right bottom/8px 2px no-repeat,linear-gradient(var(--c),var(--c)) right bottom/2px 8px no-repeat}
 #mkLayer i.air{--c:#3EA6FF}
 #mkLayer i.t{width:40px;height:40px;margin:-20px 0 0 -20px}
-#mkLayer i.hero{width:56px;height:56px;margin:-28px 0 0 -28px;border-width:3px}
+#mkLayer i.hero{--c:#FFD028;width:46px;height:46px;margin:-23px 0 0 -23px;transform:rotate(45deg)}
+#mkLayer i.hero.air{--c:#FFD028}
+#mkLayer i.hero.aim{transform:rotate(45deg) scale(1.3)}#mkLayer i.hero.lp{transform:rotate(45deg) scale(1.25)}#mkLayer i.hero.lk{transform:rotate(45deg) scale(1.35)}
 #mkLayer i.aim{transform:scale(1.3);filter:drop-shadow(0 0 4px var(--c))}
 #mkLayer i.lp{transform:scale(1.25);transition:transform .2s}
 #mkLayer i.lk{animation:mkb .14s steps(2,start) infinite;transform:scale(1.35)}
@@ -1191,7 +1199,7 @@ function syncDrone(t,dt){if(!DRONE_O){const g=new THREE.Group(),M=mats(0);g.add(
  <path d="M-92 -70V-88H-74M74 -88H92V-70M92 70V88H74M-74 88H-92V70"/></g><circle r="1.2" fill="#FF5A40"/></svg>
  <div class="tape"></div><div class="zl"></div><div class="art"></div><div id="drTgt"></div>`;H.insertBefore(dh,H.firstChild.nextSibling);
  for(let i=0;i<60;i++)mk.appendChild(document.createElement('i'));}
-function setVeh(v){if(v===CUR)return;VEH().move=false;CUR=v;for(const b of q('.veh').children)b.classList.toggle('on',b.dataset.v===CUR);
+function setVeh(v){if(v===CUR)return;if((v==='titan'?P:v==='drone'?D:F).dead>1e8)return;VEH().move=false;CUR=v;for(const b of q('.veh').children)b.classList.toggle('on',b.dataset.v===CUR);
  const dr=CUR==='drone',pl=CUR==='plane';document.getElementById('drHud').style.display=dr?'block':'none';q('.sup').style.display=dr?'none':'flex';q('.sup').firstChild.textContent=pl?'Ракеты':'Залп';q('.go').style.display=pl?'none':'flex';
  {const g=document.getElementById('tiGun');if(g)g.style.display=pl?'none':'';for(const k of [0,1]){const f=document.getElementById('tiFl'+k);if(f)f.style.display=pl?'none':'';}}PA.style.display=pl?'flex':'none';
  const s=q('img.sight');if(s)s.style.display=dr?'none':'block';q('svg.xh').style.display=dr?'none':'block';q('.frame').style.display=dr?'none':'block';
@@ -1205,7 +1213,7 @@ function droneHud(t){if(CUR!=='drone')return;const g=document.getElementById('ti
 /* red brackets over every marked enemy that is on screen, in either view */
 function markHud(){const L_=document.getElementById('mkLayer').children,v=new THREE.Vector3();let n=0;const put=(x,y,z,big,cls)=>{if(n>=L_.length)return;v.set(x,y,z).project(cam);if(v.z>1||Math.abs(v.x)>1.05||Math.abs(v.y)>1.05)return;const el=L_[n++];el.style.display='block';el.className=(big?'t ':'')+(cls||'');el.style.left=((v.x+1)/2*innerWidth)+'px';el.style.top=((1-v.y)/2*innerHeight)+'px';};
  const AIM=CUR==='titan'?LOCK:CUR==='plane'?LOCKF:null,au=AIM&&AIM.tg.k==='u'?AIM.tg.o:null,ak=AIM?AIM.tg.k:'';
- if(ET.dead<=0)put(ET.x,40,ET.z,true,'hero'+(ak==='et'?' aim':''));if(ED.dead<=0)put(ED.x,ED.y,ED.z,true,'air hero'+(ak==='ed'?' aim':''));if(EF.dead<=0)put(EF.x,EF.y,EF.z,true,'air hero'+(ak==='ef'?' aim':''));
+ if(ET.dead<=0)put(ET.x,40,ET.z,true,'hero'+(ET.lk?' lk':LK.u===ET&&LK.t>0.25?' lp':ak==='et'?' aim':''));if(ED.dead<=0)put(ED.x,ED.y,ED.z,true,'air hero'+(ak==='ed'?' aim':''));if(EF.dead<=0)put(EF.x,EF.y,EF.z,true,'air hero'+(ak==='ef'?' aim':''));
  for(const u of G_.units)if((u.mk||u===au)&&!u.dead)put(u.x,u.y+(u.k==='heli'?14:26),u.z,u.k!=='inf',(US[u.k].air?'air ':'')+(u.lk?'lk':u===au?'aim':LK.u===u&&LK.t>0.25?'lp':''));for(const t of G_.towers)if(t.mk&&!t.dead)put(t.x,22,t.z,true);for(const h of G_.harv)if(h.mk&&!h.dead)put(h.x,10,h.z,false);
  for(let i=n;i<L_.length;i++)if(L_[i].style.display!=='none')L_[i].style.display='none';}
 {const p0=AUD.play.bind(AUD);AUD.play=function(kind,x,z,k){if(kind==='mark'){if(!this.ctx||!this.on)return;const C=this.ctx,now=C.currentTime;if(this.last.mark&&now-this.last.mark<0.25)return;this.last.mark=now;const o=C.createOscillator(),g=C.createGain();o.type='square';o.frequency.setValueAtTime(1400,now);o.frequency.setValueAtTime(1900,now+0.05);g.gain.setValueAtTime(0.05,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.12);o.connect(g).connect(this.out);o.start(now);o.stop(now+0.13);return;}return p0(kind,x,z,k);};}
@@ -1215,6 +1223,7 @@ window.__isle.D=D;window.__isle.cam=cam;window.__isle.DL=DL;window.__isle.stepAr
 const LOCK_T=3,LOCK_PX=34,MIS=[];let MIS_CD=0,MID=0;const LK={u:null,t:0,beep:0};
 function stepLock(dt){if(CUR!=='drone'||D.dead>0||D.fall||G_.over){LK.u=null;LK.t=0;return;}
  const cx=innerWidth/2,cy=innerHeight/2,v=new THREE.Vector3();let best=null,bd=LOCK_PX*D.zoom;/* the same patch of ground at any zoom */
+ if(ET.dead<=0&&!ET.lk){v.set(ET.x,20,ET.z).project(cam);if(v.z<=1){const d=Math.hypot((v.x+1)/2*innerWidth-cx,(1-v.y)/2*innerHeight-cy)-14;if(d<bd){bd=d;best=ET;}}}
  for(const u of G_.units){if(u.dead||u.s!==1||u.lk)continue;v.set(u.x,u.y+6,u.z).project(cam);if(v.z>1)continue;const d=Math.hypot((v.x+1)/2*innerWidth-cx,(1-v.y)/2*innerHeight-cy);if(d<bd){bd=d;best=u;}}
  if(best&&best===LK.u)LK.t+=dt;else{LK.u=best;LK.t=0;}
  if(LK.u){LK.u.mk=1;LK.beep-=dt;if(LK.t>0.25&&LK.beep<=0){LK.beep=0.45-0.3*Math.min(1,LK.t/LOCK_T);AUD.play('lockp');}}
@@ -1223,13 +1232,13 @@ function stepLock(dt){if(CUR!=='drone'||D.dead>0||D.fall||G_.over){LK.u=null;LK.
 function launchMissiles(u){u.lk=1;MIS_CD=6;HUD.msg('Цель захвачена — пуск ракет!');
  BATT[0].forEach((g,i)=>{if(i===1)return;const gx=g.position.x,gz=g.position.z;MIS.push({id:++MID,x:gx,y:20,z:gz,vx:(rn()-0.5)*40,vy:260,vz:(rn()-0.5)*40,t:-i*0.12,u,tx:u.x,tz:u.z,tr:0,go:0});});}
 function stepMissiles(dt){MIS_CD=Math.max(0,MIS_CD-dt);const SP=1150;
- for(const u of G_.units)if(u.lk&&!u.dead){LK.lb=(LK.lb||0)-dt;if(LK.lb<=0){LK.lb=0.13;if(CUR==='drone')AUD.play('lockf');}break;}
+ for(const u of [ET,...G_.units])if(u.lk&&!u.dead){LK.lb=(LK.lb||0)-dt;if(LK.lb<=0){LK.lb=0.13;if(CUR==='drone')AUD.play('lockf');}break;}
  for(let i=MIS.length-1;i>=0;i--){const m=MIS[i];m.t+=dt;if(m.t<0)continue;if(!m.go){m.go=1;puff(m.x,22,m.z,'muzzle');AUD.play('shot',m.x,m.z);}if(m.u&&!m.u.dead){m.tx=m.u.x;m.tz=m.u.z;m.ty=m.u.y+5;}else m.ty=m.ty??2;
   const dx=m.tx-m.x,dy=(m.ty??5)-m.y,dz=m.tz-m.z,L=Math.hypot(dx,dy,dz)||1;
   if(m.t<0.7){m.vy-=120*dt;}else{const k=Math.min(1,dt*(3+m.t*2));const sp=Math.min(SP,300+m.t*700);m.vx+=(dx/L*sp-m.vx)*k;m.vy+=(dy/L*sp-m.vy)*k;m.vz+=(dz/L*sp-m.vz)*k;}
   m.x+=m.vx*dt;m.y+=m.vy*dt;m.z+=m.vz*dt;m.tr-=dt;if(m.tr<=0){m.tr=0.035;puff(m.x,m.y,m.z,'trail');}
   if(L<14||m.t>14||(m.t>0.8&&m.y<0.5)){MIS.splice(i,1);explode(m.x,Math.max(0,m.y),m.z,1.2);
-   if(m.u&&!m.u.dead&&Math.hypot(m.u.x-m.x,m.u.z-m.z)<30)dmgUnit(m.u,1100,0);
+   if(m.u&&!m.u.dead&&Math.hypot(m.u.x-m.x,m.u.z-m.z)<(m.u===ET?45:30)){if(m.u===ET)ET.hp-=1100;else dmgUnit(m.u,1100,0);}
    for(const u of G_.units){if(u.dead||u.s===0||u===m.u)continue;if(Math.hypot(u.x-m.x,u.z-m.z)<30)dmgUnit(u,300,0);}
    if(m.u&&!m.u.dead&&!MIS.some(q=>q.u===m.u))m.u.lk=0;}}}
 {const p1=AUD.play;AUD.play=function(kind,x,z,k){if(kind==='lockp'||kind==='lockf'){if(!this.ctx||!this.on)return;const C=this.ctx,now=C.currentTime,o=C.createOscillator(),g=C.createGain();o.type='square';
@@ -1241,7 +1250,7 @@ const F={x:0,z:0,y:0,yaw:0,ty:0,pitch:-0.18,hp:2500,max:2500,dead:0,zoom:1,alt:2
 const PLANE={limit:450,maxRate:0.75,mgCd:0.09,mgDmg:32,range:1400,cone:0.05,rocketCd:5,rocketN:6,rocketDmg:300,rocketR:48};
 let LOCKF=null;const PR=[],PB=[];let PRID=0;
 function spawnPlane(){const [bx,bz]=BASES[0];F.x=bx-300;F.z=bz;F.yaw=0;F.ty=0;F.pitch=-0.18;F.hp=F.max;F.dead=0;F.bank=0;F.turn=false;F.zoom=1;}
-function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0)spawnPlane();return;}
+function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0){if(RSP.F>0){RSP.F--;spawnPlane();}else F.dead=1e9;}return;}
  F.cd=Math.max(0,F.cd-dt);F.rcd=Math.max(0,F.rcd-dt);F.hurt=Math.max(0,F.hurt-dt);
  const L=PLANE.limit,out=F.x<-L||F.z<-L||F.x>IW+L||F.z>IH+L;
  /* past the limit: turn towards the middle at the gentlest rate that still makes it, until heading inwards */
@@ -1303,29 +1312,30 @@ function planeHud(){if(CUR!=='plane'){PCK.style.display='none';q('.fps').style.t
 window.__isle.F=F;window.__isle.dmgUnit=dmgUnit;window.__isle.stepFx=stepFx;window.__isle.mkShell=mkShell;window.__isle.AUD=AUD;window.__isle.WU=WU;window.__isle.rayHit=rayHit;window.__isle.shk=(v)=>{if(v!=null)SHK=v;return SHK;};window.__isle.shakeAt=shakeAt;window.__isle.FXP=FXP;window.__isle.bigBlast=bigBlast;window.__isle.FXN=()=>({fx:FXP.length,wrk:WRK.length,fall:FALL.length,deb:DEBR.length,part:PART.length});window.__isle.buildXM=buildXM;window.__isle.XM=XM;window.__isle.hitBase=hitBase;window.__isle.syncAll=syncAll;window.__isle.PART=PART;window.__isle.stepParts=stepParts;window.__isle.hitMine=hitMine;window.__isle.stepTitan=stepTitan;window.__isle.P=P;window.__isle.get_LOCK=()=>LOCK;window.__isle.stepPlane=stepPlane;window.__isle.planeRockets=planeRockets;window.__isle.PR=PR;window.__isle.get_LOCKF=()=>LOCKF;
 
 /* ================== TEST: the bot sends free waves (mostly helicopters); they don't take lives from our base ================== */
-const TESTW={on:true,t:6,n:0};try{TESTW.on=localStorage.getItem('dvebazy-testw')!=='0';}catch(_){}
+const TESTW={on:false,t:6,n:0};
 function testWaves(dt){if(!TESTW.on)return;TESTW.t-=dt;if(TESTW.t>0)return;TESTW.t=20;TESTW.n++;
  const S=G_.sides[1],w=['heli','heli','heli','heli','jeep','jeep','tank'];if(TESTW.n%2===0)w.push('heli','heli','tank');for(const k of w)S.queue.push(k);}
 {const tb=document.createElement('div');tb.className='b testw';tb.style.cssText='left:max(8px,env(safe-area-inset-left));top:86px;padding:0 10px;height:32px;font-size:12px';
- const upd=()=>{tb.textContent='Тест-волны: '+(TESTW.on?'вкл':'выкл');tb.style.background=TESTW.on?'rgba(160,60,40,.7)':'';};upd();H.appendChild(tb);
- tapBtn(tb,()=>{TESTW.on=!TESTW.on;TESTW.t=3;upd();try{localStorage.setItem('dvebazy-testw',TESTW.on?'1':'0');}catch(_){}});}
+ const upd=TESTW.upd=()=>{tb.textContent='Беспл. юниты бота: '+(TESTW.on?'вкл':'выкл');tb.style.background=TESTW.on?'rgba(160,60,40,.7)':'';};upd();H.appendChild(tb);
+ tapBtn(tb,()=>{TESTW.on=!TESTW.on;TESTW.t=3;upd();});}
 
 /* ================== the bot's own Titan, drone and plane ==================
    the Titan drives to our Titan, a mine or the base and shells it; the drone hangs over our side and calls the bot's battery;
    the plane hunts our drone/plane/helicopters with its gun and makes rocket runs on our Titan and mines */
-const ET={x:0,z:0,yaw:Math.PI,hp:6000,max:6000,dead:0,cd:0,scd:10,path:null,pi:0,rp:0,tg:null,tgT:0,seed:3};
+const ET={x:0,y:0,z:0,lk:0,yaw:Math.PI,hp:6000,max:6000,dead:0,cd:0,scd:10,path:null,pi:0,rp:0,tg:null,tgT:0,seed:3};
 const ED={x:0,z:0,y:450,yaw:Math.PI,hp:1500,max:1500,dead:0,art:6,goal:null,gT:0};
 const EF={x:0,z:0,y:230,yaw:Math.PI,hp:2500,max:2500,dead:0,cd:0,rcd:6,bank:0,tg:null,tT:0,ty:Math.PI,pitch:0};
 const ETS=[],EFR=[],EAR=[];let EID=0;
-function etSpawn(){const [bx,bz]=BASES[1];ET.x=bx-260;ET.z=bz+(rn()-0.5)*80;ET.yaw=Math.PI;ET.hp=ET.max;ET.dead=0;ET.path=null;ET.tg=null;ET.tgT=0;ET.cd=1;ET.scd=12;ET.seed=1+rn()*900;}
+function etSpawn(){ET.lk=0;ET.y=0;const [bx,bz]=BASES[1];ET.x=bx-260;ET.z=bz+(rn()-0.5)*80;ET.yaw=Math.PI;ET.hp=ET.max;ET.dead=0;ET.path=null;ET.tg=null;ET.tgT=0;ET.cd=1;ET.scd=12;ET.seed=1+rn()*900;}
 function edSpawn(){const [bx,bz]=BASES[1];ED.x=bx-120;ED.z=bz;ED.y=ED.alt||450;ED.yaw=Math.PI;ED.hp=ED.max;ED.dead=0;ED.art=7;ED.goal=null;}
 function efSpawn(){const [bx,bz]=BASES[1];EF.x=bx+300;EF.z=bz+(rn()-0.5)*600;EF.y=230;EF.yaw=Math.PI;EF.ty=Math.PI;EF.hp=EF.max;EF.dead=0;EF.rcd=6;EF.tg=null;}
-function heroesReset(){etSpawn();edSpawn();efSpawn();ETS.length=0;EFR.length=0;EAR.length=0;}
+const RSP={P:5,D:5,F:5,ET:5,ED:5,EF:5};
+function heroesReset(){Object.assign(RSP,{P:5,D:5,F:5,ET:5,ED:5,EF:5});TESTW.on=false;TESTW.t=6;if(TESTW.upd)TESTW.upd();etSpawn();edSpawn();efSpawn();ETS.length=0;EFR.length=0;EAR.length=0;}
 {const ng=newGame;newGame=function(){ng();heroesReset();};}
 {const sg=stepGame;stepGame=function(dt){sg(dt);if(G_&&!G_.over&&!WU.on)stepHeroes(dt);};}
 /* our hits on them: a blast at (x,y,z) of radius r */
 function heroSplash(x,y,z,r,dmg){if(ET.dead<=0&&Math.hypot(ET.x-x,ET.z-z)<r&&y<60)ET.hp-=dmg;if(ED.dead<=0&&Math.hypot(ED.x-x,ED.y-y,ED.z-z)<r*0.8)ED.hp-=dmg;if(EF.dead<=0&&Math.hypot(EF.x-x,EF.y-y,EF.z-z)<r*0.8)EF.hp-=dmg;}
-const TW=()=>TESTW.on;   // in test mode the bot still fights, but our base and mines are spared
+const TW=()=>false;
 function hitOurs(x,y,z,r,dmg,lifeP){/* a bot blast: our Titan, units, towers, mines and base */
  if(P.dead<=0&&Math.hypot(P.x-x,P.z-z)<r+20&&y<60){P.hp-=dmg*0.6;P.hurt=0.3;}
  if(D.dead<=0&&!D.fall&&Math.hypot(D.x-x,D.y-y,D.z-z)<r){D.hp-=dmg;D.hurt=0.3;}if(F.dead<=0&&Math.hypot(F.x-x,F.y-y,F.z-z)<r){F.hp-=dmg;F.hurt=0.3;}
@@ -1340,7 +1350,7 @@ function etPick(){let best=null,bd=1e9;const c=(k,x,z,y,w,o)=>{const d=Math.hypo
  for(const m of G_.mines)if(m.s===0&&!m.dead)c('m',m.x,m.z,10,1,m);if(G_.sides[0].lives>0)c('b',BASES[0][0],BASES[0][1],20,1.15);return best;}
 function etShoot(tx,ty,tz,sup){const sx=ET.x+Math.cos(ET.yaw)*30,sy=30,sz=ET.z+Math.sin(ET.yaw)*30,L=Math.hypot(tx-sx,ty-sy,tz-sz);ETS.push({id:++EID,sx,sy,sz,tx,ty,tz,x:sx,y:sy,z:sz,t:0,T:Math.max(0.05,L/TITAN.v),sup});
  if(!sup){puff(sx,sy,sz,'muzzle');AUD.play('cannon',sx,sz);}}
-function stepET(dt){if(ET.dead>0){ET.dead-=dt;if(ET.dead<=0)etSpawn();return;}
+function stepET(dt){if(ET.dead>0){ET.dead-=dt;if(ET.dead<=0){if(RSP.ET>0){RSP.ET--;etSpawn();}else ET.dead=1e9;}return;}
  ET.cd=Math.max(0,ET.cd-dt);ET.scd=Math.max(0,ET.scd-dt);ET.tgT-=dt;ET.rp-=dt;
  if(ET.tgT<=0){ET.tgT=1.5;const n=etPick();const ch=!ET.tg||!n||n.k!==ET.tg.k||n.o!==ET.tg.o;ET.tg=n;if(n&&(ch||ET.rp<=0)){ET.rp=5;ET.path=chaikin(astar(ET.x,ET.z,n.x,n.z,ET.seed),2);ET.pi=1;}}
  const g=ET.tg;if(g){if(g.k==='p'){g.x=P.x;g.z=P.z;}else if(g.k==='u'&&g.o){if(g.o.dead){ET.tgT=0;}else{g.x=g.o.x;g.z=g.o.z;}}else if(g.k==='m'&&g.o.dead)ET.tgT=0;}
@@ -1364,7 +1374,7 @@ function botFireArt(x,z){BATT[1].forEach((g,i)=>{const gx=g.position.x,gz=g.posi
   setTimeout(()=>{puff(gx+Math.cos(a)*16,22,gz+Math.sin(a)*16,'muzzle');AUD.play('cannon',gx,gz);},i*180);});
  EAR.push({id:++EID,x,z,t:artTime(Math.hypot(x-BASES[1][0],z-BASES[1][1]))+0.6});}
 function botArtImpact(x,z){explode(x,0,z,1.9);hitOurs(x,10,z,ART.R+10,ART.DMG*0.7,1);}
-function stepED(dt){if(ED.dead>0){ED.dead-=dt;if(ED.dead<=0)edSpawn();return;}
+function stepED(dt){if(ED.dead>0){ED.dead-=dt;if(ED.dead<=0){if(RSP.ED>0){RSP.ED--;edSpawn();}else ED.dead=1e9;}return;}
  ED.gT-=dt;if(ED.gT<=0){ED.gT=2;ED.goal=edGoal();}
  if(ED.goal){const [gx,gz]=ED.goal;const hx=gx+260,hz=gz;/* hang a little behind the target, on its own side */const dx=hx-ED.x,dz=hz-ED.z,d=Math.hypot(dx,dz);
   if(d>40){const v=Math.min(d,150*dt);ED.x+=dx/d*v;ED.z+=dz/d*v;ED.yaw=Math.atan2(dz,dx);}
@@ -1377,7 +1387,7 @@ function efPick(){const c=[];if(F.dead<=0)c.push({k:'f',air:1,w:0.7,x:F.x,y:F.y,
  for(const u of G_.units)if(!u.dead&&u.s===0&&US[u.k].air)c.push({k:'u',o:u,air:1,w:1,x:u.x,y:u.y,z:u.z});
  if(P.dead<=0)c.push({k:'p',air:0,w:1.1,x:P.x,y:14,z:P.z});for(const m of G_.mines)if(m.s===0&&!m.dead)c.push({k:'m',o:m,air:0,w:1.4,x:m.x,y:8,z:m.z});
  let best=null,bd=1e9;for(const q of c){const d=Math.hypot(q.x-EF.x,q.z-EF.z)*q.w;if(d<bd){bd=d;best=q;}}return best;}
-function stepEF(dt){if(EF.dead>0){EF.dead-=dt;if(EF.dead<=0)efSpawn();return;}
+function stepEF(dt){if(EF.dead>0){EF.dead-=dt;if(EF.dead<=0){if(RSP.EF>0){RSP.EF--;efSpawn();}else EF.dead=1e9;}return;}
  EF.cd=Math.max(0,EF.cd-dt);EF.rcd=Math.max(0,EF.rcd-dt);EF.tT-=dt;if(EF.tT<=0){EF.tT=1;EF.tg=efPick();}
  const g=EF.tg;if(g){if(g.k==='f'){g.x=F.x;g.y=F.y;g.z=F.z;if(F.dead>0)EF.tT=0;}else if(g.k==='d'){g.x=D.x;g.y=D.y;g.z=D.z;if(D.dead>0||D.fall)EF.tT=0;}else if(g.k==='u'){if(g.o.dead)EF.tT=0;else{g.x=g.o.x;g.y=g.o.y;g.z=g.o.z;}}else if(g.k==='p'){g.x=P.x;g.z=P.z;if(P.dead>0)EF.tT=0;}else if(g.k==='m'&&g.o.dead)EF.tT=0;}
  const L=PLANE.limit,out=EF.x<-L||EF.z<-L||EF.x>IW+L||EF.z>IH+L;
