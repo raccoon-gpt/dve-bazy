@@ -1314,9 +1314,17 @@ function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0){if(RSP.F>0){RSP.F--
  for(let i=PB.length-1;i>=0;i--){const b=PB[i];b.t+=dt;const k=Math.min(1,b.t/b.T);b.px=b.x;b.py=b.y;b.pz=b.z;b.x=b.sx+(b.tx-b.sx)*k;b.y=b.sy+(b.ty-b.sy)*k;b.z=b.sz+(b.tz-b.sz)*k;if(k>=1){PB.splice(i,1);puff(b.tx,b.ty,b.tz,'muzzle');if(rn()<0.4)puff(b.tx,b.ty,b.tz,'dust');}}
  /* rockets in flight */
  for(let i=PR.length-1;i>=0;i--){const r=PR[i];r.t+=dt;if(r.t<0)continue;if(!r.go){r.go=1;r.x=F.x-Math.sin(F.yaw)*r.sd*8;r.y=F.y-4;r.z=F.z+Math.cos(F.yaw)*r.sd*8;AUD.play('shot',r.x,r.z);}
-  if(r.u&&!r.u.dead){r.tx=r.u.x;r.ty=r.u.y+4;r.tz=r.u.z;}const dx=r.tx-r.x,dy=r.ty-r.y,dz=r.tz-r.z,Ln=Math.hypot(dx,dy,dz)||1,sp=Math.min(1300,500+r.t*1600);
-  r.vx=dx/Ln*sp;r.vy=dy/Ln*sp;r.vz=dz/Ln*sp;r.x+=r.vx*dt;r.y+=r.vy*dt;r.z+=r.vz*dt;r.tr-=dt;if(r.tr<=0){r.tr=0.03;puff(r.x,r.y,r.z,'trail');}
-  if(Ln<sp*dt*1.2||r.t>9||r.y<0){PR.splice(i,1);rocketHit(r.tx,r.tz,r.ty);}}}
+  const sp=Math.min(1300,500+r.t*1600);
+  if(!r.aim){r.aim=1;/* leave along the line to the sight point, spread a little */const dx=r.tx-r.x,dy=r.ty-r.y,dz=r.tz-r.z,L=Math.hypot(dx,dy,dz)||1;r.vx=dx/L;r.vy=dy/L;r.vz=dz/L;}
+  const tp=r.tg&&r.tg();let hitNow=false;
+  if(tp){/* steer towards the target, but no faster than the rocket's turn rate */const dx=tp[0]-r.x,dy=tp[1]-r.y,dz=tp[2]-r.z,L=Math.hypot(dx,dy,dz)||1,ux=dx/L,uy=dy/L,uz=dz/L;
+   const ca=Math.max(-1,Math.min(1,r.vx*ux+r.vy*uy+r.vz*uz)),ang=Math.acos(ca),mx=r.turn*dt;if(ang>1e-4){const k=Math.min(1,mx/ang);let nx=r.vx+(ux-r.vx)*k,ny=r.vy+(uy-r.vy)*k,nz=r.vz+(uz-r.vz)*k;const nl=Math.hypot(nx,ny,nz)||1;r.vx=nx/nl;r.vy=ny/nl;r.vz=nz/nl;}
+   if(L<26)hitNow=true;}
+  else if(!r.free){const dx=r.tx-r.x,dy=r.ty-r.y,dz=r.tz-r.z,L=Math.hypot(dx,dy,dz)||1;if(L<sp*dt*1.2)hitNow=true;else{r.vx=dx/L;r.vy=dy/L;r.vz=dz/L;}}
+  if(r.tg&&!tp)r.free=1;/* target died: fly on straight */
+  r.x+=r.vx*sp*dt;r.y+=r.vy*sp*dt;r.z+=r.vz*sp*dt;r.tr-=dt;if(r.tr<=0){r.tr=0.03;puff(r.x,r.y,r.z,'trail');}
+  const gnd=r.y<=Math.max(0,hgt(r.x,r.z))+1||OBS.some(o=>o.h>0&&r.y<=o.h&&inRect(r.x,r.z,o,0));
+  if(hitNow||gnd||r.t>9){PR.splice(i,1);rocketHit(r.x,r.z,Math.max(0,r.y));}}}
 function rocketHit(x,z,y){explode(x,y||0,z,1.3);const R_=PLANE.rocketR;heroSplash(x,y||0,z,R_+20,PLANE.rocketDmg);
  for(const u of G_.units){if(u.dead||u.s===0)continue;const d=Math.hypot(u.x-x,u.z-z);if(d<R_)dmgUnit(u,PLANE.rocketDmg*(d<R_*0.5?1:0.6),0);}
  for(const t of G_.towers){if(t.s===0||t.dead)continue;if(Math.hypot(t.x-x,t.z-z)<R_*0.6+14)dmgTower(t,PLANE.rocketDmg*2,0);}
@@ -1324,11 +1332,17 @@ function rocketHit(x,z,y){explode(x,y||0,z,1.3);const R_=PLANE.rocketR;heroSplas
  if(!G_.over&&Math.hypot(x-BASES[1][0],z-BASES[1][1])<110&&rn()<0.34)hitBase(1,1);
  {const m=nearMineOf(1,x,z,95);if(m&&!G_.over&&rn()<0.34)hitMine(m,1);}}
 /* rockets: at the target on the sight, or where the sight meets the ground */
-function planeRockets(){if(F.dead>0||F.rcd>0)return;F.rcd=PLANE.rocketCd;let tx,ty,tz,u=null;
- if(LOCKF){tx=LOCKF.x;ty=LOCKF.y;tz=LOCKF.z;if(LOCKF.tg.k==='u')u=LOCKF.tg.o;}
- else{const dv=[Math.cos(F.yaw)*Math.cos(F.pitch),Math.sin(F.pitch),Math.sin(F.yaw)*Math.cos(F.pitch)];const rh=rayHit(F.x,F.y,F.z,dv[0],dv[1],dv[2],4000,0);const L=rh.hit?null:4000;
-  if(rh.hit){tx=rh.x;ty=Math.max(0,rh.y);tz=rh.z;if(rh.u)u=rh.u;}else{tx=F.x+dv[0]*L;ty=Math.max(0,F.y+dv[1]*L);tz=F.z+dv[2]*L;}}
- for(let i=0;i<PLANE.rocketN;i++){const sd=i%2?1:-1;PR.push({id:++PRID,t:-i*0.11,sd,u:i<2?u:null,tx:tx+(i<2&&u?0:(rn()-0.5)*30),ty:ty+(i<2&&u?0:(rn()-0.5)*8),tz:tz+(i<2&&u?0:(rn()-0.5)*30),x:F.x,y:F.y,z:F.z,vx:0,vy:0,vz:0,tr:0});}
+/* semi-guided rockets: they lock onto the enemy closest to the sight line (within ~11°) and steer towards it with a limited turn rate,
+   so a small miss is corrected and a big one flies past; with nothing near the sight they go straight to where it points */
+function rocketTarget(dv){let best=null,ba=0.2;const c=(x,y,z,fn)=>{const vx=x-F.x,vy=y-F.y,vz=z-F.z,L=Math.hypot(vx,vy,vz);if(L<60||L>4000)return;const a=Math.acos(Math.max(-1,Math.min(1,(vx*dv[0]+vy*dv[1]+vz*dv[2])/L)));if(a<ba){ba=a;best=fn;}};
+ for(const u of G_.units){if(u.dead||u.s===0)continue;const air=US[u.k].air;c(u.x,u.y+(air?0:8),u.z,()=>u.dead?null:[u.x,u.y+(US[u.k].air?0:8),u.z]);}
+ if(ET.dead<=0)c(ET.x,14,ET.z,()=>ET.dead>0?null:[ET.x,14,ET.z]);if(ED.dead<=0)c(ED.x,ED.y,ED.z,()=>ED.dead>0?null:[ED.x,ED.y,ED.z]);if(EF.dead<=0)c(EF.x,EF.y,EF.z,()=>EF.dead>0?null:[EF.x,EF.y,EF.z]);
+ return best;}
+function planeRockets(){if(F.dead>0||F.rcd>0)return;F.rcd=PLANE.rocketCd;let tx,ty,tz;
+ const dv=[Math.cos(F.yaw)*Math.cos(F.pitch),Math.sin(F.pitch),Math.sin(F.yaw)*Math.cos(F.pitch)];const rh=rayHit(F.x,F.y,F.z,dv[0],dv[1],dv[2],4000,0);
+ if(rh.hit){tx=rh.x;ty=Math.max(0,rh.y);tz=rh.z;}else{tx=F.x+dv[0]*4000;ty=Math.max(0,F.y+dv[1]*4000);tz=F.z+dv[2]*4000;}
+ const tg=rocketTarget(dv);const p0=tg&&tg(),Te=Math.max(0.4,Math.hypot(...(p0||[tx,ty,tz]).map((v,k)=>v-[F.x,F.y,F.z][k]))/1100),turn=Math.max(0.12,Math.min(1.6,0.13/Te));
+ for(let i=0;i<PLANE.rocketN;i++){const sd=i%2?1:-1;PR.push({id:++PRID,t:-i*0.11,sd,tg,turn,tx:tx+(rn()-0.5)*30,ty:ty+(rn()-0.5)*8,tz:tz+(rn()-0.5)*30,x:F.x,y:F.y,z:F.z,vx:0,vy:0,vz:0,tr:0});}
  HUD.msg('Пуск ракет!');HUD.kick();}
 function planeCam(){if(F.dead>0){const [bx,bz]=BASES[0];cam.position.set(bx-300,300,bz);cam.lookAt(bx+300,0,bz);return;}
  cam.position.set(F.x,F.y,F.z);cam.up.set(0,1,0);cam.lookAt(F.x+Math.cos(F.yaw)*Math.cos(F.pitch)*100,F.y+Math.sin(F.pitch)*100,F.z+Math.sin(F.yaw)*Math.cos(F.pitch)*100);cam.rotateZ(F.bank);
@@ -1412,9 +1426,9 @@ function heroesReset(){Object.assign(RSP,{P:5,D:5,F:5,ET:5,ED:5,EF:5});TESTW.on=
 /* our hits on them: a blast at (x,y,z) of radius r */
 function heroSplash(x,y,z,r,dmg){if(ET.dead<=0&&Math.hypot(ET.x-x,ET.z-z)<r&&y<60)ET.hp-=dmg;if(ED.dead<=0&&Math.hypot(ED.x-x,ED.y-y,ED.z-z)<r*0.8)ED.hp-=dmg;if(EF.dead<=0&&Math.hypot(EF.x-x,EF.y-y,EF.z-z)<r*0.8)EF.hp-=dmg;}
 const TW=()=>false;
-function hitOurs(x,y,z,r,dmg,lifeP){/* a bot blast: our Titan, units, towers, mines and base */
- if(P.dead<=0&&Math.hypot(P.x-x,P.z-z)<r+20&&y<60){P.hp-=dmg*0.6;P.hurt=0.3;}
- if(D.dead<=0&&!D.fall&&Math.hypot(D.x-x,D.y-y,D.z-z)<r){D.hp-=dmg;D.hurt=0.3;}if(F.dead<=0&&Math.hypot(F.x-x,F.y-y,F.z-z)<r){F.hp-=dmg;F.hurt=0.3;}
+function hitOurs(x,y,z,r,dmg,lifeP,noHero){/* a bot blast: our Titan, units, towers, mines and base */
+ if(!noHero&&P.dead<=0&&Math.hypot(P.x-x,P.z-z)<r+20&&y<60){P.hp-=dmg*0.6;P.hurt=0.3;}
+ if(!noHero){if(D.dead<=0&&!D.fall&&Math.hypot(D.x-x,D.y-y,D.z-z)<r){D.hp-=dmg;D.hurt=0.3;}if(F.dead<=0&&Math.hypot(F.x-x,F.y-y,F.z-z)<r){F.hp-=dmg;F.hurt=0.3;}}
  for(const u of G_.units){if(u.dead||u.s!==0)continue;if(Math.hypot(u.x-x,u.z-z)<r)dmgUnit(u,dmg,1);}
  for(const t of G_.towers){if(t.s!==0||t.dead)continue;if(Math.hypot(t.x-x,t.z-z)<r*0.6+14)dmgTower(t,dmg,1);}
  if(G_.over||TW())return;const m=nearMineOf(0,x,z,90);if(m&&rn()<lifeP)hitMine(m,1);if(Math.hypot(x-BASES[0][0],z-BASES[0][1])<110&&rn()<lifeP)hitBase(0,1);}
@@ -1461,11 +1475,11 @@ function stepED(dt){if(ED.dead>0){ED.dead-=dt;if(ED.dead<=0){if(RSP.ED>0){RSP.ED
 /* --- the enemy plane --- */
 function efPick(){const c=[];if(F.dead<=0)c.push({k:'f',air:1,w:0.7,x:F.x,y:F.y,z:F.z});if(D.dead<=0&&!D.fall)c.push({k:'d',air:1,w:0.8,x:D.x,y:D.y,z:D.z});
  for(const u of G_.units)if(!u.dead&&u.s===0&&US[u.k].air)c.push({k:'u',o:u,air:1,w:1,x:u.x,y:u.y,z:u.z});
- if(P.dead<=0)c.push({k:'p',air:0,w:1.1,x:P.x,y:14,z:P.z});for(const m of G_.mines)if(m.s===0&&!m.dead)c.push({k:'m',o:m,air:0,w:1.4,x:m.x,y:8,z:m.z});
+ for(const u of G_.units)if(!u.dead&&u.s===0&&!US[u.k].air)c.push({k:'u',o:u,air:0,w:0.9,x:u.x,y:u.y+8,z:u.z});for(const m of G_.mines)if(m.s===0&&!m.dead)c.push({k:'m',o:m,air:0,w:1.4,x:m.x,y:8,z:m.z});
  let best=null,bd=1e9;for(const q of c){const d=Math.hypot(q.x-EF.x,q.z-EF.z)*q.w;if(d<bd){bd=d;best=q;}}return best;}
 function stepEF(dt){if(EF.dead>0){EF.dead-=dt;if(EF.dead<=0){if(RSP.EF>0){RSP.EF--;efSpawn();}else EF.dead=1e9;}return;}
  EF.cd=Math.max(0,EF.cd-dt);EF.rcd=Math.max(0,EF.rcd-dt);EF.tT-=dt;if(EF.tT<=0){EF.tT=1;EF.tg=efPick();}
- const g=EF.tg;if(g){if(g.k==='f'){g.x=F.x;g.y=F.y;g.z=F.z;if(F.dead>0)EF.tT=0;}else if(g.k==='d'){g.x=D.x;g.y=D.y;g.z=D.z;if(D.dead>0||D.fall)EF.tT=0;}else if(g.k==='u'){if(g.o.dead)EF.tT=0;else{g.x=g.o.x;g.y=g.o.y;g.z=g.o.z;}}else if(g.k==='p'){g.x=P.x;g.z=P.z;if(P.dead>0)EF.tT=0;}else if(g.k==='m'&&g.o.dead)EF.tT=0;}
+ const g=EF.tg;if(g){if(g.k==='f'){g.x=F.x;g.y=F.y;g.z=F.z;if(F.dead>0)EF.tT=0;}else if(g.k==='d'){g.x=D.x;g.y=D.y;g.z=D.z;if(D.dead>0||D.fall)EF.tT=0;}else if(g.k==='u'){if(g.o.dead)EF.tT=0;else{g.x=g.o.x;g.y=g.o.y+(g.air?0:8);g.z=g.o.z;}}else if(g.k==='p'){g.x=P.x;g.z=P.z;if(P.dead>0)EF.tT=0;}else if(g.k==='m'&&g.o.dead)EF.tT=0;}
  const L=PLANE.limit,out=EF.x<-L||EF.z<-L||EF.x>IW+L||EF.z>IH+L;
  if(out)EF.ty=Math.atan2(IH/2-EF.z,IW/2-EF.x);else if(g){const dd=Math.hypot(g.x-EF.x,g.z-EF.z);
   /* too close to line up: fly on past it and come round again */
@@ -1479,7 +1493,7 @@ function stepEF(dt){if(EF.dead>0){EF.dead-=dt;if(EF.dead<=0){if(RSP.EF>0){RSP.EF
  if(EF.hp<=0){EF.hp=0;EF.dead=7;heroDie({x:EF.x,y:EF.y,z:EF.z},2,400);}}
 function stepEFR(dt){for(let i=EFR.length-1;i>=0;i--){const r=EFR[i];r.t+=dt;if(r.t<0){r.x=EF.x;r.y=EF.y-4;r.z=EF.z;continue;}if(!r.go){r.go=1;AUD.play('shot',r.x,r.z);}
   const dx=r.tx-r.x,dy=r.ty-r.y,dz=r.tz-r.z,Ln=Math.hypot(dx,dy,dz)||1,sp=Math.min(1200,500+r.t*1500);r.vx=dx/Ln*sp;r.vy=dy/Ln*sp;r.vz=dz/Ln*sp;r.x+=r.vx*dt;r.y+=r.vy*dt;r.z+=r.vz*dt;
-  r.tr-=dt;if(r.tr<=0){r.tr=0.03;puff(r.x,r.y,r.z,'trail');}if(Ln<sp*dt*1.2||r.t>6||r.y<0){EFR.splice(i,1);explode(r.tx,r.ty,r.tz,1.3);hitOurs(r.tx,r.ty,r.tz,PLANE.rocketR,260,0.34);}}}
+  r.tr-=dt;if(r.tr<=0){r.tr=0.03;puff(r.x,r.y,r.z,'trail');}if(Ln<sp*dt*1.2||r.t>6||r.y<0){EFR.splice(i,1);explode(r.tx,r.ty,r.tz,1.3);hitOurs(r.tx,r.ty,r.tz,PLANE.rocketR,260,0.34,true);}}}
 function stepHeroes(dt){stepET(dt);stepETS(dt);stepED(dt);stepEF(dt);stepEFR(dt);for(let i=EAR.length-1;i>=0;i--){EAR[i].t-=dt;if(EAR[i].t<=0)EAR.splice(i,1);}}
 
 /* --- how they look --- */
