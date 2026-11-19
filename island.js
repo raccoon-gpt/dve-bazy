@@ -1247,7 +1247,7 @@ window.__isle.setVeh=setVeh;window.__isle.LK=LK;window.__isle.MIS=MIS;window.__i
 
 /* ================== the plane: always flying, machine gun fires by itself, rockets on demand, turns back smoothly past the limit ================== */
 const F={x:0,z:0,y:0,yaw:0,ty:0,pitch:-0.18,hp:2500,max:2500,dead:0,zoom:1,alt:200,sp:225,cd:0,rcd:0,bank:0,turn:false,hurt:0,move:true};
-const PLANE={limit:450,maxRate:0.75,mgCd:0.09,mgDmg:32,range:1400,cone:0.05,rocketCd:5,rocketN:6,rocketDmg:300,rocketR:48};
+const PLANE={limit:450,maxRate:0.75,mgCd:0.09,mgDmg:32,range:4000,cone:0.05,rocketCd:5,rocketN:6,rocketDmg:300,rocketR:48};
 let LOCKF=null;const PR=[],PB=[];let PRID=0;
 function spawnPlane(){const [bx,bz]=BASES[0];F.x=bx-300;F.z=bz;F.yaw=0;F.ty=0;F.pitch=-0.18;F.hp=F.max;F.dead=0;F.bank=0;F.turn=false;F.zoom=1;}
 function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0){if(RSP.F>0){RSP.F--;spawnPlane();}else F.dead=1e9;}return;}
@@ -1276,7 +1276,7 @@ function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0){if(RSP.F>0){RSP.F--
  for(let i=PR.length-1;i>=0;i--){const r=PR[i];r.t+=dt;if(r.t<0)continue;if(!r.go){r.go=1;r.x=F.x-Math.sin(F.yaw)*r.sd*8;r.y=F.y-4;r.z=F.z+Math.cos(F.yaw)*r.sd*8;AUD.play('shot',r.x,r.z);}
   if(r.u&&!r.u.dead){r.tx=r.u.x;r.ty=r.u.y+4;r.tz=r.u.z;}const dx=r.tx-r.x,dy=r.ty-r.y,dz=r.tz-r.z,Ln=Math.hypot(dx,dy,dz)||1,sp=Math.min(1300,500+r.t*1600);
   r.vx=dx/Ln*sp;r.vy=dy/Ln*sp;r.vz=dz/Ln*sp;r.x+=r.vx*dt;r.y+=r.vy*dt;r.z+=r.vz*dt;r.tr-=dt;if(r.tr<=0){r.tr=0.03;puff(r.x,r.y,r.z,'trail');}
-  if(Ln<sp*dt*1.2||r.t>6||r.y<0){PR.splice(i,1);rocketHit(r.tx,r.tz,r.ty);}}}
+  if(Ln<sp*dt*1.2||r.t>9||r.y<0){PR.splice(i,1);rocketHit(r.tx,r.tz,r.ty);}}}
 function rocketHit(x,z,y){explode(x,y||0,z,1.3);const R_=PLANE.rocketR;heroSplash(x,y||0,z,R_+20,PLANE.rocketDmg);
  for(const u of G_.units){if(u.dead||u.s===0)continue;const d=Math.hypot(u.x-x,u.z-z);if(d<R_)dmgUnit(u,PLANE.rocketDmg*(d<R_*0.5?1:0.6),0);}
  for(const t of G_.towers){if(t.s===0||t.dead)continue;if(Math.hypot(t.x-x,t.z-z)<R_*0.6+14)dmgTower(t,PLANE.rocketDmg*2,0);}
@@ -1286,7 +1286,7 @@ function rocketHit(x,z,y){explode(x,y||0,z,1.3);const R_=PLANE.rocketR;heroSplas
 /* rockets: at the target on the sight, or where the sight meets the ground */
 function planeRockets(){if(F.dead>0||F.rcd>0)return;F.rcd=PLANE.rocketCd;let tx,ty,tz,u=null;
  if(LOCKF){tx=LOCKF.x;ty=LOCKF.y;tz=LOCKF.z;if(LOCKF.tg.k==='u')u=LOCKF.tg.o;}
- else{const dv=[Math.cos(F.yaw)*Math.cos(F.pitch),Math.sin(F.pitch),Math.sin(F.yaw)*Math.cos(F.pitch)];const rh=rayHit(F.x,F.y,F.z,dv[0],dv[1],dv[2],1400,0);const L=rh.hit?null:1100;
+ else{const dv=[Math.cos(F.yaw)*Math.cos(F.pitch),Math.sin(F.pitch),Math.sin(F.yaw)*Math.cos(F.pitch)];const rh=rayHit(F.x,F.y,F.z,dv[0],dv[1],dv[2],4000,0);const L=rh.hit?null:4000;
   if(rh.hit){tx=rh.x;ty=Math.max(0,rh.y);tz=rh.z;if(rh.u)u=rh.u;}else{tx=F.x+dv[0]*L;ty=Math.max(0,F.y+dv[1]*L);tz=F.z+dv[2]*L;}}
  for(let i=0;i<PLANE.rocketN;i++){const sd=i%2?1:-1;PR.push({id:++PRID,t:-i*0.11,sd,u:i<2?u:null,tx:tx+(i<2&&u?0:(rn()-0.5)*30),ty:ty+(i<2&&u?0:(rn()-0.5)*8),tz:tz+(i<2&&u?0:(rn()-0.5)*30),x:F.x,y:F.y,z:F.z,vx:0,vy:0,vz:0,tr:0});}
  HUD.msg('Пуск ракет!');HUD.kick();}
