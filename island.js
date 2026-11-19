@@ -1316,10 +1316,12 @@ function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0){if(RSP.F>0){RSP.F--
  for(let i=PR.length-1;i>=0;i--){const r=PR[i];r.t+=dt;if(r.t<0)continue;if(!r.go){r.go=1;r.x=F.x-Math.sin(F.yaw)*r.sd*8;r.y=F.y-4;r.z=F.z+Math.cos(F.yaw)*r.sd*8;AUD.play('shot',r.x,r.z);}
   const sp=Math.min(1300,500+r.t*1600);
   if(!r.aim){r.aim=1;/* leave along the line to the sight point, spread a little */const dx=r.tx-r.x,dy=r.ty-r.y,dz=r.tz-r.z,L=Math.hypot(dx,dy,dz)||1;r.vx=dx/L;r.vy=dy/L;r.vz=dz/L;}
-  const tp=r.tg&&r.tg();let hitNow=false;
+  let tp=r.tg&&r.tg();let hitNow=false;
+  if(tp&&r.strong){/* lead the target: where it will be when the rocket gets there */if(r.pp&&dt>0){const k=Math.min(1,dt*6);r.tv=r.tv||[0,0,0];for(let q=0;q<3;q++)r.tv[q]+=((tp[q]-r.pp[q])/dt-r.tv[q])*k;}r.pp=tp.slice();
+   if(r.tv){const L0=Math.hypot(tp[0]-r.x,tp[1]-r.y,tp[2]-r.z),tti=Math.min(2.5,L0/sp);tp=[tp[0]+r.tv[0]*tti,tp[1]+r.tv[1]*tti,tp[2]+r.tv[2]*tti];}}
   if(tp){/* steer towards the target, but no faster than the rocket's turn rate */const dx=tp[0]-r.x,dy=tp[1]-r.y,dz=tp[2]-r.z,L=Math.hypot(dx,dy,dz)||1,ux=dx/L,uy=dy/L,uz=dz/L;
    const ca=Math.max(-1,Math.min(1,r.vx*ux+r.vy*uy+r.vz*uz)),ang=Math.acos(ca),mx=r.turn*dt;if(ang>1e-4){const k=Math.min(1,mx/ang);let nx=r.vx+(ux-r.vx)*k,ny=r.vy+(uy-r.vy)*k,nz=r.vz+(uz-r.vz)*k;const nl=Math.hypot(nx,ny,nz)||1;r.vx=nx/nl;r.vy=ny/nl;r.vz=nz/nl;}
-   if(L<26)hitNow=true;}
+   {const cur=r.tg();if(cur&&Math.hypot(cur[0]-r.x,cur[1]-r.y,cur[2]-r.z)<(r.strong?30:26))hitNow=true;}}
   else if(!r.free){const dx=r.tx-r.x,dy=r.ty-r.y,dz=r.tz-r.z,L=Math.hypot(dx,dy,dz)||1;if(L<sp*dt*1.2)hitNow=true;else{r.vx=dx/L;r.vy=dy/L;r.vz=dz/L;}}
   if(r.tg&&!tp)r.free=1;/* target died: fly on straight */
   r.x+=r.vx*sp*dt;r.y+=r.vy*sp*dt;r.z+=r.vz*sp*dt;r.tr-=dt;if(r.tr<=0){r.tr=0.03;puff(r.x,r.y,r.z,'trail');}
@@ -1334,15 +1336,18 @@ function rocketHit(x,z,y){explode(x,y||0,z,1.3);const R_=PLANE.rocketR;heroSplas
 /* rockets: at the target on the sight, or where the sight meets the ground */
 /* semi-guided rockets: they lock onto the enemy closest to the sight line (within ~11°) and steer towards it with a limited turn rate,
    so a small miss is corrected and a big one flies past; with nothing near the sight they go straight to where it points */
-function rocketTarget(dv){let best=null,ba=0.2;const c=(x,y,z,fn)=>{const vx=x-F.x,vy=y-F.y,vz=z-F.z,L=Math.hypot(vx,vy,vz);if(L<60||L>4000)return;const a=Math.acos(Math.max(-1,Math.min(1,(vx*dv[0]+vy*dv[1]+vz*dv[2])/L)));if(a<ba){ba=a;best=fn;}};
+function rocketTarget(dv,cone){let best=null,ba=cone;const c=(x,y,z,fn)=>{const vx=x-F.x,vy=y-F.y,vz=z-F.z,L=Math.hypot(vx,vy,vz);if(L<60||L>4000)return;const a=Math.acos(Math.max(-1,Math.min(1,(vx*dv[0]+vy*dv[1]+vz*dv[2])/L)));if(a<ba){ba=a;best=fn;}};
  for(const u of G_.units){if(u.dead||u.s===0)continue;const air=US[u.k].air;c(u.x,u.y+(air?0:8),u.z,()=>u.dead?null:[u.x,u.y+(US[u.k].air?0:8),u.z]);}
  if(ET.dead<=0)c(ET.x,14,ET.z,()=>ET.dead>0?null:[ET.x,14,ET.z]);if(ED.dead<=0)c(ED.x,ED.y,ED.z,()=>ED.dead>0?null:[ED.x,ED.y,ED.z]);if(EF.dead<=0)c(EF.x,EF.y,EF.z,()=>EF.dead>0?null:[EF.x,EF.y,EF.z]);
  return best;}
 function planeRockets(){if(F.dead>0||F.rcd>0)return;F.rcd=PLANE.rocketCd;let tx,ty,tz;
  const dv=[Math.cos(F.yaw)*Math.cos(F.pitch),Math.sin(F.pitch),Math.sin(F.yaw)*Math.cos(F.pitch)];const rh=rayHit(F.x,F.y,F.z,dv[0],dv[1],dv[2],4000,0);
  if(rh.hit){tx=rh.x;ty=Math.max(0,rh.y);tz=rh.z;}else{tx=F.x+dv[0]*4000;ty=Math.max(0,F.y+dv[1]*4000);tz=F.z+dv[2]*4000;}
- const tg=rocketTarget(dv);const p0=tg&&tg(),Te=Math.max(0.4,Math.hypot(...(p0||[tx,ty,tz]).map((v,k)=>v-[F.x,F.y,F.z][k]))/1100),turn=Math.max(0.12,Math.min(1.6,0.13/Te));
- for(let i=0;i<PLANE.rocketN;i++){const sd=i%2?1:-1;PR.push({id:++PRID,t:-i*0.11,sd,tg,turn,tx:tx+(rn()-0.5)*30,ty:ty+(rn()-0.5)*8,tz:tz+(rn()-0.5)*30,x:F.x,y:F.y,z:F.z,vx:0,vy:0,vz:0,tr:0});}
+ /* the outer ring of the sight is about 17% of the screen height from its centre: anything inside it at launch is chased hard and hit;
+    a little outside it the rockets only nudge towards it and usually fly past */
+ const ring=Math.atan(0.34*Math.tan((80/F.zoom)*Math.PI/360));let tg=rocketTarget(dv,ring),strong=!!tg;if(!tg)tg=rocketTarget(dv,ring*1.6);
+ const p0=tg&&tg(),Te=Math.max(0.4,Math.hypot(...(p0||[tx,ty,tz]).map((v,k)=>v-[F.x,F.y,F.z][k]))/1100),turn=strong?3.2:Math.max(0.12,Math.min(1.6,0.13/Te));
+ for(let i=0;i<PLANE.rocketN;i++){const sd=i%2?1:-1;PR.push({id:++PRID,t:-i*0.11,sd,tg,turn,strong,tx:tx+(rn()-0.5)*30,ty:ty+(rn()-0.5)*8,tz:tz+(rn()-0.5)*30,x:F.x,y:F.y,z:F.z,vx:0,vy:0,vz:0,tr:0});}
  HUD.msg('Пуск ракет!');HUD.kick();}
 function planeCam(){if(F.dead>0){const [bx,bz]=BASES[0];cam.position.set(bx-300,300,bz);cam.lookAt(bx+300,0,bz);return;}
  cam.position.set(F.x,F.y,F.z);cam.up.set(0,1,0);cam.lookAt(F.x+Math.cos(F.yaw)*Math.cos(F.pitch)*100,F.y+Math.sin(F.pitch)*100,F.z+Math.sin(F.yaw)*Math.cos(F.pitch)*100);cam.rotateZ(F.bank);
