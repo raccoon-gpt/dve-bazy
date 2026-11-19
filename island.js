@@ -893,13 +893,43 @@ function size(){const w=innerWidth,h=innerHeight;R.setSize(w,h,false);cam.aspect
 addEventListener('resize',size);
 let BUILT=false;
 function start(){CUR='drone';if(!BUILT){genYard(1234);buildNav();planRoads();}newGame();if(!BUILT||MIL_DIRTY){for(const e of live.values())dyn.remove(e.o);live.clear();buildWorld();BUILT=true;MIL_DIRTY=false;MAPIMG=null;}
- fxReset();for(const e of live.values())dyn.remove(e.o);live.clear();cv3.style.display='block';H.style.display='block';size();running=true;CUR='drone';setVeh('titan');}
+ fxReset();for(const e of live.values())dyn.remove(e.o);live.clear();cv3.style.display='block';H.style.display='block';size();CUR='drone';setVeh('titan');
+ /* start sharp: at least ×1.75 (capped by the screen), the remembered value if higher */
+ {const cap=Math.min(2,devicePixelRatio||1),nq=Math.min(cap,Math.max(T3.q,1.75));if(nq!==T3.q){T3.q=nq;T3.applyQ=true;}}
+ warmBegin();}
+/* ================== loading screen: wait for the models, compile every shader and push every texture to the GPU before the fight ================== */
+const LD=document.createElement('div');LD.id='isleLoad';LD.innerHTML='<div class="c"><div class="t">Загрузка</div><div class="bar"><i></i></div><div class="s"></div></div>';document.body.appendChild(LD);
+{const st=document.createElement('style');st.textContent=`#isleLoad{position:fixed;inset:0;z-index:45;display:none;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 45%,#2A2420,#0B0A09);font:800 15px 'Rubik',system-ui,sans-serif;color:#EDE3D2}
+#isleLoad .c{width:min(360px,70vw);text-align:center}#isleLoad .t{font-size:20px;letter-spacing:2px;margin-bottom:14px;text-transform:uppercase}
+#isleLoad .bar{height:8px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden}#isleLoad .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#E8902C,#F2C232);transition:width .15s}
+#isleLoad .s{margin-top:10px;font-size:12px;font-weight:600;opacity:.6}`;document.head.appendChild(st);}
+const WU={on:false,t:0,ph:0,g:null,t0:0};
+function assetsReady(){const xs=Object.values(XM);const all=2+xs.length+xs.filter(m=>m.blue).length;let n=(MIL?1:0)+(THREE.GLTFLoader?1:0)+xs.filter(m=>m.sc).length+xs.filter(m=>m.blue&&m.bt).length;return [n,all];}
+function warmBegin(){WU.on=true;WU.t=0;WU.ph=0;WU.t0=performance.now();LD.style.display='flex';LD.querySelector('i').style.width='0%';running=true;}
+function warmBuild(){/* one of every machine (both sides, wreck and ash variants), a blast, smoke, rings and debris in front of the camera */
+ const g=new THREE.Group();let i=0;const put=o=>{o.position.set((i%4-1.5)*70,0,Math.floor(i/4)*60);g.add(o);i++;};
+ for(const k of ['jeep','tank','heli','inf'])for(const s of [0,1]){const xm=xmOK(k,s);const o=instantiate(proto('U'+k+s+(MIL?'m':'')+(xm?'x':''),()=>xm?buildXM(k,s):buildUnit(k,s)));put(o);}
+ for(const k of ['jeep','tank','heli']){const xm=xmOK(k,1);const o=instantiate(proto('U'+k+'1'+(MIL?'m':'')+(xm?'x':''),()=>xm?buildXM(k,1):buildUnit(k,1)));darken(o);put(o);
+  const a=instantiate(proto('U'+k+'1'+(MIL?'m':'')+(xm?'x':''),()=>xm?buildXM(k,1):buildUnit(k,1)));darken(a);a.traverse(m=>{if(m.isMesh){const c=m.material.clone();c.transparent=true;c.depthWrite=false;c.opacity=0.5;m.material=c;}});put(a);}
+ WU.g=g;scene.add(g);}
+function warmPlace(){if(!WU.g)return;const d=new THREE.Vector3();cam.getWorldDirection(d);d.y=0;d.normalize();const x=cam.position.x+d.x*260,z=cam.position.z+d.z*260;WU.g.position.set(x,Math.max(0,hgt(x,z)),z);WU.g.rotation.y=-Math.atan2(d.z,d.x)+Math.PI/2;}
+function warmStep(dt){const [n,all]=assetsReady(),bar=LD.querySelector('i'),sub=LD.querySelector('.s');WU.t+=dt;
+ if(WU.ph===0){bar.style.width=(55*n/all)+'%';sub.textContent='модели '+n+' из '+all;if(n>=all||performance.now()-WU.t0>15000){WU.ph=1;WU.t=0;}return;}
+ if(WU.ph===1){sub.textContent='подготовка графики';warmBuild();warmPlace();R.compile(scene,cam);R.compile(cockScene,cam);WU.ph=2;WU.t=0;bar.style.width='65%';return;}
+ /* phase 2: draw a slow turn in each vehicle, with a blast in view, so nothing is drawn for the first time during the fight */
+ const T=WU.t;if(WU.ph===2&&!WU.fx&&T>0.1){WU.fx=1;const p=WU.g.position;bigBlast(p.x,p.y,p.z,50);queueBlast(p.x+60,p.y,p.z,40);explode(p.x,p.y+20,p.z,1.2);}
+ if(T<0.8){if(CUR!=='titan')setVeh('titan');P.yaw+=dt*7.8;}else if(T<1.4){if(CUR!=='drone')setVeh('drone');}else if(T<2.0){if(CUR!=='plane')setVeh('plane');}
+ warmPlace();bar.style.width=(65+35*Math.min(1,T/2.0))+'%';
+ if(T>=2.0)warmEnd();}
+function warmEnd(){WU.on=false;WU.fx=0;if(WU.g){scene.remove(WU.g);WU.g=null;}fxReset();for(const p of PART.splice(0)){scene.remove(p.s);p.s.material.dispose();}for(const o of scorch.splice(0)){scene.remove(o.m);o.m.material.dispose();}SHK=0;P.shake=0;flash.intensity=0;
+ newGame();for(const e of live.values())dyn.remove(e.o);live.clear();CUR='drone';setVeh('titan');
+ T3.warm=0;T3.fpsN=0;T3.fpsT=0;T3.lowN=0;T3.hiN=0;LD.style.display='none';}
 let running=false,MIL_DIRTY=false,last=performance.now();
 function loop(now_){requestAnimationFrame(loop);const dt=Math.min(0.05,(now_-last)/1000);last=now_;if(!running)return;
  if(T3.map){mapLoop();stepGame(dt);stepTitan(dt);stepDrone(dt);stepPlane(dt);stepArt(dt);stepShells(dt);return;}
  if(T3.applyQ){T3.applyQ=false;R.setPixelRatio(T3.q);size();}/* resolution changes happen before drawing, so the canvas is never shown cleared */
  if(CUR==='plane'){if(keys.has('KeyA'))F.ty-=1.4*dt;if(keys.has('KeyD'))F.ty+=1.4*dt;}else{if(keys.has('KeyA'))VEH().yaw-=1.6*dt;if(keys.has('KeyD'))VEH().yaw+=1.6*dt;}
- const t=now_/1000;stepGame(dt);stepTitan(dt);stepDrone(dt);stepPlane(dt);stepArt(dt);stepShells(dt);syncAll(t,dt);syncDrone(t,dt);syncPlane(t);stepParts(dt);stepFx(dt);
+ const t=now_/1000;if(WU.on)warmStep(dt);else{stepGame(dt);stepTitan(dt);stepDrone(dt);stepPlane(dt);stepArt(dt);stepShells(dt);}syncAll(t,dt);syncDrone(t,dt);syncPlane(t);stepParts(dt);stepFx(dt);
  if(G_.over&&over.style.display!=='flex'){over.style.display='flex';over.querySelector('.t').textContent=G_.over.w===0?'Победа!':'Поражение';}
  if(ocean)ocean.material.normalMap.offset.set(t*0.004,-t*0.01);
  for(const c of world.children)if(c.userData.cloud){c.position.x+=c.userData.v*dt;if(c.position.x>IW+7000)c.position.x=-7000;}
@@ -912,9 +942,9 @@ function loop(now_){requestAnimationFrame(loop);const dt=Math.min(0.05,(now_-las
  cam.updateMatrixWorld();stepLock(dt);HUD.upd(dt);droneHud(t);planeHud();markHud();if(PO.on){PO.fin.uniforms.mono.value=CUR==='drone'?1:0;PO.fin.uniforms.tm.value=t%100;}if(FR%6===0)drawMap(q('.mini'),false);cam.updateMatrixWorld();cockRoot.position.copy(cam.position);cockRoot.quaternion.copy(cam.quaternion);cockScene.environment=scene.environment;drawFrame();AUD.tick(dt);
  T3.fpsN++;T3.fpsT+=dt;if(T3.fpsT>=2){T3.fps=T3.fpsN/T3.fpsT;T3.fpsN=0;T3.fpsT=0;T3.warm=(T3.warm||0)+1;
   /* ignore the first seconds (shaders compiling); go down after two slow windows, up only after four fast ones and never soon after going down */
-  if(T3.warm>2){T3.lowN=T3.fps<38?(T3.lowN||0)+1:0;T3.hiN=T3.fps>58?(T3.hiN||0)+1:0;let nq=T3.q;
+  if(T3.warm>2){T3.lowN=T3.fps<38?(T3.lowN||0)+1:0;T3.hiN=T3.fps>55?(T3.hiN||0)+1:0;let nq=T3.q;
    if(T3.lowN>=2&&T3.q>0.55){nq=Math.max(0.55,T3.q-0.15);T3.lowN=0;T3.downAt=now_;}
-   else if(T3.hiN>=4&&T3.q<Math.min(2,devicePixelRatio||1)&&now_-(T3.downAt||-1e9)>30000){nq=Math.min(devicePixelRatio||1,T3.q+0.1);T3.hiN=0;}
+   else if(T3.hiN>=2&&T3.q<Math.min(2,devicePixelRatio||1)&&now_-(T3.downAt||-1e9)>20000){nq=Math.min(2,devicePixelRatio||1,T3.q+0.15);T3.hiN=0;}
    if(nq!==T3.q){T3.q=nq;T3.applyQ=true;try{localStorage.setItem('dvebazy-isleq',''+nq);}catch(_){}}
    if(T3.fps<26&&T3.q<=0.56&&R.shadowMap.enabled){R.shadowMap.enabled=false;scene.traverse(o=>{if(o.material)o.material.needsUpdate=true;});}}}}
 requestAnimationFrame(loop);
@@ -1164,7 +1194,7 @@ function planeHud(){if(CUR!=='plane'){PCK.style.display='none';q('.fps').style.t
  q('.lk').setAttribute('display','none');const im=q('img.sight');if(im)im.classList.toggle('lock',!!LOCKF);
  q('.rld').setAttribute('stroke-dasharray',(170*(1-F.rcd/PLANE.rocketCd)).toFixed(1)+' 170');
  q('.sup span').textContent=F.rcd>0?Math.ceil(F.rcd)+' с':'';q('.sup').classList.toggle('cd',F.rcd>0);q('.hurt').style.boxShadow='inset 0 0 120px rgba(200,20,10,'+(F.hurt>0?0.5:0)+')';}
-window.__isle.F=F;window.__isle.dmgUnit=dmgUnit;window.__isle.stepFx=stepFx;window.__isle.rayHit=rayHit;window.__isle.shk=(v)=>{if(v!=null)SHK=v;return SHK;};window.__isle.shakeAt=shakeAt;window.__isle.FXP=FXP;window.__isle.bigBlast=bigBlast;window.__isle.FXN=()=>({fx:FXP.length,wrk:WRK.length,fall:FALL.length,deb:DEBR.length,part:PART.length});window.__isle.buildXM=buildXM;window.__isle.XM=XM;window.__isle.hitBase=hitBase;window.__isle.syncAll=syncAll;window.__isle.PART=PART;window.__isle.stepParts=stepParts;window.__isle.hitMine=hitMine;window.__isle.stepTitan=stepTitan;window.__isle.P=P;window.__isle.get_LOCK=()=>LOCK;window.__isle.stepPlane=stepPlane;window.__isle.planeRockets=planeRockets;window.__isle.PR=PR;window.__isle.get_LOCKF=()=>LOCKF;
+window.__isle.F=F;window.__isle.dmgUnit=dmgUnit;window.__isle.stepFx=stepFx;window.__isle.WU=WU;window.__isle.rayHit=rayHit;window.__isle.shk=(v)=>{if(v!=null)SHK=v;return SHK;};window.__isle.shakeAt=shakeAt;window.__isle.FXP=FXP;window.__isle.bigBlast=bigBlast;window.__isle.FXN=()=>({fx:FXP.length,wrk:WRK.length,fall:FALL.length,deb:DEBR.length,part:PART.length});window.__isle.buildXM=buildXM;window.__isle.XM=XM;window.__isle.hitBase=hitBase;window.__isle.syncAll=syncAll;window.__isle.PART=PART;window.__isle.stepParts=stepParts;window.__isle.hitMine=hitMine;window.__isle.stepTitan=stepTitan;window.__isle.P=P;window.__isle.get_LOCK=()=>LOCK;window.__isle.stepPlane=stepPlane;window.__isle.planeRockets=planeRockets;window.__isle.PR=PR;window.__isle.get_LOCKF=()=>LOCKF;
 
 /* ================== TEST: the bot sends free waves (mostly helicopters); they don't take lives from our base ================== */
 const TESTW={on:true,t:6,n:0};try{TESTW.on=localStorage.getItem('dvebazy-testw')!=='0';}catch(_){}
