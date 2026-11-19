@@ -1311,10 +1311,38 @@ function syncPlane(t){if(!PLANE_O){PLANE_O=instantiate(proto('Uplane0',()=>build
  for(const r of PR)if(r.t>=0)sync('R'+r.id,()=>{const g=new THREE.Group();const b=new THREE.Mesh(new THREE.CylinderGeometry(0.7,0.7,7,8),std(0xD8D8D0,0.5,0.4));b.rotation.z=Math.PI/2;g.add(b);const f=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.glow,color:0xFFB050,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}));f.scale.set(9,9,1);f.position.x=-5;g.add(f);return g;},o=>{o.position.set(r.x,r.y,r.z);o.rotation.set(0,-Math.atan2(r.vz,r.vx),Math.atan2(r.vy,Math.hypot(r.vx,r.vz)));});}
 /* plane HUD: speed and altitude, rocket ring, the sight goes red when something is on the gun */
 const PA=document.createElement('div');PA.className='b palt';PA.style.cssText='right:max(14px,env(safe-area-inset-right));top:56px;padding:0 12px;height:38px;font-size:13px;display:none';H.appendChild(PA);
-{const ALTS=[120,200,300,450];let ai=1;try{const v=+localStorage.getItem('dvebazy-plalt');if(ALTS.includes(v))ai=ALTS.indexOf(v);}catch(_){}F.alt=ALTS[ai];F.y=F.alt;
+{const ALTS=[120,200,300,450,600,800];let ai=1;try{const v=+localStorage.getItem('dvebazy-plalt');if(ALTS.includes(v))ai=ALTS.indexOf(v);}catch(_){}F.alt=ALTS[ai];F.y=F.alt;
  const upd=()=>PA.textContent='Высота '+F.alt;upd();tapBtn(PA,()=>{ai=(ai+1)%ALTS.length;F.alt=ALTS[ai];upd();try{localStorage.setItem('dvebazy-plalt',''+F.alt);}catch(_){}});}
 const PCK=document.createElement('img');PCK.src='pl_cockpit.webp';PCK.alt='';PCK.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none;display:none';{const tc=document.getElementById('tiCock');tc.parentNode.insertBefore(PCK,tc);}
-function planeHud(){if(CUR!=='plane'){PCK.style.display='none';q('.fps').style.top='';return;}q('.fps').style.top='102px';
+/* cracked canopy: hits spread cracks from impact points (more and longer the longer we are under fire); out of the line of fire they fade away.
+   The canopy bulges forward, so lines bow outwards and thin out towards its edges */
+const CRK={peak:0,a:0,calm:0,hp:null,lvl:-1,imp:null,cv:null};
+{const cv=document.createElement('canvas');cv.id='plCrack';cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none;display:none;opacity:0';PCK.parentNode.insertBefore(cv,PCK);CRK.cv=cv;}
+function crackGen(){const imp=[];for(let i=0;i<9;i++){const x=0.18+rn()*0.64,y=0.2+rn()*0.48,rays=[];const n=7+Math.floor(rn()*5);
+  for(let k=0;k<n;k++){let a=k/n*6.283+(rn()-0.5)*0.5,L=0.07+rn()*0.16,pts=[[0,0]],px=0,py=0;const seg=6+Math.floor(rn()*4);
+   for(let j=1;j<=seg;j++){a+=(rn()-0.5)*0.45;px+=Math.cos(a)*L/seg;py+=Math.sin(a)*L/seg*1.15;pts.push([px,py]);}
+   const br=rn()<0.55?{at:2+Math.floor(rn()*(seg-2)),a:a+(rn()<0.5?1:-1)*(0.5+rn()*0.6),L:L*(0.25+rn()*0.3)}:null;rays.push({pts,br});}
+  const rings=[];for(let r=0;r<2;r++)rings.push({r:0.018+r*0.03+rn()*0.012,jit:Array.from({length:n},()=>0.75+rn()*0.5)});
+  imp.push({x,y,rays,rings,n});}return imp;}
+function crackDraw(level){const cv=CRK.cv,W=Math.round(innerWidth*Math.min(1.5,devicePixelRatio||1)),H=Math.round(innerHeight*Math.min(1.5,devicePixelRatio||1));if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}
+ const c=cv.getContext('2d');c.clearRect(0,0,W,H);if(!CRK.imp)CRK.imp=crackGen();const S=Math.min(W,H)*1.1;
+ /* bulging glass: barrel bend around the canopy centre, foreshortening towards its rim */
+ const P_=(x,y)=>{const u=(x-0.5)/0.46,v=(y-0.44)/0.36,r2=u*u+v*v,k=1-0.16*r2;return [W*(0.5+u*0.46*k),H*(0.44+v*0.36*k),Math.max(0.25,1-0.55*r2)];};
+ c.lineCap='round';c.lineJoin='round';
+ CRK.imp.forEach((m,i)=>{const g=Math.max(0,Math.min(1,(level-i*0.1)/0.3));if(g<=0)return;const [cx0,cy0,f0]=P_(m.x,m.y);
+  const fr=c.createRadialGradient(cx0,cy0,0,cx0,cy0,S*0.05*f0*(0.4+g));fr.addColorStop(0,`rgba(235,245,255,${0.5*f0})`);fr.addColorStop(1,'rgba(235,245,255,0)');c.fillStyle=fr;c.beginPath();c.arc(cx0,cy0,S*0.05*f0*(0.4+g),0,7);c.fill();
+  const path=(pts,ox,oy,frac)=>{const n=Math.max(1,Math.round((pts.length-1)*frac));c.beginPath();for(let j=0;j<=n;j++){const [X,Y]=P_(m.x+(ox+pts[j][0])*S/W,m.y+(oy+pts[j][1])*S/H);j?c.lineTo(X,Y):c.moveTo(X,Y);}c.stroke();};
+  for(const pass of [0,1]){c.strokeStyle=pass?`rgba(240,248,255,${0.85*f0})`:`rgba(10,14,20,${0.35*f0})`;c.lineWidth=(pass?1.3:2.4)*f0*(W/1400+0.6);
+   for(const ry of m.rays){path(ry.pts,pass?0:0.0015,pass?0:0.0015,g);if(ry.br&&g>0.6){const b=ry.pts[ry.br.at];const pts=[[b[0],b[1]],[b[0]+Math.cos(ry.br.a)*ry.br.L*0.5,b[1]+Math.sin(ry.br.a)*ry.br.L*0.5],[b[0]+Math.cos(ry.br.a+0.2)*ry.br.L,b[1]+Math.sin(ry.br.a+0.2)*ry.br.L]];path(pts,0,0,(g-0.6)/0.4);}}
+   if(g>0.45)for(const rg of m.rings){const n=m.n;c.beginPath();for(let k=0;k<=n;k++){const kk=k%n,a=kk/n*6.283,rr=rg.r*rg.jit[kk]*Math.min(1,(g-0.45)/0.4);const [X,Y]=P_(m.x+Math.cos(a)*rr*S/W,m.y+Math.sin(a)*rr*1.15*S/H);k?c.lineTo(X,Y):c.moveTo(X,Y);}c.stroke();}}});}
+function crackStep(dt){if(CRK.hp==null)CRK.hp=F.hp;const lost=CRK.hp-F.hp;CRK.hp=F.hp;
+ if(F.dead>0||lost<0){CRK.peak=0;CRK.a=0;CRK.imp=null;}
+ else if(lost>0){CRK.peak=Math.min(1,CRK.peak+lost/650);CRK.a=1;CRK.calm=0;}
+ else{CRK.calm+=dt;if(CRK.calm>1.2)CRK.a=Math.max(0,CRK.a-dt*0.4);if(CRK.a<=0&&CRK.peak>0){CRK.peak=0;CRK.imp=null;}}
+ const show=CUR==='plane'&&CRK.a>0&&PCK.style.display!=='none';CRK.cv.style.display=show?'block':'none';if(!show)return;
+ const lv=Math.round(CRK.peak*60);if(lv!==CRK.lvl){CRK.lvl=lv;crackDraw(CRK.peak);}CRK.cv.style.opacity=CRK.a.toFixed(3);}
+let CRKT=0;addEventListener('resize',()=>CRK.lvl=-1);
+function planeHud(){{const n=performance.now(),d=CRKT?Math.min(0.1,(n-CRKT)/1000):0;CRKT=n;crackStep(d);}if(CUR!=='plane'){PCK.style.display='none';q('.fps').style.top='';return;}q('.fps').style.top='102px';
  const g=document.getElementById('tiCock');if(g)g.style.display='none';PCK.style.display=F.dead<=0&&F.zoom<1.5?'block':'none';
  q('.lk').setAttribute('display','none');const im=q('img.sight');if(im)im.classList.toggle('lock',!!LOCKF);
  q('.rld').setAttribute('stroke-dasharray',(170*(1-F.rcd/PLANE.rocketCd)).toFixed(1)+' 170');
@@ -1429,7 +1457,7 @@ function syncHeroes(t,dt){if(!G_)return;
  for(const r of EFR)if(r.t>=0)sync('hr'+r.id,()=>{const g=new THREE.Group();const b=new THREE.Mesh(new THREE.CylinderGeometry(0.7,0.7,7,8),std(0xB0B0A8,0.5,0.4));b.rotation.z=Math.PI/2;g.add(b);const f=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.glow,color:0xFF7050,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}));f.scale.set(9,9,1);f.position.x=-5;g.add(f);return g;},o=>{o.position.set(r.x,r.y,r.z);o.rotation.set(0,-Math.atan2(r.vz||0,r.vx||1),Math.atan2(r.vy||0,Math.hypot(r.vx||1,r.vz||0)));});
  /* where the bot's shells will land: a pulsing red ring on the ground */
  for(const a of EAR)sync('hA'+a.id,()=>{const m=new THREE.Mesh(new THREE.RingGeometry(ART.R*0.85,ART.R,40),new THREE.MeshBasicMaterial({color:0xFF3020,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));m.rotation.x=-Math.PI/2;return m;},o=>{o.position.set(a.x,2,a.z);o.material.opacity=0.35+0.35*Math.sin(t*10);});}
-window.__isle.ET=ET;window.__isle.ED=ED;window.__isle.EF=EF;window.__isle.stepHeroes=stepHeroes;
+window.__isle.CRK=CRK;window.__isle.ET=ET;window.__isle.ED=ED;window.__isle.EF=EF;window.__isle.stepHeroes=stepHeroes;
 
 function onMil(){if(BUILT){MIL_DIRTY=false;buildWorld();}else MIL_DIRTY=true;}
 cam.far=9000;cam.updateProjectionMatrix();{const c=sun.shadow.camera;c.left=-330;c.right=330;c.top=330;c.bottom=-330;c.far=1600;c.updateProjectionMatrix();}
