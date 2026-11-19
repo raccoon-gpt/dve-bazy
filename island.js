@@ -627,7 +627,7 @@ function pickTarget(s,x,z,rng,hitAir,hitGround,mines){let best=null,bd=rng;
  if(!best&&mines)for(const m of G_.mines){if(m.dead||m.s===s)continue;const d=Math.hypot(m.x-x,m.z-z)-60;if(d<bd){bd=d;best={k:'m',o:m};}}
  return best;}
 const tpos=tg=>tg.k==='et'?[ET.x,26,ET.z]:tg.k==='ed'?[ED.x,ED.y,ED.z]:tg.k==='ef'?[EF.x,EF.y,EF.z]:tg.k==='f'?[F.x,F.y,F.z]:tg.k==='d'?[D.x,D.y,D.z]:tg.k==='p'?[P.x,hgt(P.x,P.z)+14,P.z]:tg.k==='u'?[tg.o.x,tg.o.y+6,tg.o.z]:tg.k==='t'?[tg.o.x,hgt(tg.o.x,tg.o.z)+14,tg.o.z]:tg.k==='m'?[tg.o.x+(rn()-0.5)*60,10,tg.o.z+(rn()-0.5)*50]:[tg.o.x,hgt(tg.o.x,tg.o.z)+7,tg.o.z];
-function applyHit(tg,d,by){if(tg.k==='u')dmgUnit(tg.o,d,by);else if(tg.k==='t')dmgTower(tg.o,d,by);else if(tg.k==='h')dmgHarv(tg.o,d,by);else if(tg.k==='m')dmgMine(tg.o,d);else if(tg.k==='p'){P.hp-=d;P.hurt=0.25;}else if(tg.k==='d'){D.hp-=d;D.hurt=0.25;}else if(tg.k==='f'){F.hp-=d;F.hurt=0.25;}else if(tg.k==='et')ET.hp-=d;else if(tg.k==='ed')ED.hp-=d;else if(tg.k==='ef')EF.hp-=d;}
+function applyHit(tg,d,by){if(tg.k==='u')dmgUnit(tg.o,d,by);else if(tg.k==='t')dmgTower(tg.o,d,by);else if(tg.k==='h')dmgHarv(tg.o,d,by);else if(tg.k==='m')dmgMine(tg.o,d);else if(tg.k==='p'){P.hp-=d;P.hurt=0.25;}else if(tg.k==='d'){D.hp-=d;D.hurt=0.25;}else if(tg.k==='f'){F.hp-=d;F.hurt=0.25;}else if(tg.k==='et')ET.hp-=d;else if(tg.k==='ed')ED.hp-=d;else if(tg.k==='ef'){EF.hp-=d;if(by===0)efThreat();}}
 function splash(s,x,z,r,d,by){for(const u of G_.units){if(u.dead||u.s===s||US[u.k].air)continue;const k=Math.hypot(u.x-x,u.z-z);if(k<r)dmgUnit(u,d*(k<r*0.5?1:0.6),by);}
  for(const h of G_.harv){if(!h.dead&&h.s!==s&&Math.hypot(h.x-x,h.z-z)<r)dmgHarv(h,d,by);}}
 
@@ -1338,7 +1338,7 @@ function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0){if(RSP.F>0){RSP.F--
   r.x+=r.vx*sp*dt;r.y+=r.vy*sp*dt;r.z+=r.vz*sp*dt;r.tr-=dt;if(r.tr<=0){r.tr=0.03;puff(r.x,r.y,r.z,'trail');}
   const gnd=r.y<=Math.max(0,hgt(r.x,r.z))+1||OBS.some(o=>o.h>0&&r.y<=o.h&&inRect(r.x,r.z,o,0));
   if(hitNow||gnd||r.t>9){PR.splice(i,1);rocketHit(r.x,r.z,Math.max(0,r.y));}}}
-function rocketHit(x,z,y){explode(x,y||0,z,1.3);const R_=PLANE.rocketR;heroSplash(x,y||0,z,R_+20,PLANE.rocketDmg);
+function rocketHit(x,z,y){explode(x,y||0,z,1.3);const R_=PLANE.rocketR;if(EF.dead<=0&&Math.hypot(EF.x-x,EF.y-(y||0),EF.z-z)<130)efThreat();heroSplash(x,y||0,z,R_+20,PLANE.rocketDmg);
  for(const u of G_.units){if(u.dead||u.s===0)continue;const d=Math.hypot(u.x-x,u.z-z);if(d<R_)dmgUnit(u,PLANE.rocketDmg*(d<R_*0.5?1:0.6),0);}
  for(const t of G_.towers){if(t.s===0||t.dead)continue;if(Math.hypot(t.x-x,t.z-z)<R_*0.6+14)dmgTower(t,PLANE.rocketDmg*2,0);}
  for(const h of G_.harv){if(h.s===0||h.dead)continue;if(Math.hypot(h.x-x,h.z-z)<R_)dmgHarv(h,PLANE.rocketDmg,0);}
@@ -1349,7 +1349,7 @@ function rocketHit(x,z,y){explode(x,y||0,z,1.3);const R_=PLANE.rocketR;heroSplas
    so a small miss is corrected and a big one flies past; with nothing near the sight they go straight to where it points */
 function rocketTarget(dv,cone){let best=null,ba=cone;const c=(x,y,z,fn)=>{const vx=x-F.x,vy=y-F.y,vz=z-F.z,L=Math.hypot(vx,vy,vz);if(L<60||L>4000)return;const a=Math.acos(Math.max(-1,Math.min(1,(vx*dv[0]+vy*dv[1]+vz*dv[2])/L)));if(a<ba){ba=a;best=fn;}};
  for(const u of G_.units){if(u.dead||u.s===0)continue;const air=US[u.k].air;c(u.x,u.y+(air?0:8),u.z,()=>u.dead?null:[u.x,u.y+(US[u.k].air?0:8),u.z]);}
- if(ET.dead<=0)c(ET.x,14,ET.z,()=>ET.dead>0?null:[ET.x,14,ET.z]);if(ED.dead<=0)c(ED.x,ED.y,ED.z,()=>ED.dead>0?null:[ED.x,ED.y,ED.z]);if(EF.dead<=0)c(EF.x,EF.y,EF.z,()=>EF.dead>0?null:[EF.x,EF.y,EF.z]);
+ if(ET.dead<=0)c(ET.x,14,ET.z,()=>ET.dead>0?null:[ET.x,14,ET.z]);if(ED.dead<=0)c(ED.x,ED.y,ED.z,()=>ED.dead>0?null:[ED.x,ED.y,ED.z]);if(EF.dead<=0){const f=()=>EF.dead>0?null:[EF.x,EF.y,EF.z];f.ef=1;c(EF.x,EF.y,EF.z,f);}
  return best;}
 function planeRockets(){if(F.dead>0||F.rcd>0)return;F.rcd=PLANE.rocketCd;let tx,ty,tz;
  const dv=[Math.cos(F.yaw)*Math.cos(F.pitch),Math.sin(F.pitch),Math.sin(F.yaw)*Math.cos(F.pitch)];const rh=rayHit(F.x,F.y,F.z,dv[0],dv[1],dv[2],4000,0);
@@ -1357,6 +1357,7 @@ function planeRockets(){if(F.dead>0||F.rcd>0)return;F.rcd=PLANE.rocketCd;let tx,
  /* the outer ring of the sight is about 17% of the screen height from its centre: anything inside it at launch is chased hard and hit;
     a little outside it the rockets only nudge towards it and usually fly past */
  const ring=Math.atan(0.34*Math.tan((80/F.zoom)*Math.PI/360));let tg=rocketTarget(dv,ring),strong=!!tg;if(!tg)tg=rocketTarget(dv,ring*1.6);
+ if(tg&&tg.ef)efThreat();
  const p0=tg&&tg(),Te=Math.max(0.4,Math.hypot(...(p0||[tx,ty,tz]).map((v,k)=>v-[F.x,F.y,F.z][k]))/1100),turn=strong?3.2:Math.max(0.12,Math.min(1.6,0.13/Te));
  for(let i=0;i<PLANE.rocketN;i++){const sd=i%2?1:-1;PR.push({id:++PRID,t:-i*0.11,sd,tg,turn,strong,tx:tx+(rn()-0.5)*30,ty:ty+(rn()-0.5)*8,tz:tz+(rn()-0.5)*30,x:F.x,y:F.y,z:F.z,vx:0,vy:0,vz:0,tr:0});}
  HUD.msg('Пуск ракет!');HUD.kick();}
@@ -1434,7 +1435,7 @@ const EF={x:0,z:0,y:230,yaw:Math.PI,hp:2500,max:2500,dead:0,cd:0,rcd:6,bank:0,tg
 const ETS=[],EFR=[],EAR=[];let EID=0;
 function etSpawn(){ET.lk=0;ET.y=0;const [bx,bz]=BASES[1];ET.x=bx-260;ET.z=bz+(rn()-0.5)*80;ET.yaw=Math.PI;ET.hp=ET.max;ET.dead=0;ET.path=null;ET.tg=null;ET.tgT=0;ET.cd=1;ET.scd=12;ET.seed=1+rn()*900;}
 function edSpawn(){const [bx,bz]=BASES[1];ED.x=bx-120;ED.z=bz;ED.y=ED.alt||450;ED.yaw=Math.PI;ED.hp=ED.max;ED.dead=0;ED.art=7;ED.goal=null;}
-function efSpawn(){const [bx,bz]=BASES[1];EF.x=bx+300;EF.z=bz+(rn()-0.5)*600;EF.y=230;EF.yaw=Math.PI;EF.ty=Math.PI;EF.hp=EF.max;EF.dead=0;EF.rcd=6;EF.tg=null;}
+function efSpawn(){Object.assign(EFM,{aware:0,chase:0,ignore:0,threat:-99});const [bx,bz]=BASES[1];EF.x=bx+300;EF.z=bz+(rn()-0.5)*600;EF.y=230;EF.yaw=Math.PI;EF.ty=Math.PI;EF.hp=EF.max;EF.dead=0;EF.rcd=6;EF.tg=null;}
 const RSP={P:5,D:5,F:5,ET:5,ED:5,EF:5};
 function heroesReset(){Object.assign(RSP,{P:5,D:5,F:5,ET:5,ED:5,EF:5});TESTW.on=false;TESTW.t=6;if(TESTW.upd)TESTW.upd();etSpawn();edSpawn();efSpawn();ETS.length=0;EFR.length=0;EAR.length=0;}
 {const ng=newGame;newGame=function(){ng();heroesReset();};}
@@ -1489,13 +1490,22 @@ function stepED(dt){if(ED.dead>0){ED.dead-=dt;if(ED.dead<=0){if(RSP.ED>0){RSP.ED
  if(ED.hp<=0){ED.hp=0;ED.dead=7;heroDie({x:ED.x,y:ED.y,z:ED.z},1.4,200);}}
 
 /* --- the enemy plane --- */
-function efPick(){const c=[];if(F.dead<=0)c.push({k:'f',air:1,w:0.7,x:F.x,y:F.y,z:F.z});if(D.dead<=0&&!D.fall)c.push({k:'d',air:1,w:0.8,x:D.x,y:D.y,z:D.z});
+/* how the bot pilot knows about our plane: it sees it ahead (±70°, 1800 m) or right next to it (300 m) and remembers it ~6 s;
+   being shot at by our plane makes it a threat — hunted at once, wherever it is.
+   A chase without our plane firing at it is dropped after 15 s, and our plane is then ignored for 10 s (unless it shoots at it again) */
+const EFM={aware:0,chase:0,ignore:0,threat:-99};
+function efThreat(){EFM.threat=G_?G_.t:0;EFM.aware=12;EFM.chase=0;EFM.ignore=0;if(EF.tg&&EF.tg.k!=='f')EF.tT=0;}
+function efSense(dt){EFM.ignore=Math.max(0,EFM.ignore-dt);EFM.aware=Math.max(0,EFM.aware-dt);if(F.dead>0){EFM.aware=0;EFM.chase=0;return;}
+ const dx=F.x-EF.x,dz=F.z-EF.z,d=Math.hypot(dx,dz,F.y-EF.y);const a=Math.abs(Math.atan2(Math.sin(Math.atan2(dz,dx)-EF.yaw),Math.cos(Math.atan2(dz,dx)-EF.yaw)));
+ if(EFM.ignore<=0&&(d<300||(d<2200&&a<1.22)))EFM.aware=Math.max(EFM.aware,6);
+ if(EF.tg&&EF.tg.k==='f'){EFM.chase+=dt;if(EFM.chase>15){EFM.ignore=10;EFM.aware=0;EFM.chase=0;EF.tT=0;}}}
+function efPick(){const c=[];if(F.dead<=0&&EFM.ignore<=0&&EFM.aware>0)c.push({k:'f',air:1,w:G_.t-EFM.threat<15?0.02:0.7,x:F.x,y:F.y,z:F.z});if(D.dead<=0&&!D.fall)c.push({k:'d',air:1,w:0.8,x:D.x,y:D.y,z:D.z});
  for(const u of G_.units)if(!u.dead&&u.s===0&&US[u.k].air)c.push({k:'u',o:u,air:1,w:1,x:u.x,y:u.y,z:u.z});
  for(const u of G_.units)if(!u.dead&&u.s===0&&!US[u.k].air)c.push({k:'u',o:u,air:0,w:0.9,x:u.x,y:u.y+8,z:u.z});for(const m of G_.mines)if(m.s===0&&!m.dead)c.push({k:'m',o:m,air:0,w:1.4,x:m.x,y:8,z:m.z});
  let best=null,bd=1e9;for(const q of c){const d=Math.hypot(q.x-EF.x,q.z-EF.z)*q.w;if(d<bd){bd=d;best=q;}}return best;}
 function stepEF(dt){if(EF.dead>0){EF.dead-=dt;if(EF.dead<=0){if(RSP.EF>0){RSP.EF--;efSpawn();}else EF.dead=1e9;}return;}
- EF.cd=Math.max(0,EF.cd-dt);EF.rcd=Math.max(0,EF.rcd-dt);EF.tT-=dt;if(EF.tT<=0){EF.tT=1;EF.tg=efPick();}
- const g=EF.tg;if(g){if(g.k==='f'){g.x=F.x;g.y=F.y;g.z=F.z;if(F.dead>0)EF.tT=0;}else if(g.k==='d'){g.x=D.x;g.y=D.y;g.z=D.z;if(D.dead>0||D.fall)EF.tT=0;}else if(g.k==='u'){if(g.o.dead)EF.tT=0;else{g.x=g.o.x;g.y=g.o.y+(g.air?0:8);g.z=g.o.z;}}else if(g.k==='p'){g.x=P.x;g.z=P.z;if(P.dead>0)EF.tT=0;}else if(g.k==='m'&&g.o.dead)EF.tT=0;}
+ EF.cd=Math.max(0,EF.cd-dt);EF.rcd=Math.max(0,EF.rcd-dt);efSense(dt);EF.tT-=dt;if(EF.tT<=0){EF.tT=1;const was=EF.tg&&EF.tg.k;EF.tg=efPick();if(EF.tg&&EF.tg.k==='f'&&was!=='f')EFM.chase=0;}
+ const g=EF.tg;if(g){if(g.k==='f'){g.x=F.x;g.y=F.y;g.z=F.z;if(F.dead>0||EFM.ignore>0||EFM.aware<=0)EF.tT=0;}else if(g.k==='d'){g.x=D.x;g.y=D.y;g.z=D.z;if(D.dead>0||D.fall)EF.tT=0;}else if(g.k==='u'){if(g.o.dead)EF.tT=0;else{g.x=g.o.x;g.y=g.o.y+(g.air?0:8);g.z=g.o.z;}}else if(g.k==='p'){g.x=P.x;g.z=P.z;if(P.dead>0)EF.tT=0;}else if(g.k==='m'&&g.o.dead)EF.tT=0;}
  const L=PLANE.limit,out=EF.x<-L||EF.z<-L||EF.x>IW+L||EF.z>IH+L;
  if(out)EF.ty=Math.atan2(IH/2-EF.z,IW/2-EF.x);else if(g){const dd=Math.hypot(g.x-EF.x,g.z-EF.z);
   /* too close to line up: fly on past it and come round again */
@@ -1525,7 +1535,7 @@ function syncHeroes(t,dt){if(!G_)return;
  for(const r of EFR)if(r.t>=0)sync('hr'+r.id,()=>{const g=new THREE.Group();const b=new THREE.Mesh(new THREE.CylinderGeometry(0.7,0.7,7,8),std(0xB0B0A8,0.5,0.4));b.rotation.z=Math.PI/2;g.add(b);const f=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.glow,color:0xFF7050,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}));f.scale.set(9,9,1);f.position.x=-5;g.add(f);return g;},o=>{o.position.set(r.x,r.y,r.z);o.rotation.set(0,-Math.atan2(r.vz||0,r.vx||1),Math.atan2(r.vy||0,Math.hypot(r.vx||1,r.vz||0)));});
  /* where the bot's shells will land: a pulsing red ring on the ground */
  for(const a of EAR)sync('hA'+a.id,()=>{const m=new THREE.Mesh(new THREE.RingGeometry(ART.R*0.85,ART.R,40),new THREE.MeshBasicMaterial({color:0xFF3020,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));m.rotation.x=-Math.PI/2;return m;},o=>{o.position.set(a.x,2,a.z);o.material.opacity=0.35+0.35*Math.sin(t*10);});}
-window.__isle.CRK=CRK;window.__isle.ET=ET;window.__isle.ED=ED;window.__isle.EF=EF;window.__isle.stepHeroes=stepHeroes;
+window.__isle.CRK=CRK;window.__isle.EFM=EFM;window.__isle.applyHit=applyHit;window.__isle.ET=ET;window.__isle.ED=ED;window.__isle.EF=EF;window.__isle.stepHeroes=stepHeroes;
 
 function onMil(){if(BUILT){MIL_DIRTY=false;buildWorld();}else MIL_DIRTY=true;}
 cam.far=9000;cam.updateProjectionMatrix();{const c=sun.shadow.camera;c.left=-330;c.right=330;c.top=330;c.bottom=-330;c.far=1600;c.updateProjectionMatrix();}
