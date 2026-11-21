@@ -321,6 +321,9 @@ const smoothstep=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*
 let GAPS=[],MINES_AT=[];const OBS=[];            // obstacles: axis-aligned boxes {x,z,w,d,h,k}
 const WALL_H=72,WALL_T=30;
 function inCanal(x,z){return Math.abs(x-IW/2)<CAN.hw&&!GAPS.some(g=>Math.abs(z-g)<CAN.bw/2);}
+/* the ground is not drawn under the runway and the base yard: their floors lie a hair above it, and on phones with a coarse depth buffer the ground showed through */
+function GHOLE(){const r=[];const box=(f,s,x0,x1,z0,z1)=>{const a=f(s,x0,z0),b=f(s,x1,z1);r.push(`if(abs(vWP.x-${((a[0]+b[0])/2).toFixed(1)})<${(Math.abs(a[0]-b[0])/2).toFixed(1)}&&abs(vWP.z-${((a[1]+b[1])/2).toFixed(1)})<${(Math.abs(a[1]-b[1])/2).toFixed(1)})discard;`);};
+ for(const s of [0,1]){box(airW,s,-0.085,0.085,-0.46,0.44);box(baseW,s,-0.3,0.3,-0.2,0.22);}return r.join('');}
 function hgt(x,z){return inCanal(x,z)?CAN.water:0;}
 function slope(x,z){return 0;}
 const inRect=(x,z,o,pad)=>Math.abs(x-o.x)<o.w/2+pad&&Math.abs(z-o.z)<o.d/2+pad;
@@ -451,6 +454,7 @@ function floorMaterial(){const T=yardTextures(),RM=floorMask(),SM=new THREE.Canv
    float sd=texture2D(tSand,clamp(mu,0.0,1.0)).r*inside;float nz=tc2.r-0.5+(tc.g-0.5)*0.6;float sand=smoothstep(0.32,0.68,sd+nz*0.45);
    float rip=sin(vWP.x*0.055+sin(vWP.z*0.009)*4.0+tc2.b*3.0)*0.5+0.5;vec3 sc=vec3(0.80,0.66,0.47)*(0.86+tc2.g*0.22)*(0.93+rip*0.1)+(tc.rgb-0.5)*0.08;
    col=mix(col,sc,sand);
+   ${GHOLE()}
    float cx=abs(vWP.x-${(IW/2).toFixed(1)});if(cx<${CAN.hw.toFixed(1)}&&abs(vWP.z-${gz[0]})>${(CAN.bw/2).toFixed(1)}&&abs(vWP.z-${gz[1]})>${(CAN.bw/2).toFixed(1)}&&abs(vWP.z-${gz[2]})>${(CAN.bw/2).toFixed(1)})discard;
    diffuseColor.rgb*=col;`);};return m;}
 function boxUV(geo,su,sv){const uv=geo.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,uv.getX(i)*su,uv.getY(i)*sv);return geo;}
@@ -1101,7 +1105,7 @@ function loop(now_){requestAnimationFrame(loop);let dt=Math.min(0.05,(now_-last)
  if(G_.over&&over.style.display!=='flex'){over.style.display='flex';over.querySelector('.t').textContent=G_.over.w===0?'Победа!':'Поражение';}
  if(ocean)ocean.material.normalMap.offset.set(t*0.004,-t*0.01);
  for(const c of world.children)if(c.userData.cloud){c.position.x+=c.userData.v*dt;if(c.position.x>IW+7000)c.position.x=-7000;}
- const gy=hgt(P.x,P.z),bob=P.move?Math.sin(P.bob)*0.6:0,sh=P.shake||0;const y=Math.max(gy,0)+(P.dead>0?90:26)+bob+(rn()-0.5)*sh*3;cam.position.set(P.x+(rn()-0.5)*sh*3,y,P.z);
+ const gy=hgt(P.x,P.z),bob=P.move?Math.sin(P.bob)*0.6:0,sh=P.shake||0;const y=Math.max(gy,0)+(P.dead>0?90:36)+bob+(rn()-0.5)*sh*3;cam.position.set(P.x+(rn()-0.5)*sh*3,y,P.z);
  const lp=P.pitch+(HUD.k>0?HUD.k*0.22:0);cam.lookAt(P.x+Math.cos(P.yaw)*Math.cos(lp)*100,y+Math.sin(lp)*100,P.z+Math.sin(P.yaw)*Math.cos(lp)*100);
  const fov=P.fov/P.zoom;if(Math.abs(cam.fov-fov)>0.01){cam.fov=fov;cam.updateProjectionMatrix();}cock.visible=false;{const v=P.dead<=0&&P.zoom<1.6;const g=document.getElementById('tiCock');if(g)g.style.display=v?'block':'none';}barrel.position.z=P.rec*5;
  if(CUR==='drone')droneCam(dt);else if(CUR==='plane')planeCam();
