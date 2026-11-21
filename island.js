@@ -1116,7 +1116,7 @@ function loop(now_){requestAnimationFrame(loop);let dt=Math.min(0.05,(now_-last)
   /* exact shift in light space: the target may sit a little off the ground, which is fine for a directional light */
   SHF.ty=u.y*pu;cx+=r.x*pr+u.x*pu;cz+=r.z*pr+u.z*pu;}
  {const D=CUR==='titan'?700:1200,ty=SHF.ty||0;sun.position.set(cx+SUN_DIR.x*D,ty+SUN_DIR.y*D,cz+SUN_DIR.z*D);sun.target.position.set(cx,ty,cz);}}
- cam.updateMatrixWorld();stepLock(dt);HUD.upd(dt);droneHud(t);drawStatic(dt);planeHud();markHud();if(PO.on){PO.fin.uniforms.mono.value=CUR==='drone'?1:0;PO.fin.uniforms.tm.value=t%100;}if(FR%6===0)drawMap(q('.mini'),false);cam.updateMatrixWorld();cockRoot.position.copy(cam.position);cockRoot.quaternion.copy(cam.quaternion);cockScene.environment=scene.environment;drawFrame();AUD.tick(dt);
+ cam.updateMatrixWorld();stepLock(dt);HUD.upd(dt);droneHud(t);drawStatic(dt);planeHud();markHud();if(PO.on){PO.fin.uniforms.mono.value=CUR==='drone'&&!DST.color?1:0;PO.fin.uniforms.tm.value=t%100;}if(FR%6===0)drawMap(q('.mini'),false);cam.updateMatrixWorld();cockRoot.position.copy(cam.position);cockRoot.quaternion.copy(cam.quaternion);cockScene.environment=scene.environment;drawFrame();AUD.tick(dt);
  T3.fpsN++;T3.fpsT+=dt;if(T3.fpsT>=2){T3.fps=T3.fpsN/T3.fpsT;T3.fpsN=0;T3.fpsT=0;T3.warm=(T3.warm||0)+1;
   /* ignore the first seconds (shaders compiling); go down after two slow windows, up only after four fast ones and never soon after going down */
   if(T3.warm>2){T3.lowN=T3.fps<38?(T3.lowN||0)+1:0;T3.hiN=T3.fps>55?(T3.hiN||0)+1:0;let nq=T3.q;
@@ -1225,12 +1225,14 @@ const DST={t:0,in:0,cv:null,c:null,img:null,btn:null,bk:null};
 {const cv=document.createElement('canvas');cv.width=192;cv.height=108;cv.id='drStatic';cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none;image-rendering:pixelated;display:none;z-index:3';H.appendChild(cv);DST.cv=cv;DST.c=cv.getContext('2d');DST.img=DST.c.createImageData(192,108);
  const bk=document.createElement('div');bk.style.cssText='position:absolute;inset:0;background:#000;pointer-events:none;opacity:0;display:none;z-index:4';H.appendChild(bk);DST.bk=bk;
  const b=document.createElement('div');b.className='b';b.style.cssText='right:max(14px,env(safe-area-inset-right));top:56px;padding:0 12px;height:40px;font-size:13px;display:none;background:rgba(150,40,30,.85)';b.textContent='Сбить дрон';H.appendChild(b);DST.btn=b;
+ /* TEST: drone picture in colour instead of black-and-white */
+ {const c=document.createElement('div');c.className='b';c.style.cssText='right:calc(max(14px,env(safe-area-inset-right)) + 118px);top:56px;padding:0 12px;height:40px;font-size:13px;display:none';c.textContent='Цвет: выкл';H.appendChild(c);DST.col=c;tapBtn(c,()=>{DST.color=!DST.color;c.textContent='Цвет: '+(DST.color?'вкл':'выкл');});}
  tapBtn(b,()=>{if(!D.fall&&D.dead<=0)D.hp=0;});}
 /* respawns left on the vehicle buttons; a vehicle that is gone for good is greyed out and we leave it */
 function vehBadges(){const vb=document.querySelectorAll('#h3 .veh .b');const m={titan:[P,'P'],drone:[D,'D'],plane:[F,'F']};
  vb.forEach(b=>{const [o,k]=m[b.dataset.v];let n=b.querySelector('.n');if(!n){n=document.createElement('span');n.className='n';b.appendChild(n);}const gone=o.dead>1e8;n.textContent=gone?'✕':RSP[k];b.classList.toggle('gone',gone);});
  const cur=m[CUR];if(cur&&cur[0].dead>1e8&&!G_.over){for(const v of ['titan','plane','drone'])if(m[v][0].dead<1e8){setVeh(v);break;}}}
-function drawStatic(dt){vehBadges();DST.btn.style.display=CUR==='drone'&&!G_.over?'block':'none';DST.t=Math.max(0,DST.t-dt);DST.in=Math.max(0,DST.in-dt);
+function drawStatic(dt){vehBadges();DST.btn.style.display=CUR==='drone'&&!G_.over?'block':'none';if(DST.col)DST.col.style.display=DST.btn.style.display;DST.t=Math.max(0,DST.t-dt);DST.in=Math.max(0,DST.in-dt);
  /* crash: full static that fades to black; black while waiting; the new drone fades in from black with a light ripple */
  let a=0,blk=0;if(CUR==='drone'){if(D.fall){const k=Math.min(1,D.fall.t/DFALL);a=0.12+0.55*k*k+(rn()<0.15?0.3:0);}
   else if(D.dead>0){a=DST.t>0?1:0;blk=DST.t>0?Math.min(1,(1-DST.t/0.9)*1.15):1;}
