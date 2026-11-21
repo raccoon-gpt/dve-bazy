@@ -323,7 +323,7 @@ const WALL_H=72,WALL_T=30;
 function inCanal(x,z){return Math.abs(x-IW/2)<CAN.hw&&!GAPS.some(g=>Math.abs(z-g)<CAN.bw/2);}
 /* the ground is not drawn under the runway and the base yard: their floors lie a hair above it, and on phones with a coarse depth buffer the ground showed through */
 function GHOLE(){const r=[];const box=(f,s,x0,x1,z0,z1)=>{const a=f(s,x0,z0),b=f(s,x1,z1);r.push(`if(abs(vWP.x-${((a[0]+b[0])/2).toFixed(1)})<${(Math.abs(a[0]-b[0])/2).toFixed(1)}&&abs(vWP.z-${((a[1]+b[1])/2).toFixed(1)})<${(Math.abs(a[1]-b[1])/2).toFixed(1)})discard;`);};
- for(const s of [0,1]){box(airW,s,-0.09,0.07,-0.46,-0.26);box(airW,s,-0.105,0.09,-0.26,0.44);box(baseW,s,-0.3,0.3,-0.2,0.22);}return r.join('');}
+ for(const s of [0,1]){box(airW,s,-0.155,0.155,-0.47,-0.1);box(airW,s,-0.135,0.115,-0.1,0.47);box(baseW,s,-0.3,0.3,-0.2,0.22);}return r.join('');}
 function hgt(x,z){return inCanal(x,z)?CAN.water:0;}
 function slope(x,z){return 0;}
 const inRect=(x,z,o,pad)=>Math.abs(x-o.x)<o.w/2+pad&&Math.abs(z-o.z)<o.d/2+pad;
