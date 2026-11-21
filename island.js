@@ -1395,7 +1395,7 @@ let LOCKF=null;const PR=[],PB=[];let PRID=0;
 function takeoff(o,dt){const T=o.take;T.v=Math.min(225,T.v+48*dt);o.x+=Math.cos(o.yaw)*T.v*dt;o.z+=Math.sin(o.yaw)*T.v*dt;
  if(T.v>170)o.y+=(T.v-150)*0.55*dt;o.bank=0;if(o===F)o.pitch=Math.min(0.12,-0.03+Math.max(0,o.y-PGY)*0.004);
  if(T.v>=225&&o.y>45){o.take=null;o.climb=1;if(o===F)o.pe=2.5;return false;}return true;}
-const PGY=9;                                                // plane height on the runway: wheels on the asphalt, not in it
+const PGY=10;                                               // plane height on the runway: wheels on the asphalt, not in it
 function planePark(){F.climb=0;F.pe=0;F.spin=0;[F.x,F.z]=airW(0,-0.01,-0.21);F.y=PGY;F.take=null;F.park=true;F.home=null;F.v=F.sp;F.yaw=0;F.ty=0;F.pitch=-0.03;F.bank=0;F.turn=false;}
 function spawnPlane(){invSet(F);planePark();F.lz=9;F.az=1;F.yaw=0;F.ty=0;F.pitch=-0.03;F.hp=F.max;F.dead=0;F.bank=0;F.turn=false;F.zoom=1;}
 function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0){if(RSP.F>0){RSP.F--;spawnPlane();}else F.dead=1e9;}return;}
@@ -1423,7 +1423,7 @@ function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0){if(RSP.F>0){RSP.F--
  /* machine gun: the first enemy near the centre of the sight */
  if(CUR==='plane')for(const u of G_.units){if(u.dead||u.s===0||!US[u.k].air||u.mk||SF(u))continue;const dx=u.x-F.x,dz=u.z-F.z,d=Math.hypot(dx,dz);if(d<2000){let a=Math.atan2(dz,dx)-F.yaw;a=Math.atan2(Math.sin(a),Math.cos(a));if(Math.abs(a)<0.75)u.mk=1;}}
  /* long-range bursts (2–4 km) pull the view smoothly out of the cockpit to full zoom; 1 s after the last such shot it eases back */
- F.lz=(F.lz??9)+dt;F.az=(F.az||1)+((F.lz<1&&CUR==='plane'?3:1)-(F.az||1))*Math.min(1,dt*2.2);if(F.az<1.002)F.az=1;
+ F.lz=(F.lz??9)+dt;{const zin=F.lz<1&&CUR==='plane';F.az=(F.az||1)+((zin?3:1)-(F.az||1))*Math.min(1,dt*(zin?2.2:1.32));}if(F.az<1.002)F.az=1;
  LOCKF=null;if(CUR==='plane'&&!G_.over){const o=new THREE.Vector3(F.x,F.y,F.z),dv=new THREE.Vector3(Math.cos(F.yaw)*Math.cos(F.pitch),Math.sin(F.pitch),Math.sin(F.yaw)*Math.cos(F.pitch));let best=PLANE.cone/F.zoom;
   const test=(x,y,z,tg,sz=10)=>{const vx=x-o.x,vy=y-o.y,vz=z-o.z,Ln=Math.hypot(vx,vy,vz);if(Ln>PLANE.range||Ln<25)return;const a=Math.acos(Math.max(-1,Math.min(1,(vx*dv.x+vy*dv.y+vz*dv.z)/Ln)))-Math.atan(sz/Ln);if(a<best){best=a;LOCKF={tg,x,y,z,d:Ln};}};
   for(const u of G_.units){if(u.dead||u.s===0||SF(u))continue;test(u.x,u.y+(u.k==='heli'?5:12),u.z,{k:'u',o:u},u.k==='heli'?30:u.k==='inf'?10:36);}
