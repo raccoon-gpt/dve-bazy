@@ -805,7 +805,8 @@ function bigBlast(x,y,z,S,n){shakeAt(x,y,z,Math.min(1.3,0.55+S/110));if(!WU.on&&
 function darken(o){o.traverse(m=>{if(!m.isMesh)return;let d=DKM.get(m.material.uuid);if(!d){d=m.material.clone();if(d.color)d.color.multiplyScalar(0.12);if(d.emissive)d.emissive.setRGB(0,0,0);DKM.set(m.material.uuid,d);}m.material=d;});}
 function takeVisual(u){const e=u.vk&&live.get(u.vk);if(!e)return null;live.delete(u.vk);return e.o;}
 function makeWreck(u,x,y,z,o){o=o||takeVisual(u);if(!o)return;darken(o);o.rotation.z=(rn()-0.5)*0.2;o.rotation.x=(rn()-0.5)*0.15;o.position.set(x,y,z);
- if(WRK.length>=14){const w=WRK.shift();dyn.remove(w.o);if(w.mats)for(const c of w.mats)c.dispose();}WRK.push({o,x,y,z,t:0,T:7,R:UR[u.k]||30,b:0});}
+ if(WRK.length>=14){const w=WRK.shift();dyn.remove(w.o);if(w.mats)for(const c of w.mats)c.dispose();}const hop=u.k==='heli'?null:{vy:15+rn()*4,vx:(rn()-0.5)*6,vz:(rn()-0.5)*6,wx:(rn()<0.5?-1:1)*(0.5+rn()*0.6),wz:(rn()<0.5?-1:1)*(0.4+rn()*0.6),h:0,n:0};
+ WRK.push({o,x,y,z,t:0,T:5.8,R:UR[u.k]||30,b:0,hop});}
 function startFall(u){const R=UR.heli;if(seen(u.x,u.y,u.z,R*2)){for(let i=0;i<3;i++)fire(u.x,u.y,u.z,R*0.8,R*2,0.5,(rn()-0.5)*R,R*0.3,(rn()-0.5)*R,0.07,0.55,i<1,0.95,2);
   smoke(u.x,u.y,u.z,R*1,R*2.8,2,0,R*0.2,0,0.12,0,0.8,1);}
  const o=takeVisual(u),sp=40;if(!o){queueBlast(u.x,Math.max(0,hgt(u.x,u.z)),u.z,R);return;}
@@ -817,8 +818,13 @@ function stepFx(dt){
   f.tr-=dt;if(f.tr<=0){f.tr=0.07;if(seen(f.x,f.y,f.z,80)){smoke(f.x,f.y+6,f.z,28,90,1.8,0,8,0,0.1,0,0.85,1);if(rn()<0.7)fire(f.x,f.y+4,f.z,30,12,0.25,0,0,0,0.07,0.6,true,1,0);}}
   const gy=Math.max(0,hgt(f.x,f.z));if(f.y<=gy+3||f.t>8){FALL.splice(i,1);queueBlast(f.x,gy,f.z,UR.heli*1.2);o.rotation.z=0.35;makeWreck(f.u,f.x,gy-2,f.z,o);}}
  for(let i=WRK.length-1;i>=0;i--){const w=WRK[i];w.t+=dt;
-  if(w.t<w.T-1.8){w.b-=dt;if(w.b<=0){w.b=0.2+rn()*0.1;if(seen(w.x,w.y+20,w.z,w.R*1.5)){fire(w.x+(rn()-0.5)*w.R*0.6,w.y+w.R*0.25,w.z+(rn()-0.5)*w.R*0.6,w.R*0.7,w.R*0.3,0.55,0,w.R*0.5,0,0.07,0.6,true,1,0);
-   smoke(w.x+(rn()-0.5)*w.R*0.4,w.y+w.R*0.35,w.z+(rn()-0.5)*w.R*0.4,w.R*0.8,w.R*2.6,2.4,4,w.R*0.45,0,0.08+rn()*0.06,0,0.8,0.6);}}}
+  /* the blast throws the burning hulk up with a twist; it lands, bounces twice, settles crooked */
+  const hp=w.hop;if(hp&&hp.n<3){hp.vy-=26*dt;hp.h+=hp.vy*dt;w.x+=hp.vx*dt;w.z+=hp.vz*dt;w.o.rotation.x+=hp.wx*dt;w.o.rotation.z+=hp.wz*dt;
+   if(hp.h<=0){hp.h=0;hp.n++;hp.vy=-hp.vy*0.45;hp.vx*=0.4;hp.vz*=0.4;hp.wx*=-0.45;hp.wz*=-0.45;
+    w.o.rotation.x=Math.max(-0.3,Math.min(0.3,w.o.rotation.x));w.o.rotation.z=Math.max(-0.3,Math.min(0.3,w.o.rotation.z));if(hp.n<3&&seen(w.x,w.y,w.z,w.R*2))puff(w.x,w.y+2,w.z,'dust');}
+   w.o.position.set(w.x,w.y+hp.h,w.z);}
+  if(w.t<w.T-1.8){w.b-=dt;if(w.b<=0){w.b=0.2+rn()*0.1;if(seen(w.x,w.y+20,w.z,w.R*1.5)){fire(w.x+(rn()-0.5)*w.R*0.6,w.y+(w.hop?w.hop.h:0)+w.R*0.25,w.z+(rn()-0.5)*w.R*0.6,w.R*0.7,w.R*0.3,0.55,0,w.R*0.5,0,0.07,0.6,true,1,0);
+   smoke(w.x+(rn()-0.5)*w.R*0.4,w.y+(w.hop?w.hop.h:0)+w.R*0.35,w.z+(rn()-0.5)*w.R*0.4,w.R*0.8,w.R*2.6,2.4,4,w.R*0.45,0,0.08+rn()*0.06,0,0.8,0.6);}}}
   else{/* crumbles into ash that the wind carries off, while the hulk fades */
    if(!w.mats){w.mats=[];w.sy=w.o.scale.y;w.o.traverse(m=>{if(!m.isMesh)return;const c=m.material.clone();c.userData.o0=c.opacity;c.transparent=true;c.depthWrite=false;m.material=c;w.mats.push(c);});}
    const k=(w.t-(w.T-1.8))/1.8;for(const c of w.mats)c.opacity=Math.max(0,1-k*1.15)*(c.userData.o0!=null?c.userData.o0:1);w.o.scale.y=w.sy*(1-0.35*k);
