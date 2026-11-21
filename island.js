@@ -323,7 +323,7 @@ const WALL_H=72,WALL_T=30;
 function inCanal(x,z){return Math.abs(x-IW/2)<CAN.hw&&!GAPS.some(g=>Math.abs(z-g)<CAN.bw/2);}
 /* the ground is not drawn under the runway and the base yard: their floors lie a hair above it, and on phones with a coarse depth buffer the ground showed through */
 function GHOLE(){const r=[];const box=(f,s,x0,x1,z0,z1)=>{const a=f(s,x0,z0),b=f(s,x1,z1);r.push(`if(abs(vWP.x-${((a[0]+b[0])/2).toFixed(1)})<${(Math.abs(a[0]-b[0])/2).toFixed(1)}&&abs(vWP.z-${((a[1]+b[1])/2).toFixed(1)})<${(Math.abs(a[1]-b[1])/2).toFixed(1)})discard;`);};
- for(const s of [0,1]){box(airW,s,-0.085,0.085,-0.46,0.44);box(baseW,s,-0.3,0.3,-0.2,0.22);}return r.join('');}
+ for(const s of [0,1]){box(airW,s,-0.09,0.07,-0.46,-0.26);box(airW,s,-0.105,0.09,-0.26,0.44);box(baseW,s,-0.3,0.3,-0.2,0.22);}return r.join('');}
 function hgt(x,z){return inCanal(x,z)?CAN.water:0;}
 function slope(x,z){return 0;}
 const inRect=(x,z,o,pad)=>Math.abs(x-o.x)<o.w/2+pad&&Math.abs(z-o.z)<o.d/2+pad;
@@ -1386,9 +1386,10 @@ const PLANE={limit:450,maxRate:0.75,mgCd:0.09,mgDmg:32,range:4000,cone:0.05,rock
 let LOCKF=null;const PR=[],PB=[];let PRID=0;
 /* take-off run: speeds up along the runway, lifts off at 170 m/s, climbs out; true while still on the run */
 function takeoff(o,dt){const T=o.take;T.v=Math.min(225,T.v+48*dt);o.x+=Math.cos(o.yaw)*T.v*dt;o.z+=Math.sin(o.yaw)*T.v*dt;
- if(T.v>170)o.y+=(T.v-150)*0.55*dt;o.bank=0;if(o===F)o.pitch=Math.min(0.12,-0.03+Math.max(0,o.y-4)*0.004);
+ if(T.v>170)o.y+=(T.v-150)*0.55*dt;o.bank=0;if(o===F)o.pitch=Math.min(0.12,-0.03+Math.max(0,o.y-PGY)*0.004);
  if(T.v>=225&&o.y>45){o.take=null;o.climb=1;if(o===F)o.pe=2.5;return false;}return true;}
-function planePark(){F.climb=0;F.pe=0;F.spin=0;[F.x,F.z]=airW(0,-0.01,-0.21);F.y=4;F.take=null;F.park=true;F.home=null;F.v=F.sp;F.yaw=0;F.ty=0;F.pitch=-0.03;F.bank=0;F.turn=false;}
+const PGY=5.6;                                              // plane height on the runway: wheels on the asphalt, not in it
+function planePark(){F.climb=0;F.pe=0;F.spin=0;[F.x,F.z]=airW(0,-0.01,-0.21);F.y=PGY;F.take=null;F.park=true;F.home=null;F.v=F.sp;F.yaw=0;F.ty=0;F.pitch=-0.03;F.bank=0;F.turn=false;}
 function spawnPlane(){invSet(F);planePark();F.yaw=0;F.ty=0;F.pitch=-0.03;F.hp=F.max;F.dead=0;F.bank=0;F.turn=false;F.zoom=1;}
 function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0){if(RSP.F>0){RSP.F--;spawnPlane();}else F.dead=1e9;}return;}
  F.cd=Math.max(0,F.cd-dt);F.rcd=Math.max(0,F.rcd-dt);F.hurt=Math.max(0,F.hurt-dt);
@@ -1402,8 +1403,8 @@ function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0){if(RSP.F>0){RSP.F--
   const steer=w=>{let e=w-F.yaw;e=Math.atan2(Math.sin(e),Math.cos(e));if(Math.abs(e)>2.4){H.sd=H.sd||(e>0?1:-1);e=H.sd*Math.abs(e);}else H.sd=0;F.ty=F.yaw+e;return e;};
   if(H.ph===0){steer(Math.atan2(pz-F.z,ax-F.x));if(Math.hypot(ax-F.x,pz-F.z)<320)H.ph=1;}
   else{const d=Math.hypot(px-F.x,pz-F.z),e=steer(Math.atan2(pz-F.z,px-F.x));
-   if(Math.abs(e)<0.3||H.td){const k=Math.max(0,Math.min(1,(d-700)/1400));yT=4+(F.alt-4)*k;vT=d>700?70+(F.sp-70)*k:Math.max(20,70*d/700);
-    if(d<760&&F.y<12)H.td=1;if(H.td){F.y=Math.max(4,F.y-20*dt);F.v=Math.min(F.v,vT);}if(d<12){planePark();F.yaw=Math.PI;F.ty=Math.PI;F.spin=1;return;}}
+   if(Math.abs(e)<0.3||H.td){const k=Math.max(0,Math.min(1,(d-700)/1400));yT=PGY+(F.alt-PGY)*k;vT=d>700?70+(F.sp-70)*k:Math.max(20,70*d/700);
+    if(d<760&&F.y<12)H.td=1;if(H.td){F.y=Math.max(PGY,F.y-20*dt);F.v=Math.min(F.v,vT);}if(d<12){planePark();F.yaw=Math.PI;F.ty=Math.PI;F.spin=1;return;}}
    else if(d<1300)H.ph=0;}
  }else F.home=null;
  F.v=(F.v||F.sp)+(vT-(F.v||F.sp))*Math.min(1,dt*0.8);
@@ -1538,7 +1539,7 @@ const EF={x:0,z:0,y:230,yaw:Math.PI,hp:2500,max:2500,dead:0,cd:0,rcd:6,bank:0,tg
 const ETS=[],EFR=[],EAR=[];let EID=0;
 function etSpawn(){ET.lk=0;ET.y=0;[ET.x,ET.z]=baseW(1,-0.02,0.19);ET.yaw=Math.PI;ET.hp=ET.max;ET.dead=0;ET.path=null;ET.tg=null;ET.tgT=0;ET.cd=1;ET.scd=12;ET.seed=1+rn()*900;}
 function edSpawn(){ED.safeT=10;[ED.x,ED.z]=airW(1,0,-0.35);ED.y=ED.alt||450;ED.yaw=Math.PI;ED.hp=ED.max;ED.dead=0;ED.art=7;ED.goal=null;}
-function efSpawn(){EF.safeT=10;Object.assign(EFM,{aware:0,chase:0,ignore:0,threat:-99});[EF.x,EF.z]=airW(1,-0.01,-0.21);EF.y=4;EF.take={v:20};EF.yaw=Math.PI;EF.ty=Math.PI;EF.hp=EF.max;EF.dead=0;EF.rcd=6;EF.tg=null;}
+function efSpawn(){EF.safeT=10;Object.assign(EFM,{aware:0,chase:0,ignore:0,threat:-99});[EF.x,EF.z]=airW(1,-0.01,-0.21);EF.y=PGY;EF.take={v:20};EF.yaw=Math.PI;EF.ty=Math.PI;EF.hp=EF.max;EF.dead=0;EF.rcd=6;EF.tg=null;}
 const RSP={P:5,D:5,F:5,ET:5,ED:5,EF:5};
 function heroesReset(){slotsReset();TRK.length=0;Object.assign(RSP,{P:5,D:5,F:5,ET:5,ED:5,EF:5});TESTW.on=false;TESTW.t=6;if(TESTW.upd)TESTW.upd();etSpawn();edSpawn();efSpawn();ETS.length=0;EFR.length=0;EAR.length=0;}
 {const ng=newGame;newGame=function(){ng();heroesReset();};}
