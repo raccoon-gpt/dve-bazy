@@ -1625,10 +1625,10 @@ function jetFlyby(dt){JET.cd-=dt;if(JET.src&&(CUR!=='plane'||F.dead>0))jetStop(1
  const c=cam.position,cvx=(c.x-JET.lx)/dt,cvy=(c.y-JET.ly)/dt,cvz=(c.z-JET.lz)/dt;JET.lx=c.x;JET.ly=c.y;JET.lz=c.z;
  if(EF.dead>0||JET.cd>0||WU.on||!EF.px){EF.px=EF.x;EF.py=EF.y;EF.pz=EF.z;return;}
  const vx=(EF.x-EF.px)/dt-cvx,vy=(EF.y-EF.py)/dt-cvy,vz=(EF.z-EF.pz)/dt-cvz;EF.px=EF.x;EF.py=EF.y;EF.pz=EF.z;
- const rx=EF.x-c.x,ry=EF.y-c.y,rz=EF.z-c.z,v2=vx*vx+vy*vy+vz*vz;if(v2<100||v2>4e6)return;const tca=-(rx*vx+ry*vy+rz*vz)/v2;if(tca<1.6||tca>2.6)return;
+ const rx=EF.x-c.x,ry=EF.y-c.y,rz=EF.z-c.z,v2=vx*vx+vy*vy+vz*vz;if(v2<100||v2>4e6)return;const tca=-(rx*vx+ry*vy+rz*vz)/v2;if(tca<1.6||tca>3.4)return;
  const dm=Math.hypot(rx+vx*tca,ry+vy*tca,rz+vz*tca);if(dm>650)return;
  const p=new THREE.Vector3(EF.x,EF.y,EF.z).project(cam);if(p.z>1||Math.abs(p.x)>1||Math.abs(p.y)>1)return;
- if(AUD.sample('jetBy',null,null,1.6*Math.min(1,Math.max(0.35,1-(dm-150)/600)),0,Math.max(0,2.6-tca)))JET.cd=9;}
+ if(AUD.sample('jetBy',null,null,1.6*Math.min(1,Math.max(0.35,1-(dm-150)/600)),Math.max(0,tca-2.6),0))JET.cd=9;}
 function stepEF(dt){jetFlyby(dt);if(EF.dead>0){EF.dead-=dt;if(EF.dead<=0){if(RSP.EF>0){RSP.EF--;efSpawn();}else EF.dead=1e9;}return;}if(EF.safeT>0)EF.safeT-=dt;
  if(EF.take&&takeoff(EF,dt)&&EF.hp>0)return;
  EF.cd=Math.max(0,EF.cd-dt);EF.rcd=Math.max(0,EF.rcd-dt);efSense(dt);EF.tT-=dt;if(EF.tT<=0){EF.tT=1;const was=EF.tg&&EF.tg.k;EF.tg=efPick();if(EF.tg&&EF.tg.k==='f'&&was!=='f')EFM.chase=0;}
