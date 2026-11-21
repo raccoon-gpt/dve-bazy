@@ -680,15 +680,18 @@ function stepGame(dt){if(G_.over)return;G_.t+=dt;
   if(last&&st.air&&!(u.goal&&u.goal.k==='b')){const h=u.id*2.39996,r=45+(u.id%5)*28;t=[t[0]+Math.cos(h)*r,t[1]+Math.sin(h)*r];}   // a base is entered, not circled
   const dx=t[0]-u.x,dz=t[1]-u.z,d=Math.hypot(dx,dz);if(d<20&&!last){u.pi++;continue;}
   const sl=st.air?0:slope(u.x,u.z);let v=st.sp*USPK*(tg&&st.air?0.35:1)*(1-Math.min(0.6,sl*0.8))*dt;const a=Math.atan2(dz,dx);
-  if(last){v*=Math.min(1,d/70);if(d<4)v=0;}/* arrive and stop: no overshooting back and forth around the last point */
+  if(last){v*=Math.min(1,d/70);if(d<(st.air?4:14))v=0;}/* arrive and stop: no overshooting back and forth around the last point */
   const ox=last?0:-Math.sin(a)*u.off*0.02,oz=last?0:Math.cos(a)*u.off*0.02;
   if(!st.air){const mx=Math.cos(a)+ox,mz=Math.sin(a)+oz,want=Math.atan2(mz,mx);if(u.a==null)u.a=want;let da=want-u.a;da=Math.atan2(Math.sin(da),Math.cos(da));
-   if(v>dt*4){const R_=(u.k==='tank'?1.7:2.8)*dt;u.a+=Math.max(-R_,Math.min(R_,da));}const f=Math.max(0.15,Math.cos(Math.min(1.5,Math.abs(da))))*Math.hypot(mx,mz);u.x+=Math.cos(u.a)*v*f;u.z+=Math.sin(u.a)*v*f;}
+   if(v>dt*4){const R_=(u.k==='tank'?1.7:2.8)*dt;u.a+=Math.max(-R_,Math.min(R_,da));}const f=(Math.abs(da)>1.0?0:Math.max(0.2,Math.cos(da)))*Math.hypot(mx,mz);/* a sharp turn is made on the spot: no circling round a point */u.x+=Math.cos(u.a)*v*f;u.z+=Math.sin(u.a)*v*f;}
   else{u.x+=Math.cos(a)*v+ox*v;u.z+=Math.sin(a)*v+oz*v;if(tg&&u.ga!=null)u.a=u.ga;else if((!last||d>60)&&v>st.sp*USPK*dt*0.5)u.a=a;}
   const gy=hgt(u.x,u.z);u.y=st.air?u.y+(Math.max(gy,0)+ALT[u.k]-u.y)*Math.min(1,dt*1.5):gy;}
  /* ground machines give way to the Titans */
  for(const u of G_.units){if(u.dead||US[u.k].air)continue;for(const T of [P,ET]){if(T.dead>0)continue;const dx=u.x-T.x,dz=u.z-T.z,d=Math.hypot(dx,dz),R_=u.k==='tank'?95:u.k==='jeep'?85:40;
   if(d<R_){const k=(R_-d)/(d||1);let nx=dx*k,nz=dz*k;if(!d){nx=R_;nz=0;}if(!blockedAt(u.x+nx,u.z+nz,10)){u.x+=nx;u.z+=nz;}}}}
+ /* ground machines don't drive into one another */
+ {const gs=G_.units.filter(u=>!u.dead&&!US[u.k].air);for(let i=0;i<gs.length;i++)for(let j=i+1;j<gs.length;j++){const A=gs[i],B=gs[j],R_=(A.k==='tank'?20:15)+(B.k==='tank'?20:15);const dx=B.x-A.x,dz=B.z-A.z;if(Math.abs(dx)>R_||Math.abs(dz)>R_)continue;const d=Math.hypot(dx,dz);
+  if(d<R_){const k=Math.min(30,(R_-d)*2)*dt/(d||1),px=(d?dx:1)*k,pz=(d?dz:(A.id%2?1:-1))*k;if(!blockedAt(A.x-px,A.z-pz,10)){A.x-=px;A.z-=pz;}if(!blockedAt(B.x+px,B.z+pz,10)){B.x+=px;B.z+=pz;}}}}
  /* helicopters keep a little room between each other instead of overlapping */
  {const hs=G_.units.filter(u=>!u.dead&&US[u.k].air);for(let i=0;i<hs.length;i++)for(let j=i+1;j<hs.length;j++){const A=hs[i],B=hs[j];const dx=B.x-A.x,dz=B.z-A.z,d=Math.hypot(dx,dz);
   if(d<70){const k=Math.min(25,(70-d)*1.2)*dt/(d||1),px=(d?dx:1)*k,pz=(d?dz:0)*k;A.x-=px;A.z-=pz;B.x+=px;B.z+=pz;}}}
@@ -795,7 +798,7 @@ function queueBlast(x,y,z,R){for(const b of BLQ)if(Math.hypot(b.x-x,b.z-z)<180){
 let SHK=0;
 function shakeAt(x,y,z,pw){const d=cam.position.distanceTo(FSP.center.set(x,y,z));const [d0,d1]=CUR==='drone'?[550,1700]:CUR==='plane'?[200,1100]:[150,950];
  const k=Math.max(0,Math.min(1,1-(d-d0)/(d1-d0)));if(k>0)SHK=Math.max(SHK,pw*k);}
-function applyShake(dt){if(SHK<=0)return;const z=CUR==='drone'?D.zoom||1:CUR==='plane'?F.zoom||1:P.zoom||1,a=SHK*SHK*0.02/z;cam.rotateX((rn()-0.5)*a);cam.rotateY((rn()-0.5)*a);cam.rotateZ((rn()-0.5)*a*0.6);SHK=Math.max(0,SHK-dt*1.8);}
+function applyShake(dt){if(SHK<=0)return;const z=CUR==='drone'?D.zoom||1:CUR==='plane'?ZF():P.zoom||1,a=SHK*SHK*0.02/z;cam.rotateX((rn()-0.5)*a);cam.rotateY((rn()-0.5)*a);cam.rotateZ((rn()-0.5)*a*0.6);SHK=Math.max(0,SHK-dt*1.8);}
 function bigBlast(x,y,z,S,n){shakeAt(x,y,z,Math.min(1.3,0.55+S/110));if(!WU.on&&!AUD.sample((n||1)>=3?'boomM':'boom1',x,z,(n||1)>=3?0.75:0.55))AUD.play('kill',x,z,0.8+S/120);
  if(!seen(x,y+S*0.5,z,S*3))return;
  flash.position.set(x,y+S*0.6,z);flash.intensity=Math.max(flash.intensity,6);
@@ -1052,7 +1055,7 @@ const ptr=new Map();let pinch0=0,zoom0=1;
 const TAP={};cv3.addEventListener('pointerdown',e=>{try{cv3.setPointerCapture(e.pointerId);}catch(_){}ptr.set(e.pointerId,[e.clientX,e.clientY]);TAP[e.pointerId]={x:e.clientX,y:e.clientY,t:performance.now(),m:0,n:ptr.size};if(ptr.size===2){const [a,b]=[...ptr.values()];pinch0=Math.hypot(a[0]-b[0],a[1]-b[1]);zoom0=VEH().zoom;}});
 cv3.addEventListener('pointermove',e=>{const p=ptr.get(e.pointerId);if(!p)return;const dx=e.clientX-p[0],dy=e.clientY-p[1];ptr.set(e.pointerId,[e.clientX,e.clientY]);
  if(TAP[e.pointerId])TAP[e.pointerId].m+=Math.abs(dx)+Math.abs(dy);
- if(CUR==='plane'){if(ptr.size===1){const k=0.0045/F.zoom;F.ty+=dx*k;F.pitch=Math.max(-0.75,Math.min(0.25,F.pitch-dy*k*0.8));}else if(ptr.size===2&&pinch0>0){const [a,b]=[...ptr.values()];F.zoom=Math.max(1,Math.min(3,zoom0*Math.hypot(a[0]-b[0],a[1]-b[1])/pinch0));}return;}
+ if(CUR==='plane'){if(ptr.size===1){const k=0.0045/ZF();F.ty+=dx*k;F.pitch=Math.max(-0.75,Math.min(0.25,F.pitch-dy*k*0.8));}else if(ptr.size===2&&pinch0>0){const [a,b]=[...ptr.values()];F.zoom=Math.max(1,Math.min(3,zoom0*Math.hypot(a[0]-b[0],a[1]-b[1])/pinch0));}return;}
  if(CUR==='drone'){if(ptr.size===1){const k=0.004/D.zoom;D.yaw+=dx*k;D.pitch=Math.max(-1.45,Math.min(-28*Math.PI/180,D.pitch-dy*k*0.8));}else if(ptr.size===2&&pinch0>0){const [a,b]=[...ptr.values()];D.zoom=Math.max(1,Math.min(4,zoom0*Math.hypot(a[0]-b[0],a[1]-b[1])/pinch0));}return;}
  if(ptr.size===1){const k=0.0055/P.zoom;P.yaw+=dx*k;P.pitch=Math.max(-0.35,Math.min(0.25,P.pitch-dy*k*0.8));}
  else if(ptr.size===2&&pinch0>0){const [a,b]=[...ptr.values()];P.zoom=Math.max(1,Math.min(3.5,zoom0*Math.hypot(a[0]-b[0],a[1]-b[1])/pinch0));}});
@@ -1321,7 +1324,7 @@ function syncDrone(t,dt){if(!DRONE_O){const g=new THREE.Group(),M=mats(0);g.add(
 #mkLayer i.hero{--c:#FFD028;width:46px;height:46px;margin:-23px 0 0 -23px;transform:rotate(45deg)}
 #mkLayer i.hero.air{--c:#FFD028}
 #mkLayer i.hero{background:linear-gradient(var(--c),var(--c)) right top/8px 2px no-repeat,linear-gradient(var(--c),var(--c)) right top/2px 8px no-repeat,linear-gradient(var(--c),var(--c)) left bottom/8px 2px no-repeat,linear-gradient(var(--c),var(--c)) left bottom/2px 8px no-repeat,linear-gradient(var(--c),var(--c)) right bottom/8px 2px no-repeat,linear-gradient(var(--c),var(--c)) right bottom/2px 8px no-repeat}
-#mkLayer i.hero::after{content:'';position:absolute;left:0;top:0;width:18px;height:18px;background:center/contain no-repeat;transform:translate(-50%,-50%) rotate(-45deg) translateY(-2px)}
+#mkLayer i.hero::after{content:'';position:absolute;left:0;top:0;width:18px;height:18px;background:center/contain no-repeat;transform:translate(-50%,-50%) rotate(-45deg) translateY(6px)}
 #mkLayer i.hero.ht::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='%23FFD028' stroke='%23000' stroke-opacity='.55' stroke-width='1.2' paint-order='stroke'%3E%3Cpath d='M3 20h26l-3 6H6z'/%3E%3Cpath d='M8 14h13l2 5H7z'/%3E%3Cpath d='M19 15.5h11v2H19z'/%3E%3C/svg%3E")}#mkLayer i.hero.hd::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='%23FFD028' stroke='%23000' stroke-opacity='.55' stroke-width='1.2' paint-order='stroke'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Ccircle cx='25' cy='7' r='5'/%3E%3Ccircle cx='7' cy='25' r='5'/%3E%3Ccircle cx='25' cy='25' r='5'/%3E%3Cpath d='M8 6l18 18-2 2L6 8zM24 6l2 2L8 26l-2-2z'/%3E%3Crect x='12' y='12' width='8' height='8' rx='2'/%3E%3C/svg%3E")}#mkLayer i.hero.hf::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='%23FFD028' stroke='%23000' stroke-opacity='.55' stroke-width='1.2' paint-order='stroke'%3E%3Cpath d='M16 2c1.3 0 2 1.4 2 3v7l11 6v3l-11-3v6l3 2.5V29l-5-1.5-5 1.5v-2.5l3-2.5v-6L3 21v-3l11-6V5c0-1.6.7-3 2-3z'/%3E%3C/svg%3E")}
 #mkLayer i.hero.aim{transform:rotate(45deg) scale(1.3)}#mkLayer i.hero.lp{transform:rotate(45deg) scale(1.25)}#mkLayer i.hero.lk{transform:rotate(45deg) scale(1.35)}
 #mkLayer i.aim{transform:scale(1.3);filter:drop-shadow(0 0 4px var(--c))}
@@ -1385,15 +1388,16 @@ window.__isle.setVeh=setVeh;window.__isle.LK=LK;window.__isle.MIS=MIS;window.__i
 
 /* ================== the plane: always flying, machine gun fires by itself, rockets on demand, turns back smoothly past the limit ================== */
 const F={x:0,z:0,y:0,yaw:0,ty:0,pitch:-0.18,hp:2500,max:2500,dead:0,zoom:1,alt:200,sp:225,cd:0,rcd:0,bank:0,turn:false,hurt:0,move:true};
+const ZF=()=>Math.max(F.zoom||1,F.az||1);                 // plane view zoom: the player's own, or the long-burst auto zoom
 const PLANE={limit:450,maxRate:0.75,mgCd:0.09,mgDmg:32,range:4000,cone:0.05,rocketCd:5,rocketN:6,rocketDmg:300,rocketR:48};
 let LOCKF=null;const PR=[],PB=[];let PRID=0;
 /* take-off run: speeds up along the runway, lifts off at 170 m/s, climbs out; true while still on the run */
 function takeoff(o,dt){const T=o.take;T.v=Math.min(225,T.v+48*dt);o.x+=Math.cos(o.yaw)*T.v*dt;o.z+=Math.sin(o.yaw)*T.v*dt;
  if(T.v>170)o.y+=(T.v-150)*0.55*dt;o.bank=0;if(o===F)o.pitch=Math.min(0.12,-0.03+Math.max(0,o.y-PGY)*0.004);
  if(T.v>=225&&o.y>45){o.take=null;o.climb=1;if(o===F)o.pe=2.5;return false;}return true;}
-const PGY=8.5;                                              // plane height on the runway: wheels on the asphalt, not in it
+const PGY=9;                                                // plane height on the runway: wheels on the asphalt, not in it
 function planePark(){F.climb=0;F.pe=0;F.spin=0;[F.x,F.z]=airW(0,-0.01,-0.21);F.y=PGY;F.take=null;F.park=true;F.home=null;F.v=F.sp;F.yaw=0;F.ty=0;F.pitch=-0.03;F.bank=0;F.turn=false;}
-function spawnPlane(){invSet(F);planePark();F.yaw=0;F.ty=0;F.pitch=-0.03;F.hp=F.max;F.dead=0;F.bank=0;F.turn=false;F.zoom=1;}
+function spawnPlane(){invSet(F);planePark();F.lz=9;F.az=1;F.yaw=0;F.ty=0;F.pitch=-0.03;F.hp=F.max;F.dead=0;F.bank=0;F.turn=false;F.zoom=1;}
 function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0){if(RSP.F>0){RSP.F--;spawnPlane();}else F.dead=1e9;}return;}
  F.cd=Math.max(0,F.cd-dt);F.rcd=Math.max(0,F.rcd-dt);F.hurt=Math.max(0,F.hurt-dt);
  invTick(F,'plane',dt);if(F.pe>0){F.pe-=dt;F.pitch+=(-0.18-F.pitch)*Math.min(1,dt*1.5);}
@@ -1418,14 +1422,16 @@ function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0){if(RSP.F>0){RSP.F--
  F.x+=Math.cos(F.yaw)*F.v*dt;F.z+=Math.sin(F.yaw)*F.v*dt;{const dy=(yT-F.y)*Math.min(1,dt*(F.home?2.5:1.2));F.y+=F.climb?Math.min(dy,35*dt):dy;if(F.climb&&Math.abs(yT-F.y)<3)F.climb=0;}
  /* machine gun: the first enemy near the centre of the sight */
  if(CUR==='plane')for(const u of G_.units){if(u.dead||u.s===0||!US[u.k].air||u.mk||SF(u))continue;const dx=u.x-F.x,dz=u.z-F.z,d=Math.hypot(dx,dz);if(d<2000){let a=Math.atan2(dz,dx)-F.yaw;a=Math.atan2(Math.sin(a),Math.cos(a));if(Math.abs(a)<0.75)u.mk=1;}}
+ /* long-range bursts (2–4 km) pull the view smoothly out of the cockpit to full zoom; 1 s after the last such shot it eases back */
+ F.lz=(F.lz??9)+dt;F.az=(F.az||1)+((F.lz<1&&CUR==='plane'?3:1)-(F.az||1))*Math.min(1,dt*2.2);if(F.az<1.002)F.az=1;
  LOCKF=null;if(CUR==='plane'&&!G_.over){const o=new THREE.Vector3(F.x,F.y,F.z),dv=new THREE.Vector3(Math.cos(F.yaw)*Math.cos(F.pitch),Math.sin(F.pitch),Math.sin(F.yaw)*Math.cos(F.pitch));let best=PLANE.cone/F.zoom;
-  const test=(x,y,z,tg,sz=10)=>{const vx=x-o.x,vy=y-o.y,vz=z-o.z,Ln=Math.hypot(vx,vy,vz);if(Ln>PLANE.range||Ln<25)return;const a=Math.acos(Math.max(-1,Math.min(1,(vx*dv.x+vy*dv.y+vz*dv.z)/Ln)))-Math.atan(sz/Ln);if(a<best){best=a;LOCKF={tg,x,y,z};}};
+  const test=(x,y,z,tg,sz=10)=>{const vx=x-o.x,vy=y-o.y,vz=z-o.z,Ln=Math.hypot(vx,vy,vz);if(Ln>PLANE.range||Ln<25)return;const a=Math.acos(Math.max(-1,Math.min(1,(vx*dv.x+vy*dv.y+vz*dv.z)/Ln)))-Math.atan(sz/Ln);if(a<best){best=a;LOCKF={tg,x,y,z,d:Ln};}};
   for(const u of G_.units){if(u.dead||u.s===0||SF(u))continue;test(u.x,u.y+(u.k==='heli'?5:12),u.z,{k:'u',o:u},u.k==='heli'?30:u.k==='inf'?10:36);}
   for(const t of G_.towers){if(t.s===0)continue;test(t.x,14,t.z,{k:'t',o:t});}
   for(const h of G_.harv){if(h.s===0)continue;test(h.x,7,h.z,{k:'h',o:h});}
   for(const m of G_.mines){if(m.s===0||m.dead)continue;test(m.x,8,m.z,{k:'m',o:m},55);}
   if(ET.dead<=0)test(ET.x,24,ET.z,{k:'et'},50);if(ED.dead<=0&&!SF(ED))test(ED.x,ED.y,ED.z,{k:'ed'},16);if(EF.dead<=0&&!SF(EF))test(EF.x,EF.y,EF.z,{k:'ef'},26);
-  if(LOCKF&&F.cd<=0){F.cd=PLANE.mgCd;const tg=LOCKF.tg;applyHit(tg,PLANE.mgDmg*(tg.k==='t'?0.5:1),0);
+  if(LOCKF&&F.cd<=0){F.cd=PLANE.mgCd;const tg=LOCKF.tg;if(LOCKF.d>=2000)F.lz=0;applyHit(tg,PLANE.mgDmg*(tg.k==='t'?0.5:1),0);
    const sd=(F.mgSide=-(F.mgSide||1));{const ax=F.x-Math.sin(F.yaw)*sd*7+Math.cos(F.yaw)*8,ay=F.y-4,az=F.z+Math.cos(F.yaw)*sd*7+Math.sin(F.yaw)*8,bx=LOCKF.x+(rn()-0.5)*5,by=LOCKF.y+(rn()-0.5)*4,bz=LOCKF.z+(rn()-0.5)*5;PB.push({id:++PRID,x:ax,y:ay,z:az,sx:ax,sy:ay,sz:az,tx:bx,ty:by,tz:bz,t:0,T:Math.max(0.05,Math.hypot(bx-ax,by-ay,bz-az)/2400)});AUD.play('mg',ax,az);}}}
  if(F.hp<=0){F.hp=0;F.dead=5;G_.sides[1].ore+=400;explode(F.x,F.y,F.z,2);if(CUR==='plane')HUD.msg('Самолёт сбит — новый через 5 с');}
  /* machine-gun rounds: bright streaks flying to the target, a spark where they land */
@@ -1463,14 +1469,14 @@ function planeRockets(){if(F.dead>0||F.rcd>0)return;F.rcd=PLANE.rocketCd;let tx,
  if(rh.hit){tx=rh.x;ty=Math.max(0,rh.y);tz=rh.z;}else{tx=F.x+dv[0]*4000;ty=Math.max(0,F.y+dv[1]*4000);tz=F.z+dv[2]*4000;}
  /* the outer ring of the sight is about 17% of the screen height from its centre: anything inside it at launch is chased hard and hit;
     a little outside it the rockets only nudge towards it and usually fly past */
- const ring=Math.atan(0.34*Math.tan((80/F.zoom)*Math.PI/360));let tg=rocketTarget(dv,ring),strong=!!tg;if(!tg)tg=rocketTarget(dv,ring*1.6);
+ const ring=Math.atan(0.34*Math.tan((80/ZF())*Math.PI/360));let tg=rocketTarget(dv,ring),strong=!!tg;if(!tg)tg=rocketTarget(dv,ring*1.6);
  if(tg&&tg.ef)efThreat();
  const p0=tg&&tg(),Te=Math.max(0.4,Math.hypot(...(p0||[tx,ty,tz]).map((v,k)=>v-[F.x,F.y,F.z][k]))/1100),turn=strong?3.2:Math.max(0.12,Math.min(1.6,0.13/Te));
  for(let i=0;i<PLANE.rocketN;i++){const sd=i%2?1:-1;PR.push({id:++PRID,t:-i*0.11,sd,tg,turn,strong,tx:tx+(rn()-0.5)*30,ty:ty+(rn()-0.5)*8,tz:tz+(rn()-0.5)*30,x:F.x,y:F.y,z:F.z,vx:0,vy:0,vz:0,tr:0});}
  HUD.msg('Пуск ракет!');HUD.kick();}
 function planeCam(){if(F.dead>0){const [bx,bz]=BASES[0];cam.position.set(bx-300,300,bz);cam.lookAt(bx+300,0,bz);return;}
  cam.position.set(F.x,F.y,F.z);cam.up.set(0,1,0);cam.lookAt(F.x+Math.cos(F.yaw)*Math.cos(F.pitch)*100,F.y+Math.sin(F.pitch)*100,F.z+Math.sin(F.yaw)*Math.cos(F.pitch)*100);cam.rotateZ(F.bank);
- const fov=80/F.zoom;if(Math.abs(cam.fov-fov)>0.01){cam.fov=fov;cam.updateProjectionMatrix();}}
+ const fov=80/ZF();if(Math.abs(cam.fov-fov)>0.01){cam.fov=fov;cam.updateProjectionMatrix();}}
 let PLANE_O=null;
 function syncPlane(t){if(!PLANE_O){PLANE_O=instantiate(proto('Uplane0',()=>buildUnit('plane',0)));PLANE_O.scale.setScalar(1.5);dyn.add(PLANE_O);}
  PLANE_O.visible=F.dead<=0&&CUR!=='plane';PLANE_O.position.set(F.x,F.y,F.z);PLANE_O.rotation.set(0,-F.yaw,0);PLANE_O.rotateX(-F.bank);
@@ -1519,7 +1525,7 @@ function crackStep(dt){glassTick();if(CRK.hp==null)CRK.hp=F.hp;const lost=CRK.hp
  const lv=Math.round(CRK.peak*60);if(lv!==CRK.lvl){CRK.lvl=lv;crackDraw(CRK.peak);}CRK.cv.style.opacity=CRK.a.toFixed(3);}
 let CRKT=0;addEventListener('resize',()=>CRK.lvl=-1);
 function planeHud(){{const n=performance.now(),d=CRKT?Math.min(0.1,(n-CRKT)/1000):0;CRKT=n;crackStep(d);}if(CUR!=='plane'){PCK.style.display='none';q('.fps').style.top='';return;}q('.fps').style.top='102px';
- const g=document.getElementById('tiCock');if(g)g.style.display='none';PCK.style.display=F.dead<=0&&F.zoom<1.5?'block':'none';
+ const g=document.getElementById('tiCock');if(g)g.style.display='none';PCK.style.display=F.dead<=0&&ZF()<1.5?'block':'none';
  q('.lk').setAttribute('display','none');const im=q('img.sight');if(im)im.classList.toggle('lock',!!LOCKF);
  q('.rld').setAttribute('stroke-dasharray',(170*(1-F.rcd/PLANE.rocketCd)).toFixed(1)+' 170');
  q('.sup span').textContent=F.rcd>0?Math.ceil(F.rcd)+' с':'';q('.sup').classList.toggle('cd',F.rcd>0);q('.hurt').style.boxShadow='inset 0 0 120px rgba(200,20,10,'+(F.hurt>0?0.5:0)+')';}
