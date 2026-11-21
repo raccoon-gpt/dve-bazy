@@ -8,6 +8,6 @@ self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil((async()=>{co
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==V).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;const u=new URL(r.url);if(u.origin!==location.origin)return;
  /* the page itself and the version file: always from the network when online (no stale copies), the cache when offline */
- if(u.pathname.endsWith('3d.html')||u.pathname.endsWith('island.js')||u.pathname.endsWith('three.min.js')||u.pathname.endsWith('GLTFLoader.js')||u.pathname.endsWith('.glb')||u.pathname.endsWith('_blue.jpg'))return;/* the 3D prototype is never cached */
+ if(u.pathname.endsWith('3d.html')||u.pathname.endsWith('island.js')||u.pathname.endsWith('three.min.js')||u.pathname.endsWith('GLTFLoader.js')||u.pathname.endsWith('.glb')||u.pathname.endsWith('_blue.jpg')||u.pathname.endsWith('_red.jpg'))return;/* the 3D prototype is never cached */
  if(r.mode==='navigate'||u.pathname.endsWith('version.json')){e.respondWith(fetch(r,{cache:'no-store'}).then(x=>{if(r.mode==='navigate'){const y=x.clone();caches.open(V).then(c=>c.put('index.html',y));}return x;}).catch(()=>caches.match(r.mode==='navigate'?'index.html':r,{ignoreSearch:true})));return;}
  e.respondWith(caches.match(r,{ignoreSearch:true}).then(m=>m||fetch(r).then(x=>{if(x.ok){const y=x.clone();caches.open(V).then(c=>c.put(r,y));}return x;})));});
