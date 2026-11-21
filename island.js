@@ -1109,7 +1109,7 @@ function loop(now_){requestAnimationFrame(loop);let dt=Math.min(0.05,(now_-last)
  if(G_.over&&over.style.display!=='flex'){over.style.display='flex';over.querySelector('.t').textContent=G_.over.w===0?'Победа!':'Поражение';}
  if(ocean)ocean.material.normalMap.offset.set(t*0.004,-t*0.01);
  for(const c of world.children)if(c.userData.cloud){c.position.x+=c.userData.v*dt;if(c.position.x>IW+7000)c.position.x=-7000;}
- const gy=hgt(P.x,P.z),bob=P.move?Math.sin(P.bob)*0.6:0,sh=P.shake||0;const y=Math.max(gy,0)+(P.dead>0?90:36)+bob+(rn()-0.5)*sh*3;cam.position.set(P.x+(rn()-0.5)*sh*3,y,P.z);
+ const gy=hgt(P.x,P.z),bob=P.move?Math.sin(P.bob)*0.6:0,sh=P.shake||0;const y=Math.max(gy,0)+(P.dead>0?90:42)+bob+(rn()-0.5)*sh*3;cam.position.set(P.x+(rn()-0.5)*sh*3,y,P.z);
  const lp=P.pitch+(HUD.k>0?HUD.k*0.22:0);cam.lookAt(P.x+Math.cos(P.yaw)*Math.cos(lp)*100,y+Math.sin(lp)*100,P.z+Math.sin(P.yaw)*Math.cos(lp)*100);
  const fov=P.fov/P.zoom;if(Math.abs(cam.fov-fov)>0.01){cam.fov=fov;cam.updateProjectionMatrix();}cock.visible=false;{const v=P.dead<=0&&P.zoom<1.6;const g=document.getElementById('tiCock');if(g)g.style.display=v?'block':'none';}barrel.position.z=P.rec*5;
  if(CUR==='drone')droneCam(dt);else if(CUR==='plane')planeCam();
@@ -1146,7 +1146,7 @@ const AUD={ctx:null,on:true,last:{},
   this.eng=C.createGain();this.eng.gain.value=0;src.connect(lp).connect(this.eng);o.connect(og).connect(this.eng);this.eng.connect(this.out);src.start();o.start();this.engO=o;
   this.loadS();
   this.music=new Audio('desert.mp3');this.music.loop=true;this.music.volume=0.32;if(this.on)this.music.play().catch(()=>{});}catch(e){console.error(e);}},
- SF:{boom1:'isle_boom1.mp3',boomM:'isle_boom_mass.mp3',dfall:'isle_drone_fall.mp3',whoosh:'isle_art_whoosh.mp3',glass:'isle_glass.mp3'},buf:{},
+ SF:{boom1:'isle_boom1.mp3',boomM:'isle_boom_mass.mp3',dfall:'isle_drone_fall.mp3',whoosh:'isle_art_whoosh.mp3',glass:'isle_glass.mp3',jetUp:'isle_jet_takeoff.mp3',jetBy:'isle_jet_pass.mp3'},buf:{},
  loadS(){for(const [k,f] of Object.entries(this.SF))fetch(f).then(r=>r.arrayBuffer()).then(a=>new Promise((ok,no)=>this.ctx.decodeAudioData(a,ok,no))).then(b=>{this.buf[k]=b;}).catch(e=>console.error(f,e));},
  /* a recorded sound: distance-scaled unless x is null; `delay` seconds from now, starting `off` seconds into the file */
  sample(k,x,z,vol,delay,off){if(!this.ctx||!this.on||!this.buf[k])return false;const g0=x==null?1:this.gainAt(x,z);if(g0<0.01)return true;const C=this.ctx,now=C.currentTime;
@@ -1401,7 +1401,7 @@ function spawnPlane(){invSet(F);planePark();F.lz=9;F.az=1;F.yaw=0;F.ty=0;F.pitch
 function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0){if(RSP.F>0){RSP.F--;spawnPlane();}else F.dead=1e9;}return;}
  F.cd=Math.max(0,F.cd-dt);F.rcd=Math.max(0,F.rcd-dt);F.hurt=Math.max(0,F.hurt-dt);
  invTick(F,'plane',dt);if(F.pe>0){F.pe-=dt;F.pitch+=(-0.18-F.pitch)*Math.min(1,dt*1.5);}
- if(F.park){if(F.spin){let e=-F.yaw;e=Math.atan2(Math.sin(e),Math.cos(e));const st_=Math.sign(e)*Math.min(Math.abs(e),0.7*dt);F.yaw+=st_;F.ty=F.yaw;if(Math.abs(e)<0.01){F.yaw=F.ty=0;F.spin=0;}}
+ if(F.park){if(CUR==='plane'&&!WU.on)jetTakeoff();if(F.spin){let e=-F.yaw;e=Math.atan2(Math.sin(e),Math.cos(e));const st_=Math.sign(e)*Math.min(Math.abs(e),0.7*dt);F.yaw+=st_;F.ty=F.yaw;if(Math.abs(e)<0.01){F.yaw=F.ty=0;F.spin=0;}}
   if(CUR!=='plane')return;F.park=false;F.spin=0;F.yaw=F.ty=0;F.take={v:20};}
  if(F.take&&takeoff(F,dt)&&F.hp>0)return;
  let vT=F.sp,yT=F.alt;
@@ -1616,7 +1616,20 @@ function efPick(){const c=[];if(VUL(F)&&EFM.ignore<=0&&EFM.aware>0)c.push({k:'f'
  for(const u of G_.units)if(!u.dead&&u.s===0&&US[u.k].air)c.push({k:'u',o:u,air:1,w:1,x:u.x,y:u.y,z:u.z});
  for(const u of G_.units)if(!u.dead&&u.s===0&&!US[u.k].air)c.push({k:'u',o:u,air:0,w:0.9,x:u.x,y:u.y+8,z:u.z});for(const m of G_.mines)if(m.s===0&&!m.dead)c.push({k:'m',o:m,air:0,w:1.4,x:m.x,y:8,z:m.z});
  let best=null,bd=1e9;for(const q of c){const d=Math.hypot(q.x-EF.x,q.z-EF.z)*q.w;if(d<bd){bd=d;best=q;}}return best;}
-function stepEF(dt){if(EF.dead>0){EF.dead-=dt;if(EF.dead<=0){if(RSP.EF>0){RSP.EF--;efSpawn();}else EF.dead=1e9;}return;}if(EF.safeT>0)EF.safeT-=dt;
+/* our take-off roar: starts with the roll, fades out if the player leaves the plane or it goes down */
+const JET={src:null,g:null,cam:null,cd:0,lx:0,lz:0,ly:0};
+function jetTakeoff(){const C=AUD.ctx,b=AUD.buf.jetUp;if(!C||!AUD.on||!b)return;jetStop(0.1);const s=C.createBufferSource();s.buffer=b;const g=C.createGain();g.gain.value=1.1;s.connect(g).connect(AUD.out);s.start();JET.src=s;JET.g=g;s.onended=()=>{if(JET.src===s)JET.src=null;};}
+function jetStop(t){if(!JET.src)return;const C=AUD.ctx,s=JET.src;JET.g.gain.setTargetAtTime(0,C.currentTime,t/3);setTimeout(()=>{try{s.stop();}catch(_){}},t*1000+100);JET.src=null;}
+/* an enemy jet that is on screen and about to pass close to us: one fly-by whoosh, timed so its loudest moment lands at the closest pass */
+function jetFlyby(dt){JET.cd-=dt;if(JET.src&&(CUR!=='plane'||F.dead>0))jetStop(1.5);
+ const c=cam.position,cvx=(c.x-JET.lx)/dt,cvy=(c.y-JET.ly)/dt,cvz=(c.z-JET.lz)/dt;JET.lx=c.x;JET.ly=c.y;JET.lz=c.z;
+ if(EF.dead>0||JET.cd>0||WU.on||!EF.px){EF.px=EF.x;EF.py=EF.y;EF.pz=EF.z;return;}
+ const vx=(EF.x-EF.px)/dt-cvx,vy=(EF.y-EF.py)/dt-cvy,vz=(EF.z-EF.pz)/dt-cvz;EF.px=EF.x;EF.py=EF.y;EF.pz=EF.z;
+ const rx=EF.x-c.x,ry=EF.y-c.y,rz=EF.z-c.z,v2=vx*vx+vy*vy+vz*vz;if(v2<100||v2>4e6)return;const tca=-(rx*vx+ry*vy+rz*vz)/v2;if(tca<1.6||tca>2.6)return;
+ const dm=Math.hypot(rx+vx*tca,ry+vy*tca,rz+vz*tca);if(dm>650)return;
+ const p=new THREE.Vector3(EF.x,EF.y,EF.z).project(cam);if(p.z>1||Math.abs(p.x)>1||Math.abs(p.y)>1)return;
+ if(AUD.sample('jetBy',null,null,1.6*Math.min(1,Math.max(0.35,1-(dm-150)/600)),0,Math.max(0,2.6-tca)))JET.cd=9;}
+function stepEF(dt){jetFlyby(dt);if(EF.dead>0){EF.dead-=dt;if(EF.dead<=0){if(RSP.EF>0){RSP.EF--;efSpawn();}else EF.dead=1e9;}return;}if(EF.safeT>0)EF.safeT-=dt;
  if(EF.take&&takeoff(EF,dt)&&EF.hp>0)return;
  EF.cd=Math.max(0,EF.cd-dt);EF.rcd=Math.max(0,EF.rcd-dt);efSense(dt);EF.tT-=dt;if(EF.tT<=0){EF.tT=1;const was=EF.tg&&EF.tg.k;EF.tg=efPick();if(EF.tg&&EF.tg.k==='f'&&was!=='f')EFM.chase=0;}
  const g=EF.tg;if(g){if(g.k==='f'){g.x=F.x;g.y=F.y;g.z=F.z;if(!VUL(F)||EFM.ignore>0||EFM.aware<=0)EF.tT=0;}else if(g.k==='d'){g.x=D.x;g.y=D.y;g.z=D.z;if(!VUL(D)||D.fall)EF.tT=0;}else if(g.k==='u'){if(g.o.dead)EF.tT=0;else{g.x=g.o.x;g.y=g.o.y+(g.air?0:8);g.z=g.o.z;}}else if(g.k==='p'){g.x=P.x;g.z=P.z;if(P.dead>0)EF.tT=0;}else if(g.k==='m'&&g.o.dead)EF.tT=0;}
