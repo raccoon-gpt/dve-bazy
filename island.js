@@ -1626,7 +1626,7 @@ function jetFlyby(dt){JET.cd-=dt;if(JET.src&&(CUR!=='plane'||F.dead>0))jetStop(1
  if(EF.dead>0||JET.cd>0||WU.on||!EF.px){EF.px=EF.x;EF.py=EF.y;EF.pz=EF.z;return;}
  const vx=(EF.x-EF.px)/dt-cvx,vy=(EF.y-EF.py)/dt-cvy,vz=(EF.z-EF.pz)/dt-cvz;EF.px=EF.x;EF.py=EF.y;EF.pz=EF.z;
  const rx=EF.x-c.x,ry=EF.y-c.y,rz=EF.z-c.z,v2=vx*vx+vy*vy+vz*vz;if(v2<100||v2>4e6)return;const tca=-(rx*vx+ry*vy+rz*vz)/v2;if(tca<0||tca>8)return;
- if(Math.hypot(rx+vx*tca,ry+vy*tca,rz+vz*tca)>500)return;                 // only a jet that will pass within 500 m
+ if(Math.hypot(rx+vx*tca,ry+vy*tca,rz+vz*tca)>300)return;                 // only a jet that will pass within 300 m
  /* when will it leave the screen (view held as it is now)? the file's loudest moment (~3.3 s in) is put right there */
  const q=new THREE.Quaternion().copy(cam.quaternion).invert(),hv=Math.tan(cam.fov*Math.PI/360),hh=hv*cam.aspect,w=new THREE.Vector3();
  const inView=t=>{w.set(rx+vx*t,ry+vy*t,rz+vz*t).applyQuaternion(q);return w.z<0&&Math.abs(w.x/-w.z)<hh&&Math.abs(w.y/-w.z)<hv;};
