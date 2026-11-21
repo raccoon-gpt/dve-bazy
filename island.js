@@ -51,7 +51,7 @@ const cam=new THREE.PerspectiveCamera(P.fov,1,0.8,3000);scene.add(cam);
 const hemi=new THREE.HemisphereLight(0xCFE4FF,0x4A5A2A,0.38);scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xFFEBC8,1.9);scene.add(sun,sun.target);
 const SUN_DIR=new THREE.Vector3(-0.55,0.62,0.56).normalize();
-sun.castShadow=true;{const s=T3.lo?1024:2048;sun.shadow.mapSize.set(s,s);const c=sun.shadow.camera;c.left=-170;c.right=170;c.top=170;c.bottom=-170;c.near=10;c.far=900;sun.shadow.bias=-0.0004;sun.shadow.normalBias=0.8;}
+sun.castShadow=true;{const s=T3.lo?1024:2048;sun.shadow.mapSize.set(s,s);const c=sun.shadow.camera;c.left=-170;c.right=170;c.top=170;c.bottom=-170;c.near=10;c.far=900;sun.shadow.bias=-0.0004;sun.shadow.normalBias=0.35;sun.shadow.normalBias=0.8;}
 const flash=new THREE.PointLight(0xFFB060,0,260,2);scene.add(flash);
 let world=null,sky=null,water=null;
 const dyn=new THREE.Group();scene.add(dyn);
@@ -615,7 +615,7 @@ function addHarv(s){const [bx,bz]=BASES[s];const h={id:G_.id++,s,x:bx+(s?-140:14
 function sendUnit(s,k){const S=G_.sides[s],c=US[k].cost;if(S.ore<c)return false;S.ore-=c;S.queue.push(k);return true;}
 function buyHarv(s){const S=G_.sides[s];if(S.ore<HARV.cost||G_.harv.filter(h=>h.s===s).length>=6)return false;S.ore-=HARV.cost;addHarv(s);return true;}
 /* each burst of units takes its own way: a random point on our side, one of the passes (or a random crossing), a random point on theirs */
-function groupPath(s,air,G){const [bx,bz]=BASES[s],[ex,ez]=G,d=s===0?1:-1;const st=air?airW(s,0,-0.35):baseW(s,-0.02+(rn()-0.5)*0.12,0.40);
+function groupPath(s,air,G){const [bx,bz]=BASES[s],[ex,ez]=G,d=s===0?1:-1;const st=air?airW(s,0.45,-0.35):baseW(s,-0.02+(rn()-0.5)*0.12,0.40);
  if(air){const mid=[IW/2+(rn()-0.5)*1200,IH*0.15+rn()*IH*0.7];return chaikin([st,mid,[ex,ez]],3);}
  const g=GAPS[Math.floor(rn()*GAPS.length)],v2=[IW/2,g+(rn()-0.5)*40],mid=(a,b,k,j)=>[a[0]+(b[0]-a[0])*k,a[1]+(b[1]-a[1])*k+(rn()-0.5)*j];
  const v1=mid(st,v2,0.45+rn()*0.2,900),v3=mid(v2,[ex,ez],0.4+rn()*0.2,900);
@@ -623,7 +623,8 @@ function groupPath(s,air,G){const [bx,bz]=BASES[s],[ex,ez]=G,d=s===0?1:-1;const 
  return chaikin(path,2);}
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 function enemiesOf(s){return G_.units.filter(u=>u.s!==s&&!u.dead);}
-function dmgUnit(u,d,by){if(u.dead)return;u.hp-=d;if(u.hp<=0){u.dead=true;const st=US[u.k];if(by!=null)G_.sides[by].ore+=st.rw*2;deathFx(u);}}
+const SF=o=>o.safeT>0;                                     // bot air just off its airfield: untouchable, unmarked, holds fire
+function dmgUnit(u,d,by){if(u.dead||SF(u))return;u.hp-=d;if(u.hp<=0){u.dead=true;const st=US[u.k];if(by!=null)G_.sides[by].ore+=st.rw*2;deathFx(u);}}
 function dmgTower(t,d,by){t.hp-=d;if(t.hp<=0&&!t.dead){t.dead=true;explode(t.x,hgt(t.x,t.z)+8,t.z,1.8);if(by!=null)G_.sides[by].ore+=TWS[t.k].cost*0.25;}}
 function dmgHarv(h,d,by){h.hp-=d;if(h.hp<=0&&!h.dead){h.dead=true;explode(h.x,hgt(h.x,h.z)+5,h.z,1.4);if(by!=null)G_.sides[by].ore+=500+(h.load?300:0);}}
 function hitBase(s,n){const S=G_.sides[s];if(S.lives<=0)return;S.lives=Math.max(0,S.lives-n);const [bx,bz]=BASES[s];explode(bx+(rn()-0.5)*60,hgt(bx,bz)+20,bz+(rn()-0.5)*60,1.4);if(S.lives<=0){explode(bx,hgt(bx,bz)+30,bz,3);shakeAt(bx,hgt(bx,bz)+30,bz,1.5);}checkOver(s);}
@@ -637,19 +638,19 @@ function pickGoal(s){const o=G_.mines.filter(m=>m.s!==s&&!m.dead).map(m=>({k:'m'
 function goalXY(s,g){if(g.k==='m')return [g.m.x,g.m.z];return BRP[1-s];}
 function repath(u){u.goal=pickGoal(u.s);const [gx,gz]=goalXY(u.s,u.goal);u.path=US[u.k].air?chaikin([[u.x,u.z],[gx,gz]],2):chaikin(astar(u.x,u.z,gx,gz,u.id%7),2);u.pi=1;}
 function pickTarget(s,x,z,rng,hitAir,hitGround,mines,jets){let best=null,bd=rng;
- for(const u of G_.units){if(u.dead||u.s===s)continue;const air=US[u.k].air;if(air?!hitAir:!hitGround)continue;const d=Math.hypot(u.x-x,u.z-z);if(d<bd){bd=d;best={k:'u',o:u};}}
+ for(const u of G_.units){if(u.dead||u.s===s||SF(u))continue;const air=US[u.k].air;if(air?!hitAir:!hitGround)continue;const d=Math.hypot(u.x-x,u.z-z);if(d<bd){bd=d;best={k:'u',o:u};}}
  if(hitGround){for(const t of G_.towers){if(t.dead||t.s===s)continue;const d=Math.hypot(t.x-x,t.z-z)-10;if(d<bd){bd=d;best={k:'t',o:t};}}
   for(const h of G_.harv){if(h.dead||h.s===s)continue;const d=Math.hypot(h.x-x,h.z-z);if(d<bd){bd=d;best={k:'h',o:h};}}
   if(s===1&&VUL(P)){const d=Math.hypot(P.x-x,P.z-z)-14;if(d<bd){bd=d;best={k:'p'};}}}
  if(s===1&&jets&&VUL(F)){const d=Math.hypot(F.x-x,F.z-z)+40;if(d<bd){bd=d;best={k:'f'};}}
  if(s===1&&jets&&VUL(D)&&!D.fall){const d=Math.hypot(D.x-x,D.z-z)+60;if(d<bd){bd=d;best={k:'d'};}}
  if(s===0){if(hitGround&&ET.dead<=0){const d=Math.hypot(ET.x-x,ET.z-z)-30;if(d<bd){bd=d;best={k:'et'};}}
-  if(jets&&ED.dead<=0){const d=Math.hypot(ED.x-x,ED.z-z)+60;if(d<bd){bd=d;best={k:'ed'};}}
-  if(jets&&EF.dead<=0){const d=Math.hypot(EF.x-x,EF.z-z)+40;if(d<bd){bd=d;best={k:'ef'};}}}
+  if(jets&&ED.dead<=0&&!SF(ED)){const d=Math.hypot(ED.x-x,ED.z-z)+60;if(d<bd){bd=d;best={k:'ed'};}}
+  if(jets&&EF.dead<=0&&!SF(EF)){const d=Math.hypot(EF.x-x,EF.z-z)+40;if(d<bd){bd=d;best={k:'ef'};}}}
  if(!best&&mines)for(const m of G_.mines){if(m.dead||m.s===s)continue;const d=Math.hypot(m.x-x,m.z-z)-60;if(d<bd){bd=d;best={k:'m',o:m};}}
  return best;}
 const tpos=tg=>tg.k==='et'?[ET.x,26,ET.z]:tg.k==='ed'?[ED.x,ED.y,ED.z]:tg.k==='ef'?[EF.x,EF.y,EF.z]:tg.k==='f'?[F.x,F.y,F.z]:tg.k==='d'?[D.x,D.y,D.z]:tg.k==='p'?[P.x,hgt(P.x,P.z)+14,P.z]:tg.k==='u'?[tg.o.x,tg.o.y+6,tg.o.z]:tg.k==='t'?[tg.o.x,hgt(tg.o.x,tg.o.z)+14,tg.o.z]:tg.k==='m'?[tg.o.x+(rn()-0.5)*60,10,tg.o.z+(rn()-0.5)*50]:[tg.o.x,hgt(tg.o.x,tg.o.z)+7,tg.o.z];
-function applyHit(tg,d,by){if(tg.k==='u')dmgUnit(tg.o,d,by);else if(tg.k==='t')dmgTower(tg.o,d,by);else if(tg.k==='h')dmgHarv(tg.o,d,by);else if(tg.k==='m')dmgMine(tg.o,d);else if(tg.k==='p'){if(!P.inv){P.hp-=d;P.hurt=0.25;}}else if(tg.k==='d'){if(VUL(D)){D.hp-=d;D.hurt=0.25;}}else if(tg.k==='f'){if(!F.inv){F.hp-=d;F.hurt=0.25;}}else if(tg.k==='et')ET.hp-=d;else if(tg.k==='ed')ED.hp-=d;else if(tg.k==='ef'){EF.hp-=d;if(by===0)efThreat();}}
+function applyHit(tg,d,by){if(tg.k==='u')dmgUnit(tg.o,d,by);else if(tg.k==='t')dmgTower(tg.o,d,by);else if(tg.k==='h')dmgHarv(tg.o,d,by);else if(tg.k==='m')dmgMine(tg.o,d);else if(tg.k==='p'){if(!P.inv){P.hp-=d;P.hurt=0.25;}}else if(tg.k==='d'){if(VUL(D)){D.hp-=d;D.hurt=0.25;}}else if(tg.k==='f'){if(!F.inv){F.hp-=d;F.hurt=0.25;}}else if(tg.k==='et')ET.hp-=d;else if(tg.k==='ed'){if(!SF(ED))ED.hp-=d;}else if(tg.k==='ef'){if(!SF(EF))EF.hp-=d;if(by===0)efThreat();}}
 function splash(s,x,z,r,d,by){for(const u of G_.units){if(u.dead||u.s===s||US[u.k].air)continue;const k=Math.hypot(u.x-x,u.z-z);if(k<r)dmgUnit(u,d*(k<r*0.5?1:0.6),by);}
  for(const h of G_.harv){if(!h.dead&&h.s!==s&&Math.hypot(h.x-x,h.z-z)<r)dmgHarv(h,d,by);}}
 
@@ -657,10 +658,10 @@ function stepGame(dt){if(G_.over)return;G_.t+=dt;
  for(const s of [0,1]){const S=G_.sides[s];S.ore+=BASE_INC*dt;for(const m of G_.mines)if(m.s===s&&!m.dead)S.ore+=MINE_INC*dt;
   S.qcd-=dt;if(S.queue.length&&S.qcd<=0){const k=S.queue.shift();const air=US[k].air;if(!S.grp||G_.t-S.grpT>5||S.grpAir!==air){S.goal=pickGoal(s);S.grp=groupPath(s,air,goalXY(s,S.goal));S.grpAir=air;S.grpN=0;}S.grpT=G_.t;S.grpN++;
    const [bx,bz]=BASES[s];const st=US[k];const hg=k==='tank'?baseW(s,-0.256,0.02):k==='jeep'?baseW(s,0.287,0.02):null;const u={id:G_.id++,s,k,x:hg?hg[0]:S.grp[0][0],z:hg?hg[1]:S.grp[0][1],y:0,hp:st.hp,mx:st.hp,path:hg?[hg,...(k==='tank'?[baseW(s,-0.265,0.18),baseW(s,-0.20,0.33)]:[baseW(s,0.225,0.18),baseW(s,0.17,0.33)]),...S.grp]:S.grp,goal:S.goal,pi:1,cd:rn(),off:((S.grpN%5)-2)*14,tg:null,scan:rn()*0.3,a:s===0?0:Math.PI};
-   u.y=st.air?hgt(u.x,u.z)+ALT[k]:hgt(u.x,u.z);G_.units.push(u);S.qcd=0.55;}}
+   u.y=st.air?hgt(u.x,u.z)+ALT[k]:hgt(u.x,u.z);if(st.air&&s===1)u.safeT=10;G_.units.push(u);S.qcd=0.55;}}
  /* units: shoot what is in range, otherwise keep going */
- for(const u of G_.units){if(u.dead)continue;const st=US[u.k];u.cd-=dt;u.scan-=dt;
-  if(u.scan<=0){u.scan=0.3;/* stay on the current target while it is alive and in range, so units don't flick between two */
+ for(const u of G_.units){if(u.dead)continue;const st=US[u.k];u.cd-=dt;u.scan-=dt;if(u.safeT>0){u.safeT-=dt;u.tg=null;u.scan=0;u.mk=0;}
+  if(u.scan<=0&&!SF(u)){u.scan=0.3;/* stay on the current target while it is alive and in range, so units don't flick between two */
    const o=u.tg,keep=o&&o.k==='u'&&!o.o.dead&&Math.hypot(o.o.x-u.x,o.o.z-u.z)<st.rng+20;if(!keep)u.tg=pickTarget(u.s,u.x,u.z,st.rng,st.hitAir,true,true);}
   const [ex,ez]=BRP[1-u.s];
   if(G_.sides[1-u.s].lives>0&&Math.hypot(u.x-ex,u.z-ez)<190){u.dead=true;u.breach=true;hitBase(1-u.s,st.lives);continue;}
@@ -676,8 +677,10 @@ function stepGame(dt){if(G_.over)return;G_.t+=dt;
   const dx=t[0]-u.x,dz=t[1]-u.z,d=Math.hypot(dx,dz);if(d<20&&!last){u.pi++;continue;}
   const sl=st.air?0:slope(u.x,u.z);let v=st.sp*USPK*(tg&&st.air?0.35:1)*(1-Math.min(0.6,sl*0.8))*dt;const a=Math.atan2(dz,dx);
   if(last){v*=Math.min(1,d/70);if(d<4)v=0;}/* arrive and stop: no overshooting back and forth around the last point */
-  const ox=last?0:-Math.sin(a)*u.off*0.02,oz=last?0:Math.cos(a)*u.off*0.02;u.x+=Math.cos(a)*v+ox*v;u.z+=Math.sin(a)*v+oz*v;
-  if(tg&&st.air&&u.ga!=null)u.a=u.ga;else if(!st.air?v>dt*4:(!last||d>60)&&v>st.sp*USPK*dt*0.5)u.a=a;
+  const ox=last?0:-Math.sin(a)*u.off*0.02,oz=last?0:Math.cos(a)*u.off*0.02;
+  if(!st.air){const mx=Math.cos(a)+ox,mz=Math.sin(a)+oz,want=Math.atan2(mz,mx);if(u.a==null)u.a=want;let da=want-u.a;da=Math.atan2(Math.sin(da),Math.cos(da));
+   if(v>dt*4){const R_=(u.k==='tank'?1.7:2.8)*dt;u.a+=Math.max(-R_,Math.min(R_,da));}const f=Math.max(0.15,Math.cos(Math.min(1.5,Math.abs(da))))*Math.hypot(mx,mz);u.x+=Math.cos(u.a)*v*f;u.z+=Math.sin(u.a)*v*f;}
+  else{u.x+=Math.cos(a)*v+ox*v;u.z+=Math.sin(a)*v+oz*v;if(tg&&u.ga!=null)u.a=u.ga;else if((!last||d>60)&&v>st.sp*USPK*dt*0.5)u.a=a;}
   const gy=hgt(u.x,u.z);u.y=st.air?u.y+(Math.max(gy,0)+ALT[u.k]-u.y)*Math.min(1,dt*1.5):gy;}
  /* ground machines give way to the Titans */
  for(const u of G_.units){if(u.dead||US[u.k].air)continue;for(const T of [P,ET]){if(T.dead>0)continue;const dx=u.x-T.x,dz=u.z-T.z,d=Math.hypot(dx,dz),R_=u.k==='tank'?95:u.k==='jeep'?85:40;
@@ -737,8 +740,8 @@ const bldOK=(k,s)=>{const m=BLD[k];return !!(m&&m.sc&&(s===0||m.rt));};
 function bldInst(k,s){const m=BLD[k],c=m.sc.clone(true);if(s===1)c.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.material.map=m.rt;}});return c;}
 function placeBuildings(){for(const s of [0,1]){const H_=BH[s];if(!H_||H_.userData.done)continue;if(!bldOK('base',s)||!bldOK('air',s))continue;H_.userData.done=1;
   const turn=s===0?Math.PI/2:-Math.PI/2,[bx,bz]=BASES[s],[ax,az]=AIRP[s];
-  const g=new THREE.Group();g.rotation.y=turn;g.position.set(bx,-BSINK,bz);const b=bldInst('base',s);b.scale.setScalar(BS);b.rotation.y=BROT;b.position.set(-BXC*BS,0,-BZC*BS);g.add(b);H_.add(g);
-  const a=new THREE.Group();a.rotation.y=turn;a.position.set(ax,-ASINK,az);const m=bldInst('air',s);m.scale.setScalar(AS);a.add(m);H_.add(a);}}
+  const g=new THREE.Group();g.rotation.y=turn;g.position.set(bx,-BSINK+0.35,bz);const b=bldInst('base',s);b.scale.setScalar(BS);b.rotation.y=BROT;b.position.set(-BXC*BS,0,-BZC*BS);g.add(b);H_.add(g);
+  const a=new THREE.Group();a.rotation.y=turn;a.position.set(ax,-ASINK+0.35,az);const m=bldInst('air',s);m.scale.setScalar(AS);a.add(m);H_.add(a);}}
 function buildBT(k,s){const g=new THREE.Group(),c=bldInst(k,s);c.scale.setScalar(TS);g.add(c);g.userData.top=c.getObjectByName('top');return g;}
 function buildXM(k,s){const m=XM[k],root=new THREE.Group();const c=m.sc.clone(true);if(s===0&&m.blue)c.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.material.map=m.bt;}});
  c.updateMatrixWorld(true);const bb=new THREE.Box3().setFromObject(c),sz=bb.getSize(new THREE.Vector3()),sc=m.len/Math.max(sz.x,sz.z);
@@ -1180,7 +1183,7 @@ function stepDrone(dt){if(D.fall){stepFall(dt);return;}if(D.dead>0){D.dead-=dt;i
  D.x=Math.max(-150,Math.min(IW+150,D.x));D.z=Math.max(-150,Math.min(IH+150,D.z));D.y=D.alt+Math.sin(performance.now()/700)*1.5;
  const [lx,lz]=droneLook();DL.x=lx;DL.z=lz;DL.r=(D.alt/Math.sin(-D.pitch))*0.62/D.zoom+60;
  /* everything of the enemy inside that patch gets marked, for as long as it lives */
- for(const u of G_.units)if(u.s===1&&!u.dead&&!u.mk&&Math.hypot(u.x-lx,u.z-lz)<DL.r){u.mk=1;if(CUR==='drone')AUD.play('mark');}
+ for(const u of G_.units)if(u.s===1&&!u.dead&&!u.mk&&!SF(u)&&Math.hypot(u.x-lx,u.z-lz)<DL.r){u.mk=1;if(CUR==='drone')AUD.play('mark');}
  for(const t of G_.towers)if(t.s===1&&!t.mk&&Math.hypot(t.x-lx,t.z-lz)<DL.r)t.mk=1;
  for(const h of G_.harv)if(h.s===1&&!h.mk&&Math.hypot(h.x-lx,h.z-lz)<DL.r)h.mk=1;
  if(D.hp<=0&&!D.fall)downDrone();}
@@ -1324,7 +1327,7 @@ function droneHud(t){if(CUR!=='drone')return;const g=document.getElementById('ti
 /* red brackets over every marked enemy that is on screen, in either view */
 function markHud(){const L_=document.getElementById('mkLayer').children,v=new THREE.Vector3();let n=0;const put=(x,y,z,big,cls,vk)=>{if(n>=L_.length)return;if(vk&&!live.has(vk))return;v.set(x,y,z).project(cam);if(v.z>1||Math.abs(v.x)>1.05||Math.abs(v.y)>1.05)return;const el=L_[n++];el.style.display='block';el.className=(big?'t ':'')+(cls||'');el.style.left=((v.x+1)/2*innerWidth)+'px';el.style.top=((1-v.y)/2*innerHeight)+'px';};
  const AIM=CUR==='titan'?LOCK:CUR==='plane'?LOCKF:null,au=AIM&&AIM.tg.k==='u'?AIM.tg.o:null,ak=AIM?AIM.tg.k:'';
- if(ET.dead<=0)put(ET.x,40,ET.z,true,'hero ht'+(ET.lk?' lk':LK.u===ET&&LK.t>0.25?' lp':ak==='et'?' aim':''));if(ED.dead<=0)put(ED.x,ED.y,ED.z,true,'air hero hd'+(ak==='ed'?' aim':''));if(EF.dead<=0)put(EF.x,EF.y,EF.z,true,'air hero hf'+(ak==='ef'?' aim':''));
+ if(ET.dead<=0)put(ET.x,40,ET.z,true,'hero ht'+(ET.lk?' lk':LK.u===ET&&LK.t>0.25?' lp':ak==='et'?' aim':''));if(ED.dead<=0&&!SF(ED))put(ED.x,ED.y,ED.z,true,'air hero hd'+(ak==='ed'?' aim':''));if(EF.dead<=0&&!SF(EF))put(EF.x,EF.y,EF.z,true,'air hero hf'+(ak==='ef'?' aim':''));
  for(const u of G_.units)if((u.mk||u===au)&&!u.dead)put(u.x,u.y+(u.k==='heli'?14:26),u.z,u.k!=='inf',(US[u.k].air?'air ':'')+(u.lk?'lk':u===au?'aim':LK.u===u&&LK.t>0.25?'lp':''),u.vk);for(const t of G_.towers)if(t.mk&&!t.dead)put(t.x,22,t.z,true);for(const h of G_.harv)if(h.mk&&!h.dead)put(h.x,10,h.z,false);
  for(let i=n;i<L_.length;i++)if(L_[i].style.display!=='none')L_[i].style.display='none';}
 {const p0=AUD.play.bind(AUD);AUD.play=function(kind,x,z,k){if(kind==='mark'){if(!this.ctx||!this.on)return;const C=this.ctx,now=C.currentTime;if(this.last.mark&&now-this.last.mark<0.25)return;this.last.mark=now;const o=C.createOscillator(),g=C.createGain();o.type='square';o.frequency.setValueAtTime(1400,now);o.frequency.setValueAtTime(1900,now+0.05);g.gain.setValueAtTime(0.05,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.12);o.connect(g).connect(this.out);o.start(now);o.stop(now+0.13);return;}return p0(kind,x,z,k);};}
@@ -1335,7 +1338,7 @@ const LOCK_T=3,LOCK_PX=34,MIS=[];let MIS_CD=0,MID=0;const LK={u:null,t:0,beep:0}
 function stepLock(dt){if(CUR!=='drone'||D.dead>0||D.fall||G_.over){LK.u=null;LK.t=0;return;}
  const cx=innerWidth/2,cy=innerHeight/2,v=new THREE.Vector3();let best=null,bd=LOCK_PX*D.zoom;/* the same patch of ground at any zoom */
  if(ET.dead<=0&&!ET.lk){v.set(ET.x,20,ET.z).project(cam);if(v.z<=1){const d=Math.hypot((v.x+1)/2*innerWidth-cx,(1-v.y)/2*innerHeight-cy)-14;if(d<bd){bd=d;best=ET;}}}
- for(const u of G_.units){if(u.dead||u.s!==1||u.lk)continue;v.set(u.x,u.y+6,u.z).project(cam);if(v.z>1)continue;const d=Math.hypot((v.x+1)/2*innerWidth-cx,(1-v.y)/2*innerHeight-cy);if(d<bd){bd=d;best=u;}}
+ for(const u of G_.units){if(u.dead||u.s!==1||u.lk||SF(u))continue;v.set(u.x,u.y+6,u.z).project(cam);if(v.z>1)continue;const d=Math.hypot((v.x+1)/2*innerWidth-cx,(1-v.y)/2*innerHeight-cy);if(d<bd){bd=d;best=u;}}
  if(best&&best===LK.u)LK.t+=dt;else{LK.u=best;LK.t=0;}
  if(LK.u){LK.u.mk=1;LK.beep-=dt;if(LK.t>0.25&&LK.beep<=0){LK.beep=0.45-0.3*Math.min(1,LK.t/LOCK_T);AUD.play('lockp');}}
  if(LK.u&&LK.t>=LOCK_T){if(MIS_CD>0){if(LK.t<LOCK_T+dt*1.5)HUD.msg('Ракеты перезаряжаются: '+Math.ceil(MIS_CD)+' с');return;}
@@ -1363,12 +1366,12 @@ let LOCKF=null;const PR=[],PB=[];let PRID=0;
 /* take-off run: speeds up along the runway, lifts off at 170 m/s, climbs out; true while still on the run */
 function takeoff(o,dt){const T=o.take;T.v=Math.min(225,T.v+48*dt);o.x+=Math.cos(o.yaw)*T.v*dt;o.z+=Math.sin(o.yaw)*T.v*dt;
  if(T.v>170)o.y+=(T.v-150)*0.55*dt;o.bank=0;if(o===F)o.pitch=Math.min(0.12,-0.03+Math.max(0,o.y-4)*0.004);
- if(T.v>=225&&o.y>45){o.take=null;if(o===F)o.pitch=-0.18;return false;}return true;}
-function planePark(){[F.x,F.z]=airW(0,-0.01,-0.21);F.y=4;F.take=null;F.park=true;F.home=null;F.v=F.sp;F.yaw=0;F.ty=0;F.pitch=-0.03;F.bank=0;F.turn=false;}
+ if(T.v>=225&&o.y>45){o.take=null;o.climb=1;if(o===F)o.pe=2.5;return false;}return true;}
+function planePark(){F.climb=0;F.pe=0;[F.x,F.z]=airW(0,-0.01,-0.21);F.y=4;F.take=null;F.park=true;F.home=null;F.v=F.sp;F.yaw=0;F.ty=0;F.pitch=-0.03;F.bank=0;F.turn=false;}
 function spawnPlane(){invSet(F);planePark();F.yaw=0;F.ty=0;F.pitch=-0.03;F.hp=F.max;F.dead=0;F.bank=0;F.turn=false;F.zoom=1;}
 function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0){if(RSP.F>0){RSP.F--;spawnPlane();}else F.dead=1e9;}return;}
  F.cd=Math.max(0,F.cd-dt);F.rcd=Math.max(0,F.rcd-dt);F.hurt=Math.max(0,F.hurt-dt);
- invTick(F,'plane',dt);
+ invTick(F,'plane',dt);if(F.pe>0){F.pe-=dt;F.pitch+=(-0.18-F.pitch)*Math.min(1,dt*1.5);}
  if(F.park){if(CUR!=='plane')return;F.park=false;F.take={v:20};}
  if(F.take&&takeoff(F,dt)&&F.hp>0)return;
  let vT=F.sp,yT=F.alt;
@@ -1385,16 +1388,16 @@ function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0){if(RSP.F>0){RSP.F--
  /* past the limit: turn towards the middle at the gentlest rate that still makes it, until heading inwards */
  if(out||F.turn){const want=Math.atan2(IH/2-F.z,IW/2-F.x);let d=want-F.yaw;d=Math.atan2(Math.sin(d),Math.cos(d));if(out)F.turn=true;if(Math.abs(d)<0.25&&!out)F.turn=false;F.ty=F.yaw+Math.sign(d||1)*Math.min(Math.abs(d),0.9);}
  let d=F.ty-F.yaw;const rate=Math.max(-PLANE.maxRate,Math.min(PLANE.maxRate,d*1.6));F.yaw+=rate*dt;F.bank+=(-rate*0.75-F.bank)*Math.min(1,dt*3);
- F.x+=Math.cos(F.yaw)*F.v*dt;F.z+=Math.sin(F.yaw)*F.v*dt;F.y+=(yT-F.y)*Math.min(1,dt*(F.home?2.5:1.2));
+ F.x+=Math.cos(F.yaw)*F.v*dt;F.z+=Math.sin(F.yaw)*F.v*dt;{const dy=(yT-F.y)*Math.min(1,dt*(F.home?2.5:1.2));F.y+=F.climb?Math.min(dy,35*dt):dy;if(F.climb&&Math.abs(yT-F.y)<3)F.climb=0;}
  /* machine gun: the first enemy near the centre of the sight */
- if(CUR==='plane')for(const u of G_.units){if(u.dead||u.s===0||!US[u.k].air||u.mk)continue;const dx=u.x-F.x,dz=u.z-F.z,d=Math.hypot(dx,dz);if(d<2000){let a=Math.atan2(dz,dx)-F.yaw;a=Math.atan2(Math.sin(a),Math.cos(a));if(Math.abs(a)<0.75)u.mk=1;}}
+ if(CUR==='plane')for(const u of G_.units){if(u.dead||u.s===0||!US[u.k].air||u.mk||SF(u))continue;const dx=u.x-F.x,dz=u.z-F.z,d=Math.hypot(dx,dz);if(d<2000){let a=Math.atan2(dz,dx)-F.yaw;a=Math.atan2(Math.sin(a),Math.cos(a));if(Math.abs(a)<0.75)u.mk=1;}}
  LOCKF=null;if(CUR==='plane'&&!G_.over){const o=new THREE.Vector3(F.x,F.y,F.z),dv=new THREE.Vector3(Math.cos(F.yaw)*Math.cos(F.pitch),Math.sin(F.pitch),Math.sin(F.yaw)*Math.cos(F.pitch));let best=PLANE.cone/F.zoom;
   const test=(x,y,z,tg,sz=10)=>{const vx=x-o.x,vy=y-o.y,vz=z-o.z,Ln=Math.hypot(vx,vy,vz);if(Ln>PLANE.range||Ln<25)return;const a=Math.acos(Math.max(-1,Math.min(1,(vx*dv.x+vy*dv.y+vz*dv.z)/Ln)))-Math.atan(sz/Ln);if(a<best){best=a;LOCKF={tg,x,y,z};}};
-  for(const u of G_.units){if(u.dead||u.s===0)continue;test(u.x,u.y+(u.k==='heli'?5:12),u.z,{k:'u',o:u},u.k==='heli'?30:u.k==='inf'?10:36);}
+  for(const u of G_.units){if(u.dead||u.s===0||SF(u))continue;test(u.x,u.y+(u.k==='heli'?5:12),u.z,{k:'u',o:u},u.k==='heli'?30:u.k==='inf'?10:36);}
   for(const t of G_.towers){if(t.s===0)continue;test(t.x,14,t.z,{k:'t',o:t});}
   for(const h of G_.harv){if(h.s===0)continue;test(h.x,7,h.z,{k:'h',o:h});}
   for(const m of G_.mines){if(m.s===0||m.dead)continue;test(m.x,8,m.z,{k:'m',o:m},55);}
-  if(ET.dead<=0)test(ET.x,24,ET.z,{k:'et'},50);if(ED.dead<=0)test(ED.x,ED.y,ED.z,{k:'ed'},16);if(EF.dead<=0)test(EF.x,EF.y,EF.z,{k:'ef'},26);
+  if(ET.dead<=0)test(ET.x,24,ET.z,{k:'et'},50);if(ED.dead<=0&&!SF(ED))test(ED.x,ED.y,ED.z,{k:'ed'},16);if(EF.dead<=0&&!SF(EF))test(EF.x,EF.y,EF.z,{k:'ef'},26);
   if(LOCKF&&F.cd<=0){F.cd=PLANE.mgCd;const tg=LOCKF.tg;applyHit(tg,PLANE.mgDmg*(tg.k==='t'?0.5:1),0);
    const sd=(F.mgSide=-(F.mgSide||1));{const ax=F.x-Math.sin(F.yaw)*sd*7+Math.cos(F.yaw)*8,ay=F.y-4,az=F.z+Math.cos(F.yaw)*sd*7+Math.sin(F.yaw)*8,bx=LOCKF.x+(rn()-0.5)*5,by=LOCKF.y+(rn()-0.5)*4,bz=LOCKF.z+(rn()-0.5)*5;PB.push({id:++PRID,x:ax,y:ay,z:az,sx:ax,sy:ay,sz:az,tx:bx,ty:by,tz:bz,t:0,T:Math.max(0.05,Math.hypot(bx-ax,by-ay,bz-az)/2400)});AUD.play('mg',ax,az);}}}
  if(F.hp<=0){F.hp=0;F.dead=5;G_.sides[1].ore+=400;explode(F.x,F.y,F.z,2);if(CUR==='plane')HUD.msg('Самолёт сбит — новый через 5 с');}
@@ -1425,8 +1428,8 @@ function rocketHit(x,z,y){explode(x,y||0,z,1.3);const R_=PLANE.rocketR;if(EF.dea
 /* semi-guided rockets: they lock onto the enemy closest to the sight line (within ~11°) and steer towards it with a limited turn rate,
    so a small miss is corrected and a big one flies past; with nothing near the sight they go straight to where it points */
 function rocketTarget(dv,cone){let best=null,ba=cone;const c=(x,y,z,fn)=>{const vx=x-F.x,vy=y-F.y,vz=z-F.z,L=Math.hypot(vx,vy,vz);if(L<60||L>4000)return;const a=Math.acos(Math.max(-1,Math.min(1,(vx*dv[0]+vy*dv[1]+vz*dv[2])/L)));if(a<ba){ba=a;best=fn;}};
- for(const u of G_.units){if(u.dead||u.s===0)continue;const air=US[u.k].air;c(u.x,u.y+(air?0:8),u.z,()=>u.dead?null:[u.x,u.y+(US[u.k].air?0:8),u.z]);}
- if(ET.dead<=0)c(ET.x,14,ET.z,()=>ET.dead>0?null:[ET.x,14,ET.z]);if(ED.dead<=0)c(ED.x,ED.y,ED.z,()=>ED.dead>0?null:[ED.x,ED.y,ED.z]);if(EF.dead<=0){const f=()=>EF.dead>0?null:[EF.x,EF.y,EF.z];f.ef=1;c(EF.x,EF.y,EF.z,f);}
+ for(const u of G_.units){if(u.dead||u.s===0||SF(u))continue;const air=US[u.k].air;c(u.x,u.y+(air?0:8),u.z,()=>u.dead?null:[u.x,u.y+(US[u.k].air?0:8),u.z]);}
+ if(ET.dead<=0)c(ET.x,14,ET.z,()=>ET.dead>0?null:[ET.x,14,ET.z]);if(ED.dead<=0&&!SF(ED))c(ED.x,ED.y,ED.z,()=>ED.dead>0?null:[ED.x,ED.y,ED.z]);if(EF.dead<=0&&!SF(EF)){const f=()=>EF.dead>0?null:[EF.x,EF.y,EF.z];f.ef=1;c(EF.x,EF.y,EF.z,f);}
  return best;}
 function planeRockets(){if(F.dead>0||F.rcd>0)return;F.rcd=PLANE.rocketCd;let tx,ty,tz;
  const dv=[Math.cos(F.yaw)*Math.cos(F.pitch),Math.sin(F.pitch),Math.sin(F.yaw)*Math.cos(F.pitch)];const rh=rayHit(F.x,F.y,F.z,dv[0],dv[1],dv[2],4000,0);
@@ -1511,14 +1514,14 @@ const ED={x:0,z:0,y:450,yaw:Math.PI,hp:1500,max:1500,dead:0,art:6,goal:null,gT:0
 const EF={x:0,z:0,y:230,yaw:Math.PI,hp:2500,max:2500,dead:0,cd:0,rcd:6,bank:0,tg:null,tT:0,ty:Math.PI,pitch:0};
 const ETS=[],EFR=[],EAR=[];let EID=0;
 function etSpawn(){ET.lk=0;ET.y=0;[ET.x,ET.z]=baseW(1,-0.02,0.19);ET.yaw=Math.PI;ET.hp=ET.max;ET.dead=0;ET.path=null;ET.tg=null;ET.tgT=0;ET.cd=1;ET.scd=12;ET.seed=1+rn()*900;}
-function edSpawn(){[ED.x,ED.z]=airW(1,0,-0.35);ED.y=ED.alt||450;ED.yaw=Math.PI;ED.hp=ED.max;ED.dead=0;ED.art=7;ED.goal=null;}
-function efSpawn(){Object.assign(EFM,{aware:0,chase:0,ignore:0,threat:-99});[EF.x,EF.z]=airW(1,-0.01,-0.21);EF.y=4;EF.take={v:20};EF.yaw=Math.PI;EF.ty=Math.PI;EF.hp=EF.max;EF.dead=0;EF.rcd=6;EF.tg=null;}
+function edSpawn(){ED.safeT=10;[ED.x,ED.z]=airW(1,0,-0.35);ED.y=ED.alt||450;ED.yaw=Math.PI;ED.hp=ED.max;ED.dead=0;ED.art=7;ED.goal=null;}
+function efSpawn(){EF.safeT=10;Object.assign(EFM,{aware:0,chase:0,ignore:0,threat:-99});[EF.x,EF.z]=airW(1,-0.01,-0.21);EF.y=4;EF.take={v:20};EF.yaw=Math.PI;EF.ty=Math.PI;EF.hp=EF.max;EF.dead=0;EF.rcd=6;EF.tg=null;}
 const RSP={P:5,D:5,F:5,ET:5,ED:5,EF:5};
 function heroesReset(){slotsReset();TRK.length=0;Object.assign(RSP,{P:5,D:5,F:5,ET:5,ED:5,EF:5});TESTW.on=false;TESTW.t=6;if(TESTW.upd)TESTW.upd();etSpawn();edSpawn();efSpawn();ETS.length=0;EFR.length=0;EAR.length=0;}
 {const ng=newGame;newGame=function(){ng();heroesReset();};}
 {const sg=stepGame;stepGame=function(dt){sg(dt);if(G_&&!G_.over&&!WU.on)stepHeroes(dt);};}
 /* our hits on them: a blast at (x,y,z) of radius r */
-function heroSplash(x,y,z,r,dmg,groundOnly){if(ET.dead<=0&&Math.hypot(ET.x-x,ET.z-z)<r&&y<60)ET.hp-=dmg;if(groundOnly)return;if(ED.dead<=0&&Math.hypot(ED.x-x,ED.y-y,ED.z-z)<r*0.8)ED.hp-=dmg;if(EF.dead<=0&&Math.hypot(EF.x-x,EF.y-y,EF.z-z)<r*0.8)EF.hp-=dmg;}
+function heroSplash(x,y,z,r,dmg,groundOnly){if(ET.dead<=0&&Math.hypot(ET.x-x,ET.z-z)<r&&y<60)ET.hp-=dmg;if(groundOnly)return;if(ED.dead<=0&&!SF(ED)&&Math.hypot(ED.x-x,ED.y-y,ED.z-z)<r*0.8)ED.hp-=dmg;if(EF.dead<=0&&!SF(EF)&&Math.hypot(EF.x-x,EF.y-y,EF.z-z)<r*0.8)EF.hp-=dmg;}
 const TW=()=>false;
 function hitOurs(x,y,z,r,dmg,lifeP,noHero){/* a bot blast: our Titan, units, towers, mines and base */
  if(!noHero&&VUL(P)&&Math.hypot(P.x-x,P.z-z)<r+20&&y<60){P.hp-=dmg*0.6;P.hurt=0.3;}
@@ -1558,11 +1561,11 @@ function botFireArt(x,z){BATT[1].forEach((g,i)=>{const gx=g.position.x,gz=g.posi
   setTimeout(()=>{puff(gx+Math.cos(a)*16,22,gz+Math.sin(a)*16,'muzzle');AUD.play('cannon',gx,gz);},i*180);});
  EAR.push({id:++EID,x,z,t:artTime(Math.hypot(x-BASES[1][0],z-BASES[1][1]))+0.6});}
 function botArtImpact(x,z){explode(x,0,z,1.9);hitOurs(x,10,z,ART.R+10,ART.DMG*0.7,1);}
-function stepED(dt){if(ED.dead>0){ED.dead-=dt;if(ED.dead<=0){if(RSP.ED>0){RSP.ED--;edSpawn();}else ED.dead=1e9;}return;}
+function stepED(dt){if(ED.dead>0){ED.dead-=dt;if(ED.dead<=0){if(RSP.ED>0){RSP.ED--;edSpawn();}else ED.dead=1e9;}return;}if(ED.safeT>0)ED.safeT-=dt;
  ED.gT-=dt;if(ED.gT<=0){ED.gT=2;ED.goal=edGoal();}
  if(ED.goal){const [gx,gz]=ED.goal;const hx=gx+260,hz=gz;/* hang a little behind the target, on its own side */const dx=hx-ED.x,dz=hz-ED.z,d=Math.hypot(dx,dz);
   if(d>40){const v=Math.min(d,150*dt);ED.x+=dx/d*v;ED.z+=dz/d*v;ED.yaw=Math.atan2(dz,dx);}
-  ED.art-=dt;if(ED.art<=0&&Math.hypot(gx-ED.x,gz-ED.z)<900){ED.art=9;let tx=gx,tz=gz;if(VUL(P)&&Math.hypot(P.x-gx,P.z-gz)<40){tx=P.x;tz=P.z;}botFireArt(tx,tz);}}
+  ED.art-=dt;if(ED.art<=0&&!SF(ED)&&Math.hypot(gx-ED.x,gz-ED.z)<900){ED.art=9;let tx=gx,tz=gz;if(VUL(P)&&Math.hypot(P.x-gx,P.z-gz)<40){tx=P.x;tz=P.z;}botFireArt(tx,tz);}}
  ED.y=450+Math.sin(performance.now()/650)*2;
  if(ED.hp<=0){ED.hp=0;ED.dead=7;heroDie({x:ED.x,y:ED.y,z:ED.z},1.4,200);}}
 
@@ -1580,7 +1583,7 @@ function efPick(){const c=[];if(VUL(F)&&EFM.ignore<=0&&EFM.aware>0)c.push({k:'f'
  for(const u of G_.units)if(!u.dead&&u.s===0&&US[u.k].air)c.push({k:'u',o:u,air:1,w:1,x:u.x,y:u.y,z:u.z});
  for(const u of G_.units)if(!u.dead&&u.s===0&&!US[u.k].air)c.push({k:'u',o:u,air:0,w:0.9,x:u.x,y:u.y+8,z:u.z});for(const m of G_.mines)if(m.s===0&&!m.dead)c.push({k:'m',o:m,air:0,w:1.4,x:m.x,y:8,z:m.z});
  let best=null,bd=1e9;for(const q of c){const d=Math.hypot(q.x-EF.x,q.z-EF.z)*q.w;if(d<bd){bd=d;best=q;}}return best;}
-function stepEF(dt){if(EF.dead>0){EF.dead-=dt;if(EF.dead<=0){if(RSP.EF>0){RSP.EF--;efSpawn();}else EF.dead=1e9;}return;}
+function stepEF(dt){if(EF.dead>0){EF.dead-=dt;if(EF.dead<=0){if(RSP.EF>0){RSP.EF--;efSpawn();}else EF.dead=1e9;}return;}if(EF.safeT>0)EF.safeT-=dt;
  if(EF.take&&takeoff(EF,dt)&&EF.hp>0)return;
  EF.cd=Math.max(0,EF.cd-dt);EF.rcd=Math.max(0,EF.rcd-dt);efSense(dt);EF.tT-=dt;if(EF.tT<=0){EF.tT=1;const was=EF.tg&&EF.tg.k;EF.tg=efPick();if(EF.tg&&EF.tg.k==='f'&&was!=='f')EFM.chase=0;}
  const g=EF.tg;if(g){if(g.k==='f'){g.x=F.x;g.y=F.y;g.z=F.z;if(!VUL(F)||EFM.ignore>0||EFM.aware<=0)EF.tT=0;}else if(g.k==='d'){g.x=D.x;g.y=D.y;g.z=D.z;if(!VUL(D)||D.fall)EF.tT=0;}else if(g.k==='u'){if(g.o.dead)EF.tT=0;else{g.x=g.o.x;g.y=g.o.y+(g.air?0:8);g.z=g.o.z;}}else if(g.k==='p'){g.x=P.x;g.z=P.z;if(P.dead>0)EF.tT=0;}else if(g.k==='m'&&g.o.dead)EF.tT=0;}
@@ -1589,11 +1592,11 @@ function stepEF(dt){if(EF.dead>0){EF.dead-=dt;if(EF.dead<=0){if(RSP.EF>0){RSP.EF
   /* too close to line up: fly on past it and come round again */
   EF.ty=dd<260&&!g.air?EF.yaw:Math.atan2(g.z-EF.z,g.x-EF.x);}else EF.ty=EF.yaw+0.35;
  let d=Math.atan2(Math.sin(EF.ty-EF.yaw),Math.cos(EF.ty-EF.yaw));const rate=Math.max(-PLANE.maxRate*0.9,Math.min(PLANE.maxRate*0.9,d*1.6));EF.yaw+=rate*dt;EF.bank+=(-rate*0.75-EF.bank)*Math.min(1,dt*3);
- EF.x+=Math.cos(EF.yaw)*225*dt;EF.z+=Math.sin(EF.yaw)*225*dt;const alt=g&&g.air?Math.max(120,Math.min(480,g.y+20)):230;EF.y+=(alt-EF.y)*Math.min(1,dt*0.8);
+ EF.x+=Math.cos(EF.yaw)*225*dt;EF.z+=Math.sin(EF.yaw)*225*dt;const alt=g&&g.air?Math.max(120,Math.min(480,g.y+20)):230;{const dy=(alt-EF.y)*Math.min(1,dt*0.8);EF.y+=EF.climb?Math.min(dy,35*dt):dy;if(EF.climb&&Math.abs(alt-EF.y)<3)EF.climb=0;}
  if(g){const dx=g.x-EF.x,dy=g.y-EF.y,dz=g.z-EF.z,Ln=Math.hypot(dx,dy,dz),a=Math.abs(Math.atan2(Math.sin(Math.atan2(dz,dx)-EF.yaw),Math.cos(Math.atan2(dz,dx)-EF.yaw)));EF.pitch=Math.atan2(dy,Math.hypot(dx,dz));
-  if(g.air&&Ln<900&&a<0.12&&EF.cd<=0){EF.cd=0.11;const hit=rn()<0.75;if(hit){if(g.k==='f'){if(!F.inv){F.hp-=14;F.hurt=0.25;}}else if(g.k==='d'){if(VUL(D)){D.hp-=14;D.hurt=0.25;}}else if(g.k==='u')dmgUnit(g.o,14,1);}
+  if(g.air&&Ln<900&&a<0.12&&EF.cd<=0&&!SF(EF)){EF.cd=0.11;const hit=rn()<0.75;if(hit){if(g.k==='f'){if(!F.inv){F.hp-=14;F.hurt=0.25;}}else if(g.k==='d'){if(VUL(D)){D.hp-=14;D.hurt=0.25;}}else if(g.k==='u')dmgUnit(g.o,14,1);}
    const ax=EF.x+Math.cos(EF.yaw)*10,ay=EF.y-3,az=EF.z+Math.sin(EF.yaw)*10,bx=g.x+(rn()-0.5)*(hit?4:30),by=g.y+(rn()-0.5)*(hit?4:20),bz=g.z+(rn()-0.5)*(hit?4:30);PB.push({id:++PRID,x:ax,y:ay,z:az,sx:ax,sy:ay,sz:az,tx:bx,ty:by,tz:bz,t:0,T:Math.max(0.05,Math.hypot(bx-ax,by-ay,bz-az)/2400)});AUD.play('mg',ax,az);}
-  if(!g.air&&Ln<1000&&Ln>300&&a<0.12&&EF.rcd<=0){EF.rcd=9;for(let i=0;i<4;i++)EFR.push({id:++EID,t:-i*0.12,x:EF.x,y:EF.y-4,z:EF.z,tx:g.x+(rn()-0.5)*40,ty:g.y,tz:g.z+(rn()-0.5)*40,tr:0});}}
+  if(!g.air&&Ln<1000&&Ln>300&&a<0.12&&EF.rcd<=0&&!SF(EF)){EF.rcd=9;for(let i=0;i<4;i++)EFR.push({id:++EID,t:-i*0.12,x:EF.x,y:EF.y-4,z:EF.z,tx:g.x+(rn()-0.5)*40,ty:g.y,tz:g.z+(rn()-0.5)*40,tr:0});}}
  if(EF.hp<=0){EF.hp=0;EF.dead=7;heroDie({x:EF.x,y:EF.y,z:EF.z},2,400);}}
 function stepEFR(dt){for(let i=EFR.length-1;i>=0;i--){const r=EFR[i];r.t+=dt;if(r.t<0){r.x=EF.x;r.y=EF.y-4;r.z=EF.z;continue;}if(!r.go){r.go=1;AUD.play('shot',r.x,r.z);}
   const dx=r.tx-r.x,dy=r.ty-r.y,dz=r.tz-r.z,Ln=Math.hypot(dx,dy,dz)||1,sp=Math.min(1200,500+r.t*1500);r.vx=dx/Ln*sp;r.vy=dy/Ln*sp;r.vz=dz/Ln*sp;r.x+=r.vx*dt;r.y+=r.vy*dt;r.z+=r.vz*dt;
