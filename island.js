@@ -653,7 +653,7 @@ function stepGame(dt){if(G_.over)return;G_.t+=dt;
   /* follow the path */
   const p=u.path,last=u.pi>=p.length-1;let t=p[Math.min(u.pi,p.length-1)];
   /* at the end of the route helicopters spread into their own hover slots instead of all sitting on one point */
-  if(last&&st.air){const h=u.id*2.39996,r=45+(u.id%5)*28;t=[t[0]+Math.cos(h)*r,t[1]+Math.sin(h)*r];}
+  if(last&&st.air&&!(u.goal&&u.goal.k==='b')){const h=u.id*2.39996,r=45+(u.id%5)*28;t=[t[0]+Math.cos(h)*r,t[1]+Math.sin(h)*r];}   // a base is entered, not circled
   const dx=t[0]-u.x,dz=t[1]-u.z,d=Math.hypot(dx,dz);if(d<20&&!last){u.pi++;continue;}
   const sl=st.air?0:slope(u.x,u.z);let v=st.sp*USPK*(tg&&st.air?0.35:1)*(1-Math.min(0.6,sl*0.8))*dt;const a=Math.atan2(dz,dx);
   if(last){v*=Math.min(1,d/70);if(d<4)v=0;}/* arrive and stop: no overshooting back and forth around the last point */
