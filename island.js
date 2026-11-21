@@ -1632,7 +1632,7 @@ function jetFlyby(dt){JET.cd-=dt;if(JET.src&&(CUR!=='plane'||F.dead>0))jetStop(1
  const inView=t=>{w.set(rx+vx*t,ry+vy*t,rz+vz*t).applyQuaternion(q);return w.z<0&&Math.abs(w.x/-w.z)<hh&&Math.abs(w.y/-w.z)<hv;};
  if(!inView(0))return;let te=-1;for(let t=0.05;t<=6;t+=0.05)if(!inView(t)){te=t;break;}if(te<0)return;
  const PEAK=3.3;if(te>PEAK+0.05||te<PEAK-1.2)return;
- if(AUD.sample('jetBy',null,null,1.6,Math.max(0,te-PEAK),0))JET.cd=9;}
+ if(AUD.sample('jetBy',null,null,1.6,Math.max(0,te-PEAK),0))JET.cd=te+0.3;}/* no repeat for the same pass: wait only until this jet has left the screen */
 function stepEF(dt){jetFlyby(dt);if(EF.dead>0){EF.dead-=dt;if(EF.dead<=0){if(RSP.EF>0){RSP.EF--;efSpawn();}else EF.dead=1e9;}return;}if(EF.safeT>0)EF.safeT-=dt;
  if(EF.take&&takeoff(EF,dt)&&EF.hp>0)return;
  EF.cd=Math.max(0,EF.cd-dt);EF.rcd=Math.max(0,EF.rcd-dt);efSense(dt);EF.tT-=dt;if(EF.tT<=0){EF.tT=1;const was=EF.tg&&EF.tg.k;EF.tg=efPick();if(EF.tg&&EF.tg.k==='f'&&was!=='f')EFM.chase=0;}
