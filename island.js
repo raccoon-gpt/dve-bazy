@@ -165,7 +165,7 @@ function mkHQmil(si){const g=new THREE.Group(),t=TEAM3(si);
 /* ---------- vehicles, soldiers and towers: built once per kind and team, baked, then shared ---------- */
 const PROTO=new Map();
 function proto(key,build_){let p=PROTO.get(key);if(!p){const g=build_();p={};for(const ch of g.children){const name=ch.name||'body';p[name]={parts:bakeGroup(ch),pos:ch.position.clone()};}PROTO.set(key,p);}return p;}
-function instantiate(p){const g=new THREE.Group();for(const name in p){const sub=new THREE.Group();sub.name=name;sub.position.copy(p[name].pos);for(const {geo,mat} of p[name].parts){const m=new THREE.Mesh(geo,mat);m.castShadow=true;m.receiveShadow=true;sub.add(m);}g.add(sub);g.userData[name]=sub;}return g;}
+function instantiate(p){const g=new THREE.Group();for(const name in p){const sub=new THREE.Group();sub.name=name;sub.position.copy(p[name].pos);for(const {geo,mat} of p[name].parts){const m=new THREE.Mesh(geo,mat);m.castShadow=!(mat.transparent&&mat.opacity<0.5);m.receiveShadow=true;sub.add(m);}g.add(sub);g.userData[name]=sub;}return g;}
 function part(name,...ch){const g=new THREE.Group();g.name=name;for(const c of ch)g.add(c);return g;}
 function wheels(list,r,w,m){return list.map(([x,z])=>{const c=CYL(r,r,w,m||M3.rubber,12,x,r,z);c.rotation.x=Math.PI/2;return c;});}
 /* painted panels for machines: seams, rivets, scuffed edges, grime — the colour comes from the material */
@@ -733,15 +733,26 @@ const BLD={base:{f:'b_base.glb',red:'b_base_red.jpg'},air:{f:'b_air.glb',red:'b_
 const BH=[null,null],TS=95;
 function bldLoad(m,k,tries){new THREE.GLTFLoader().load(m.f+'?v='+(BLDV[m.f]||'0')+(tries?'&r='+tries:''),g=>{g.scene.traverse(o=>{if(o.isMesh){o.material.envMapIntensity=1.1;o.material.roughness=Math.max(o.material.roughness,0.55);if(o.material.map)o.material.map.anisotropy=8;o.castShadow=k!=='air';o.receiveShadow=true;}});
   if(k==='mg'){const top=g.scene.getObjectByName('top');if(top){/* the gun head turns about the middle of its black neck */const px=0,pz=-0.077;top.geometry.translate(-px,0,-pz);top.position.set(px,0,pz);}}
-  m.sc=g.scene;placeBuildings();},undefined,e=>{console.error(m.f,e);if(tries<4)setTimeout(()=>bldLoad(m,k,tries+1),1500*(tries+1));});
+  warpBld(k,g.scene);m.sc=g.scene;placeBuildings();},undefined,e=>{console.error(m.f,e);if(tries<4)setTimeout(()=>bldLoad(m,k,tries+1),1500*(tries+1));});
  new THREE.TextureLoader().load(m.red+'?v='+(BLDV[m.red]||'0'),t=>{t.flipY=false;t.encoding=THREE.sRGBEncoding;t.anisotropy=8;m.rt=t;placeBuildings();});}
 if(THREE.GLTFLoader)for(const k in BLD)bldLoad(BLD[k],k,0);
+const WARP={"air":{"z0":-0.5000000596046448,"z1":0.5000000596046448,"p":[0.00844,0.00844,0.00849,0.00848,0.00845,0.00862,0.00857,0.00868,0.00839,0.00792,0.00734,0.00652,0.00539,0.00455,0.00335,0.00236,0.0014,0.00023,-0.00064,-0.00167,-0.00296,-0.00416,-0.00562,-0.00686,-0.00844,-0.00949,-0.01084,-0.01233,-0.01273,-0.01551,-0.01538,-0.01849,-0.01849]},"base":{"x0":-0.5000000596046448,"x1":0.5000000596046448,"z0":-0.40426647663116455,"z1":0.40426647663116455,"N":33,"g":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-0.00028,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-0.00097,-0.00077,-0.00042,0,0,0,0,0,0,0,0,0,0,0,0,-0.00048,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-0.00157,-0.0015,-0.00143,-0.00074,0,0,0,0,0,0,0,0,0,0,-0.00019,-0.00045,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-0.00178,-0.00152,-0.00126,-0.00066,-0.00015,0,0,0,0,0,0,0,0,0,-0.00044,-0.00035,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-0.00121,-0.00102,-0.00083,-0.00049,-0.00024,0,0,0,0,0,0,0,0,-0.00018,-0.00052,-0.00027,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-0.00064,-0.00046,-0.00027,0,0,0,0,0,0,0,0,0,-0.00019,-0.00049,-0.00059,-0.00025,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-8e-05,-8e-05,-8e-05,0,0,0,0,0,0,0,0,-9e-05,-0.00043,-0.00069,-0.00071,-0.00035,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-8e-05,-8e-05,0.0,0,0,0,0,0,0,0,0,-0.00022,-0.00062,-0.00093,-0.00087,-0.0005,-0.00016,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-8e-05,-8e-05,0,0,0,0,0,0,0,0,-3e-05,-0.00039,-0.00078,-0.00102,-0.00097,-0.0007,-0.00034,-6e-05,0,0,-0.0,-2e-05,0,0,0,0,0,0,0,0,0,0,0,-8e-05,-8e-05,0,0,0,0,0,0,0,0,-0.00015,-0.00055,-0.00094,-0.00107,-0.00102,-0.00086,-0.00049,-0.00017,0,0,-1e-05,-4e-05,0,0,0,0,0,0,0,0,0,0,0,-8e-05,0.0,0,0,0,0,0,0,0,0,-0.00028,-0.00067,-0.00107,-0.00106,-0.00101,-0.00097,-0.0006,-0.00027,0,-1e-05,-4e-05,0,0,0,0,0,-0.0002,-0.0002,-0.0002,-0.0002,0,0,0,-8e-05,0,0,0,0,0,0,0,0,-1e-05,-0.00041,-0.0008,-0.00106,-0.00106,-0.00101,-0.00097,-0.0006,-0.00029,0.0,-6e-05,-6e-05,0,0,0,0,0,-0.0002,-0.0002,-0.0002,-0.0002,-0.0002,-0.0002,-0.0002,-8e-05,0,0,0,0,0,0,0,0,-8e-05,-0.00047,-0.00086,-0.00106,-0.00106,-0.00101,-0.00097,-0.00059,-0.0003,-3e-05,-9e-05,-8e-05,0,0,0,0,0,-0.0002,-0.0002,-0.0002,-0.0002,-0.0002,-0.0002,-0.0002]}};
+/* the Tripo airfield sags ~30 m along its runway and the base yard dips below the ground in places: bend the floors flat (once, on the shared geometry) */
+function warpBld(k,sc){const W=WARP[k];if(!W)return;sc.updateMatrixWorld(true);const v=new THREE.Vector3(),inv=new THREE.Matrix4();
+ const lerp1=(p,t)=>{t=Math.max(0,Math.min(p.length-1,t));const i=Math.min(p.length-2,Math.floor(t)),f=t-i;return p[i]*(1-f)+p[i+1]*f;};
+ const dAt=(x,z)=>{if(k==='air')return lerp1(W.p,(z-W.z0)/(W.z1-W.z0)*(W.p.length-1));const N=W.N,tx=Math.max(0,Math.min(N-1,(x-W.x0)/(W.x1-W.x0)*(N-1))),tz=Math.max(0,Math.min(N-1,(z-W.z0)/(W.z1-W.z0)*(N-1)));
+  const i=Math.min(N-2,Math.floor(tx)),j=Math.min(N-2,Math.floor(tz)),fx=tx-i,fz=tz-j,g=W.g;return (g[j*N+i]*(1-fx)+g[j*N+i+1]*fx)*(1-fz)+(g[(j+1)*N+i]*(1-fx)+g[(j+1)*N+i+1]*fx)*fz;};
+ sc.traverse(o=>{if(!o.isMesh||o.geometry.userData.warped)return;o.geometry.userData.warped=1;const pa=o.geometry.attributes.position;inv.copy(o.matrixWorld).invert();
+  for(let i=0;i<pa.count;i++){v.fromBufferAttribute(pa,i).applyMatrix4(o.matrixWorld);v.y-=dAt(v.x,v.z);v.applyMatrix4(inv);pa.setXYZ(i,v.x,v.y,v.z);}
+  pa.needsUpdate=true;o.geometry.computeBoundingBox();o.geometry.computeBoundingSphere();});}
 const bldOK=(k,s)=>{const m=BLD[k];return !!(m&&m.sc&&(s===0||m.rt));};
 function bldInst(k,s){const m=BLD[k],c=m.sc.clone(true);if(s===1)c.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.material.map=m.rt;}});return c;}
 function placeBuildings(){for(const s of [0,1]){const H_=BH[s];if(!H_||H_.userData.done)continue;if(!bldOK('base',s)||!bldOK('air',s))continue;H_.userData.done=1;
   const turn=s===0?Math.PI/2:-Math.PI/2,[bx,bz]=BASES[s],[ax,az]=AIRP[s];
-  const g=new THREE.Group();g.rotation.y=turn;g.position.set(bx,-BSINK+0.35,bz);const b=bldInst('base',s);b.scale.setScalar(BS);b.rotation.y=BROT;b.position.set(-BXC*BS,0,-BZC*BS);g.add(b);H_.add(g);
-  const a=new THREE.Group();a.rotation.y=turn;a.position.set(ax,-ASINK+0.35,az);const m=bldInst('air',s);m.scale.setScalar(AS);a.add(m);H_.add(a);}}
+  const g=new THREE.Group();g.rotation.y=turn;g.position.set(bx,-BSINK+0.4,bz);const b=bldInst('base',s);b.scale.setScalar(BS);b.rotation.y=BROT;b.position.set(-BXC*BS,0,-BZC*BS);const lb=new THREE.Group();lb.add(b);g.add(lb);H_.add(g);
+  const a=new THREE.Group();a.rotation.y=turn;a.position.set(ax,-ASINK+0.4,az);const m=bldInst('air',s);m.scale.setScalar(AS);const la=new THREE.Group();la.add(m);a.add(la);H_.add(a);}}
+/* top of a tower pad under a slot (the pads moved a little with the levelling) */
+function padAt(s,x,z){const H_=BH[s];if(!H_)return PADY;const rc=new THREE.Raycaster(new THREE.Vector3(x,300,z),new THREE.Vector3(0,-1,0));const h=rc.intersectObject(H_,true).find(q=>Math.abs(q.point.y-PADY)<8);return h?h.point.y:PADY;}
 function buildBT(k,s){const g=new THREE.Group(),c=bldInst(k,s);c.scale.setScalar(TS);g.add(c);g.userData.top=c.getObjectByName('top');return g;}
 function buildXM(k,s){const m=XM[k],root=new THREE.Group();const c=m.sc.clone(true);if(s===0&&m.blue)c.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.material.map=m.bt;}});
  c.updateMatrixWorld(true);const bb=new THREE.Box3().setFromObject(c),sz=bb.getSize(new THREE.Vector3()),sc=m.len/Math.max(sz.x,sz.z);
@@ -854,7 +865,7 @@ function syncAll(t,dt){FR++;const cx=cam.position.x,cz=cam.position.z,far=2600;
  for(const tw of G_.towers){if(Math.abs(tw.x-cx)+Math.abs(tw.z-cz)>far*1.8)continue;const nb=bldOK(tw.k,tw.s);
   sync('t'+tw.id+(nb?'x':''),()=>{if(nb)return buildBT(tw.k,tw.s);const g=instantiate(proto('T'+tw.k+tw.s+(MIL?'m':''),()=>buildTower(tw.k,tw.s,1)));g.scale.setScalar(1.3);return g;},o=>{
    if(nb){const face=tw.s===0?0:Math.PI,want=Math.PI/2-(tw.a??face);if(o.userData.a==null)o.userData.a=want;let d=want-o.userData.a;d=Math.atan2(Math.sin(d),Math.cos(d));o.userData.a+=d*Math.min(1,dt*3);
-    o.position.set(tw.x,PADY,tw.z);if(tw.k==='mg'&&o.userData.top){o.rotation.y=Math.PI/2-face;o.userData.top.rotation.y=o.userData.a-o.rotation.y;}else o.rotation.y=o.userData.a;return;}
+    if(tw.py==null&&BH[tw.s]&&BH[tw.s].userData.done)tw.py=padAt(tw.s,tw.x,tw.z);o.position.set(tw.x,tw.py??PADY,tw.z);if(tw.k==='mg'&&o.userData.top){o.rotation.y=Math.PI/2-face;o.userData.top.rotation.y=o.userData.a-o.rotation.y;}else o.rotation.y=o.userData.a;return;}
    o.position.set(tw.x,hgt(tw.x,tw.z),tw.z);const tu=o.userData.tur;if(tu)tu.rotation.y=tw.k==='tes'?t*1.6:-tw.a;});}
  for(const s of shells)sync('s'+s.id,()=>{const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.glow,color:0xFFE2A0,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}));sp.scale.set(7,7,1);return sp;},o=>o.position.set(s.x,s.y,s.z));
  for(const tr of tracers)sync('T'+tr.id,()=>{const g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]);return new THREE.Line(g,new THREE.LineBasicMaterial({color:tr.c,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending}));},o=>{const a=o.geometry.attributes.position;a.setXYZ(0,...tr.a);a.setXYZ(1,...tr.b);a.needsUpdate=true;a.needsUpdate=true;o.geometry.computeBoundingSphere();});
@@ -1367,21 +1378,23 @@ let LOCKF=null;const PR=[],PB=[];let PRID=0;
 function takeoff(o,dt){const T=o.take;T.v=Math.min(225,T.v+48*dt);o.x+=Math.cos(o.yaw)*T.v*dt;o.z+=Math.sin(o.yaw)*T.v*dt;
  if(T.v>170)o.y+=(T.v-150)*0.55*dt;o.bank=0;if(o===F)o.pitch=Math.min(0.12,-0.03+Math.max(0,o.y-4)*0.004);
  if(T.v>=225&&o.y>45){o.take=null;o.climb=1;if(o===F)o.pe=2.5;return false;}return true;}
-function planePark(){F.climb=0;F.pe=0;[F.x,F.z]=airW(0,-0.01,-0.21);F.y=4;F.take=null;F.park=true;F.home=null;F.v=F.sp;F.yaw=0;F.ty=0;F.pitch=-0.03;F.bank=0;F.turn=false;}
+function planePark(){F.climb=0;F.pe=0;F.spin=0;[F.x,F.z]=airW(0,-0.01,-0.21);F.y=4;F.take=null;F.park=true;F.home=null;F.v=F.sp;F.yaw=0;F.ty=0;F.pitch=-0.03;F.bank=0;F.turn=false;}
 function spawnPlane(){invSet(F);planePark();F.yaw=0;F.ty=0;F.pitch=-0.03;F.hp=F.max;F.dead=0;F.bank=0;F.turn=false;F.zoom=1;}
 function stepPlane(dt){if(F.dead>0){F.dead-=dt;if(F.dead<=0){if(RSP.F>0){RSP.F--;spawnPlane();}else F.dead=1e9;}return;}
  F.cd=Math.max(0,F.cd-dt);F.rcd=Math.max(0,F.rcd-dt);F.hurt=Math.max(0,F.hurt-dt);
  invTick(F,'plane',dt);if(F.pe>0){F.pe-=dt;F.pitch+=(-0.18-F.pitch)*Math.min(1,dt*1.5);}
- if(F.park){if(CUR!=='plane')return;F.park=false;F.take={v:20};}
+ if(F.park){if(F.spin){let e=-F.yaw;e=Math.atan2(Math.sin(e),Math.cos(e));const st_=Math.sign(e)*Math.min(Math.abs(e),0.7*dt);F.yaw+=st_;F.ty=F.yaw;if(Math.abs(e)<0.01){F.yaw=F.ty=0;F.spin=0;}}
+  if(CUR!=='plane')return;F.park=false;F.spin=0;F.yaw=F.ty=0;F.take={v:20};}
  if(F.take&&takeoff(F,dt)&&F.hp>0)return;
  let vT=F.sp,yT=F.alt;
  if(CUR!=='plane'&&!F.turn){/* left alone: back to the airfield, line up with the runway from the west, glide in and stop on the apron */
-  const [px,pz]=airW(0,-0.01,-0.21),H=F.home||(F.home={ph:0});const ax=px-1800;
+  const [px,pz]=airW(0,-0.01,-0.21),H=F.home||(F.home={ph:0});const ax=px+2100;
   const steer=w=>{let e=w-F.yaw;e=Math.atan2(Math.sin(e),Math.cos(e));if(Math.abs(e)>2.4){H.sd=H.sd||(e>0?1:-1);e=H.sd*Math.abs(e);}else H.sd=0;F.ty=F.yaw+e;return e;};
   if(H.ph===0){steer(Math.atan2(pz-F.z,ax-F.x));if(Math.hypot(ax-F.x,pz-F.z)<320)H.ph=1;}
   else{const d=Math.hypot(px-F.x,pz-F.z),e=steer(Math.atan2(pz-F.z,px-F.x));
-   if(Math.abs(e)<0.3){const k=Math.min(1,d/1800);yT=4+(F.alt-4)*k;vT=35+(F.sp-35)*k;if(d<30||(F.x>px&&d<200)){planePark();return;}}
-   else if(d<700)H.ph=0;}
+   if(Math.abs(e)<0.3||H.td){const k=Math.max(0,Math.min(1,(d-700)/1400));yT=4+(F.alt-4)*k;vT=d>700?70+(F.sp-70)*k:Math.max(20,70*d/700);
+    if(d<760&&F.y<12)H.td=1;if(H.td){F.y=Math.max(4,F.y-20*dt);F.v=Math.min(F.v,vT);}if(d<12){planePark();F.yaw=Math.PI;F.ty=Math.PI;F.spin=1;return;}}
+   else if(d<1300)H.ph=0;}
  }else F.home=null;
  F.v=(F.v||F.sp)+(vT-(F.v||F.sp))*Math.min(1,dt*0.8);
  const L=PLANE.limit,out=!F.home&&(F.x<-L||F.z<-L||F.x>IW+L||F.z>IH+L);
@@ -1496,7 +1509,7 @@ function planeHud(){{const n=performance.now(),d=CRKT?Math.min(0.1,(n-CRKT)/1000
  q('.lk').setAttribute('display','none');const im=q('img.sight');if(im)im.classList.toggle('lock',!!LOCKF);
  q('.rld').setAttribute('stroke-dasharray',(170*(1-F.rcd/PLANE.rocketCd)).toFixed(1)+' 170');
  q('.sup span').textContent=F.rcd>0?Math.ceil(F.rcd)+' с':'';q('.sup').classList.toggle('cd',F.rcd>0);q('.hurt').style.boxShadow='inset 0 0 120px rgba(200,20,10,'+(F.hurt>0?0.5:0)+')';}
-window.__isle.F=F;window.__isle.dmgUnit=dmgUnit;window.__isle.stepFx=stepFx;window.__isle.mkShell=mkShell;window.__isle.AUD=AUD;window.__isle.WU=WU;window.__isle.rayHit=rayHit;window.__isle.shk=(v)=>{if(v!=null)SHK=v;return SHK;};window.__isle.shakeAt=shakeAt;window.__isle.FXP=FXP;window.__isle.bigBlast=bigBlast;window.__isle.FXN=()=>({fx:FXP.length,wrk:WRK.length,fall:FALL.length,deb:DEBR.length,part:PART.length});window.__isle.buildXM=buildXM;window.__isle.XM=XM;window.__isle.hitBase=hitBase;window.__isle.syncAll=syncAll;window.__isle.PART=PART;window.__isle.stepParts=stepParts;window.__isle.hitMine=hitMine;window.__isle.stepTitan=stepTitan;window.__isle.P=P;window.__isle.get_LOCK=()=>LOCK;window.__isle.stepPlane=stepPlane;window.__isle.planeRockets=planeRockets;window.__isle.PR=PR;window.__isle.get_LOCKF=()=>LOCKF;
+window.__isle.F=F;window.__isle.dmgUnit=dmgUnit;window.__isle.stepFx=stepFx;window.__isle.mkShell=mkShell;window.__isle.AUD=AUD;window.__isle.WU=WU;window.__isle.rayHit=rayHit;window.__isle.shk=(v)=>{if(v!=null)SHK=v;return SHK;};window.__isle.shakeAt=shakeAt;window.__isle.FXP=FXP;window.__isle.bigBlast=bigBlast;window.__isle.FXN=()=>({fx:FXP.length,wrk:WRK.length,fall:FALL.length,deb:DEBR.length,part:PART.length});window.__isle.buildXM=buildXM;window.__isle.XM=XM;window.__isle.hitBase=hitBase;window.__isle.syncAll=syncAll;window.__isle.PART=PART;window.__isle.stepParts=stepParts;window.__isle.hitMine=hitMine;window.__isle.stepTitan=stepTitan;window.__isle.P=P;window.__isle.get_LOCK=()=>LOCK;window.__isle.stepPlane=stepPlane;window.__isle.scene=scene;window.__isle.BH=BH;window.__isle.BLD=BLD;window.__isle.airW=airW;window.__isle.baseW=baseW;window.__isle.T3=THREE;window.__isle.planeRockets=planeRockets;window.__isle.PR=PR;window.__isle.get_LOCKF=()=>LOCKF;
 
 /* ================== TEST: the bot sends free waves (mostly helicopters); they don't take lives from our base ================== */
 const TESTW={on:false,t:6,n:0};
@@ -1628,7 +1641,7 @@ function syncHeroes(t,dt){if(!G_)return;
  for(const r of EFR)if(r.t>=0)sync('hr'+r.id,()=>{const g=new THREE.Group();const b=new THREE.Mesh(new THREE.CylinderGeometry(0.7,0.7,7,8),std(0xB0B0A8,0.5,0.4));b.rotation.z=Math.PI/2;g.add(b);const f=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.glow,color:0xFF7050,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}));f.scale.set(9,9,1);f.position.x=-5;g.add(f);return g;},o=>{o.position.set(r.x,r.y,r.z);o.rotation.set(0,-Math.atan2(r.vz||0,r.vx||1),Math.atan2(r.vy||0,Math.hypot(r.vx||1,r.vz||0)));});
  /* where the bot's shells will land: a pulsing red ring on the ground */
  for(const a of EAR)sync('hA'+a.id,()=>{const m=new THREE.Mesh(new THREE.RingGeometry(ART.R*0.85,ART.R,40),new THREE.MeshBasicMaterial({color:0xFF3020,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));m.rotation.x=-Math.PI/2;return m;},o=>{o.position.set(a.x,2,a.z);o.material.opacity=0.35+0.35*Math.sin(t*10);});}
-window.__isle.CRK=CRK;window.__isle.EFM=EFM;window.__isle.applyHit=applyHit;window.__isle.towerLOS=towerLOS;window.__isle.ET=ET;window.__isle.ED=ED;window.__isle.EF=EF;window.__isle.stepHeroes=stepHeroes;window.__isle.stepPlane=stepPlane;window.__isle.cur=()=>CUR;
+window.__isle.CRK=CRK;window.__isle.EFM=EFM;window.__isle.applyHit=applyHit;window.__isle.towerLOS=towerLOS;window.__isle.ET=ET;window.__isle.ED=ED;window.__isle.EF=EF;window.__isle.stepHeroes=stepHeroes;window.__isle.stepPlane=stepPlane;window.__isle.scene=scene;window.__isle.BH=BH;window.__isle.airW=airW;window.__isle.baseW=baseW;window.__isle.T3=THREE;window.__isle.cur=()=>CUR;
 
 function onMil(){if(BUILT){MIL_DIRTY=false;buildWorld();}else MIL_DIRTY=true;}
 cam.far=9000;cam.updateProjectionMatrix();{const c=sun.shadow.camera;c.left=-330;c.right=330;c.top=330;c.bottom=-330;c.far=1600;c.updateProjectionMatrix();}
