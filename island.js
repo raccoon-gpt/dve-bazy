@@ -1625,10 +1625,14 @@ function jetFlyby(dt){JET.cd-=dt;if(JET.src&&(CUR!=='plane'||F.dead>0))jetStop(1
  const c=cam.position,cvx=(c.x-JET.lx)/dt,cvy=(c.y-JET.ly)/dt,cvz=(c.z-JET.lz)/dt;JET.lx=c.x;JET.ly=c.y;JET.lz=c.z;
  if(EF.dead>0||JET.cd>0||WU.on||!EF.px){EF.px=EF.x;EF.py=EF.y;EF.pz=EF.z;return;}
  const vx=(EF.x-EF.px)/dt-cvx,vy=(EF.y-EF.py)/dt-cvy,vz=(EF.z-EF.pz)/dt-cvz;EF.px=EF.x;EF.py=EF.y;EF.pz=EF.z;
- const rx=EF.x-c.x,ry=EF.y-c.y,rz=EF.z-c.z,v2=vx*vx+vy*vy+vz*vz;if(v2<100||v2>4e6)return;const tca=-(rx*vx+ry*vy+rz*vz)/v2;if(tca<2.7||tca>3.9)return;
- const dm=Math.hypot(rx+vx*tca,ry+vy*tca,rz+vz*tca);if(dm>500)return;
- const p=new THREE.Vector3(EF.x,EF.y,EF.z).project(cam);if(p.z>1||Math.abs(p.x)>1||Math.abs(p.y)>1)return;
- if(AUD.sample('jetBy',null,null,1.6*Math.min(1,Math.max(0.35,1-(dm-150)/500)),Math.max(0,tca-3.1),0))JET.cd=9;}
+ const rx=EF.x-c.x,ry=EF.y-c.y,rz=EF.z-c.z,v2=vx*vx+vy*vy+vz*vz;if(v2<100||v2>4e6)return;const tca=-(rx*vx+ry*vy+rz*vz)/v2;if(tca<0||tca>8)return;
+ if(Math.hypot(rx+vx*tca,ry+vy*tca,rz+vz*tca)>500)return;                 // only a jet that will pass within 500 m
+ /* when will it leave the screen (view held as it is now)? the file's loudest moment (~3.3 s in) is put right there */
+ const q=new THREE.Quaternion().copy(cam.quaternion).invert(),hv=Math.tan(cam.fov*Math.PI/360),hh=hv*cam.aspect,w=new THREE.Vector3();
+ const inView=t=>{w.set(rx+vx*t,ry+vy*t,rz+vz*t).applyQuaternion(q);return w.z<0&&Math.abs(w.x/-w.z)<hh&&Math.abs(w.y/-w.z)<hv;};
+ if(!inView(0))return;let te=-1;for(let t=0.05;t<=6;t+=0.05)if(!inView(t)){te=t;break;}if(te<0)return;
+ const PEAK=3.3;if(te>PEAK+0.05||te<PEAK-1.2)return;
+ if(AUD.sample('jetBy',null,null,1.6,Math.max(0,te-PEAK),0))JET.cd=9;}
 function stepEF(dt){jetFlyby(dt);if(EF.dead>0){EF.dead-=dt;if(EF.dead<=0){if(RSP.EF>0){RSP.EF--;efSpawn();}else EF.dead=1e9;}return;}if(EF.safeT>0)EF.safeT-=dt;
  if(EF.take&&takeoff(EF,dt)&&EF.hp>0)return;
  EF.cd=Math.max(0,EF.cd-dt);EF.rcd=Math.max(0,EF.rcd-dt);efSense(dt);EF.tT-=dt;if(EF.tT<=0){EF.tT=1;const was=EF.tg&&EF.tg.k;EF.tg=efPick();if(EF.tg&&EF.tg.k==='f'&&was!=='f')EFM.chase=0;}
