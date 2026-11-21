@@ -24,7 +24,7 @@ const US={                                            // unit stats on the islan
  heli:{name:'Вертолёт',cost:165,hp:320,sp:55,rng:110,dmg:24,cd:0.6,air:true,hitAir:false,rw:25,lives:1,r:16},
 };
 const TWS={mg:{cost:200,rng:520,dmg:24,cd:0.15,air:true,ground:true,hp:3500},can:{cost:300,rng:200,dmg:60,cd:1.6,air:false,ground:true,splash:40,hp:1800},
- tes:{cost:600,rng:180,dmg:100,cd:1,air:true,ground:true,hp:1500},rkt:{cost:500,rng:900,dmg:150,cd:2.2,air:true,ground:true,hp:3500}};
+ tes:{cost:600,rng:180,dmg:100,cd:1,air:true,ground:true,hp:1500},rkt:{cost:500,rng:900,dmg:150,cd:2.2,air:true,ground:false,hp:3500}};
 const HARV={cost:500,hp:420,sp:42,load:200,mine:6};
 const VIS=520;
 const MINE_LIVES=20,MINE_HP=400,MINE_INC=5;          // each mine: 20 lives, 400 damage from units = 1 life, crystals per second                                        // how far anything of ours sees
@@ -602,6 +602,12 @@ function newGame(){CUR='titan';spawnPlane();PR.length=0;ART.sh.length=0;ART.cd=0
 }
  P.dead=0;spawnTitan();}
 function mkSide(){return{ore:START_ORE,lives:LIVES,queue:[],qcd:0,grp:null,grpT:-99,botT:0,wave:600,twT:20};}
+/* a tower's line of fire: blocked by containers, hangars, bunkers and the other towers */
+function towerLOS(t,p){const ox=t.x,oy=PADY+60,oz=t.z,dx=p[0]-ox,dy=p[1]-oy,dz=p[2]-oz,L=Math.hypot(dx,dy,dz);
+ for(let d=45;d<L-25;d+=10){const k=d/L,x=ox+dx*k,y=oy+dy*k,z=oz+dz*k;
+  for(const o of OBS)if(o.h>PADY+1&&y<=o.h&&inRect(x,z,o,0))return false;
+  for(const q of G_.towers)if(q!==t&&!q.dead&&y<PADY+90&&Math.hypot(q.x-x,q.z-z)<28)return false;}
+ return true;}
 function slotsReset(){G_.slots=[0,1].map(s=>SLOTS.map(([k,x,z])=>{const [wx,wz]=baseW(s,x,z);return {k,x:wx,z:wz,t:addTower(s,k,wx,wz),re:false,w:0};}));}
 function stepSlots(dt){for(const sl of G_.slots.flat()){if(!sl.t.dead||sl.re)continue;sl.w+=dt;if(sl.w>=20){sl.re=true;sl.t=addTower(sl.t.s,sl.k,sl.x,sl.z);}}}
 function addTower(s,k,x,z){const t={id:G_.id++,s,k,lv:1,x,z,hp:TWS[k].hp,mx:TWS[k].hp,cd:0.5,a:s===0?0:Math.PI};G_.towers.push(t);return t;}
@@ -673,6 +679,9 @@ function stepGame(dt){if(G_.over)return;G_.t+=dt;
   const ox=last?0:-Math.sin(a)*u.off*0.02,oz=last?0:Math.cos(a)*u.off*0.02;u.x+=Math.cos(a)*v+ox*v;u.z+=Math.sin(a)*v+oz*v;
   if(tg&&st.air&&u.ga!=null)u.a=u.ga;else if(!st.air?v>dt*4:(!last||d>60)&&v>st.sp*USPK*dt*0.5)u.a=a;
   const gy=hgt(u.x,u.z);u.y=st.air?u.y+(Math.max(gy,0)+ALT[u.k]-u.y)*Math.min(1,dt*1.5):gy;}
+ /* ground machines give way to the Titans */
+ for(const u of G_.units){if(u.dead||US[u.k].air)continue;for(const T of [P,ET]){if(T.dead>0)continue;const dx=u.x-T.x,dz=u.z-T.z,d=Math.hypot(dx,dz),R_=u.k==='tank'?95:u.k==='jeep'?85:40;
+  if(d<R_){const k=(R_-d)/(d||1);let nx=dx*k,nz=dz*k;if(!d){nx=R_;nz=0;}if(!blockedAt(u.x+nx,u.z+nz,10)){u.x+=nx;u.z+=nz;}}}}
  /* helicopters keep a little room between each other instead of overlapping */
  {const hs=G_.units.filter(u=>!u.dead&&US[u.k].air);for(let i=0;i<hs.length;i++)for(let j=i+1;j<hs.length;j++){const A=hs[i],B=hs[j];const dx=B.x-A.x,dz=B.z-A.z,d=Math.hypot(dx,dz);
   if(d<70){const k=Math.min(25,(70-d)*1.2)*dt/(d||1),px=(d?dx:1)*k,pz=(d?dz:0)*k;A.x-=px;A.z-=pz;B.x+=px;B.z+=pz;}}}
@@ -680,6 +689,7 @@ function stepGame(dt){if(G_.over)return;G_.t+=dt;
  G_.units=G_.units.filter(u=>!u.dead||(u.t_=(u.t_||0)+dt)<0.05);
  /* towers */
  for(const t of G_.towers){if(t.dead)continue;const st=TWS[t.k];t.cd-=dt;if(t.cd>0)continue;const tg=pickTarget(t.s,t.x,t.z,st.rng,st.air,st.ground);if(!tg)continue;
+  if(t.k==='mg'&&G_.slots&&!towerLOS(t,tpos(tg))){t.cd=0.35;continue;}
   const [tx,ty,tz]=tpos(tg);t.a=Math.atan2(tz-t.z,tx-t.x);t.cd=st.cd;
   if(t.k==='rkt'&&G_.slots){for(let q=0;q<2;q++){const sd=q?1:-1,c=Math.cos(t.a),sn=Math.sin(t.a);TRK.push({id:++EID,s:t.s,tg,dmg:st.dmg/2,x:t.x+c*40-sn*sd*16,y:PADY+70,z:t.z+sn*40+c*sd*16,t:-q*0.18,tr:0,lx:tx,ly:ty,lz:tz});}continue;}
   if(st.splash)splash(t.s,tx,tz,st.splash,st.dmg,t.s);if(!st.splash||tg.k!=='u')applyHit(tg,st.dmg*(tg.k==='p'?0.5:1),t.s);
@@ -1598,7 +1608,7 @@ function syncHeroes(t,dt){if(!G_)return;
  for(const r of EFR)if(r.t>=0)sync('hr'+r.id,()=>{const g=new THREE.Group();const b=new THREE.Mesh(new THREE.CylinderGeometry(0.7,0.7,7,8),std(0xB0B0A8,0.5,0.4));b.rotation.z=Math.PI/2;g.add(b);const f=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.glow,color:0xFF7050,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}));f.scale.set(9,9,1);f.position.x=-5;g.add(f);return g;},o=>{o.position.set(r.x,r.y,r.z);o.rotation.set(0,-Math.atan2(r.vz||0,r.vx||1),Math.atan2(r.vy||0,Math.hypot(r.vx||1,r.vz||0)));});
  /* where the bot's shells will land: a pulsing red ring on the ground */
  for(const a of EAR)sync('hA'+a.id,()=>{const m=new THREE.Mesh(new THREE.RingGeometry(ART.R*0.85,ART.R,40),new THREE.MeshBasicMaterial({color:0xFF3020,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));m.rotation.x=-Math.PI/2;return m;},o=>{o.position.set(a.x,2,a.z);o.material.opacity=0.35+0.35*Math.sin(t*10);});}
-window.__isle.CRK=CRK;window.__isle.EFM=EFM;window.__isle.applyHit=applyHit;window.__isle.ET=ET;window.__isle.ED=ED;window.__isle.EF=EF;window.__isle.stepHeroes=stepHeroes;
+window.__isle.CRK=CRK;window.__isle.EFM=EFM;window.__isle.applyHit=applyHit;window.__isle.towerLOS=towerLOS;window.__isle.ET=ET;window.__isle.ED=ED;window.__isle.EF=EF;window.__isle.stepHeroes=stepHeroes;
 
 function onMil(){if(BUILT){MIL_DIRTY=false;buildWorld();}else MIL_DIRTY=true;}
 cam.far=9000;cam.updateProjectionMatrix();{const c=sun.shadow.camera;c.left=-330;c.right=330;c.top=330;c.bottom=-330;c.far=1600;c.updateProjectionMatrix();}
