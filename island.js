@@ -726,9 +726,10 @@ function bot(s,dt){const S=G_.sides[s];S.botT-=dt;if(S.botT>0)return;S.botT=1.2;
 const live=new Map();let FR=0;
 /* Tripo models: red jeep and red tank, each with a blue repaint for our side; nose along +Z like the military pack */
 const XM={jeep:{f:'rjeep.glb',len:21,sides:[0,1],blue:'jeep_blue.jpg'},tank:{f:'rtank.glb',len:30,sides:[0,1],blue:'tank_blue.jpg'},
- heli:{f:'rheli.glb',len:46,sides:[0,1],blue:'heli_blue.jpg',hub:[0,0.372,0.105],rr:0.44,dy:-7}};
+ heli:{f:'rheli.glb',len:46,sides:[0,1],blue:'heli_blue.jpg',hub:[0,0.372,0.105],rr:0.44,dy:-7},
+ jet:{f:'rjet.glb',len:58,sides:[0,1],blue:'jet_blue.jpg'}};
 /* each file carries its content hash (so a phone never keeps a stale copy), and a failed download is retried a few times */
-const XMV={"rjeep.glb": "8aedd0df", "rtank.glb": "7fe57172", "rheli.glb": "94a7bb34", "jeep_blue.jpg": "35b1e580", "tank_blue.jpg": "fdfbbf96", "heli_blue.jpg": "374acf1f"};
+const XMV={"rjeep.glb": "8aedd0df", "rtank.glb": "7fe57172", "rheli.glb": "94a7bb34", "jeep_blue.jpg": "35b1e580", "tank_blue.jpg": "fdfbbf96", "heli_blue.jpg": "374acf1f", "rjet.glb": "913f34b1", "jet_blue.jpg": "a46cc82e"};
 function xmLoad(m,tries){new THREE.GLTFLoader().load(m.f+'?v='+(XMV[m.f]||'0')+(tries?'&r='+tries:''),g=>{g.scene.traverse(o=>{if(o.isMesh){o.material.envMapIntensity=0.5;if(o.material.map)o.material.map.anisotropy=4;}});m.sc=g.scene;},undefined,
   e=>{console.error(m.f,e);if(tries<4)setTimeout(()=>xmLoad(m,tries+1),1500*(tries+1));});}
 function xmTex(m,tries){new THREE.TextureLoader().load(m.blue+'?v='+(XMV[m.blue]||'0')+(tries?'&r='+tries:''),t=>{t.flipY=false;t.encoding=THREE.sRGBEncoding;t.anisotropy=4;m.bt=t;},undefined,()=>{if(tries<4)setTimeout(()=>xmTex(m,tries+1),1500*(tries+1));});}
@@ -1478,8 +1479,14 @@ function planeCam(){if(F.dead>0){const [bx,bz]=BASES[0];cam.position.set(bx-300,
  cam.position.set(F.x,F.y,F.z);cam.up.set(0,1,0);cam.lookAt(F.x+Math.cos(F.yaw)*Math.cos(F.pitch)*100,F.y+Math.sin(F.pitch)*100,F.z+Math.sin(F.yaw)*Math.cos(F.pitch)*100);cam.rotateZ(F.bank);
  const fov=80/ZF();if(Math.abs(cam.fov-fov)>0.01){cam.fov=fov;cam.updateProjectionMatrix();}}
 let PLANE_O=null;
-function syncPlane(t){if(!PLANE_O){PLANE_O=instantiate(proto('Uplane0',()=>buildUnit('plane',0)));PLANE_O.scale.setScalar(1.5);dyn.add(PLANE_O);}
- PLANE_O.visible=F.dead<=0&&CUR!=='plane';PLANE_O.position.set(F.x,F.y,F.z);PLANE_O.rotation.set(0,-F.yaw,0);PLANE_O.rotateX(-F.bank);
+/* the jet made for the game: blue trim for us, red for the bot; wheels on the asphalt while it rolls, gear tucked away once it is up */
+function buildJet(s){const m=XM.jet,c=m.sc.clone(true);c.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(s===0&&m.bt&&o.material.map){o.material=o.material.clone();o.material.map=m.bt;}}});
+ c.updateMatrixWorld(true);const bb=new THREE.Box3().setFromObject(c),sz=bb.getSize(new THREE.Vector3()),sc=m.len/Math.max(sz.x,sz.z);
+ c.scale.setScalar(sc);c.position.set(-(bb.min.x+bb.max.x)/2*sc,-bb.min.y*sc,-(bb.min.z+bb.max.z)/2*sc);const g=new THREE.Group();g.add(c);g.userData.jet=true;g.userData.h=sz.y*sc;g.userData.gear=c.getObjectByName('gear');return g;}
+function jetPose(o,y){const k=Math.max(0,Math.min(1,1-(y-PGY)/40));return y-k*(PGY-0.8)-(1-k)*o.userData.h*0.5;}
+function jetGear(o,y){if(o.userData.gear)o.userData.gear.visible=y<PGY+60;}
+function syncPlane(t){const wj=xmOK('jet',0);if(!PLANE_O||!!PLANE_O.userData.jet!==wj){if(PLANE_O)dyn.remove(PLANE_O);if(wj)PLANE_O=buildJet(0);else{PLANE_O=instantiate(proto('Uplane0',()=>buildUnit('plane',0)));PLANE_O.scale.setScalar(1.5);}dyn.add(PLANE_O);}
+ PLANE_O.visible=F.dead<=0&&CUR!=='plane';PLANE_O.position.set(F.x,wj?jetPose(PLANE_O,F.y):F.y,F.z);if(wj)jetGear(PLANE_O,F.y);PLANE_O.rotation.set(0,-F.yaw,0);PLANE_O.rotateX(-F.bank);
  for(const b of PB)sync('B'+b.id,()=>{const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.glow,color:0xFFD27A,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}));sp.scale.set(9,9,1);return sp;},o=>o.position.set(b.x,b.y,b.z));
  for(const b of PB)sync('b'+b.id,()=>{const g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]);return new THREE.Line(g,new THREE.LineBasicMaterial({color:0xFFE9A0,transparent:true,blending:THREE.AdditiveBlending}));},o=>{const a=o.geometry.attributes.position,L=Math.hypot(b.tx-b.sx,b.ty-b.sy,b.tz-b.sz)||1,ln=28;a.setXYZ(0,b.x,b.y,b.z);a.setXYZ(1,b.x-(b.tx-b.sx)/L*ln,b.y-(b.ty-b.sy)/L*ln,b.z-(b.tz-b.sz)/L*ln);a.needsUpdate=true;o.geometry.computeBoundingSphere();});
  for(const r of PR)if(r.t>=0)sync('R'+r.id,()=>{const g=new THREE.Group();const b=new THREE.Mesh(new THREE.CylinderGeometry(0.7,0.7,7,8),std(0xD8D8D0,0.5,0.4));b.rotation.z=Math.PI/2;g.add(b);const f=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.glow,color:0xFFB050,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}));f.scale.set(9,9,1);f.position.x=-5;g.add(f);return g;},o=>{o.position.set(r.x,r.y,r.z);o.rotation.set(0,-Math.atan2(r.vz,r.vx),Math.atan2(r.vy,Math.hypot(r.vx,r.vz)));});}
@@ -1673,7 +1680,7 @@ function syncHeroes(t,dt){if(!G_)return;
  if(P.dead<=0&&CUR!=='titan')sync('hPT'+(xmOK('tank',0)?'x':''),buildPTo,o=>{o.position.set(P.x,hgt(P.x,P.z),P.z);o.rotation.y=-P.yaw;o.children.forEach(c=>{if(c.userData.beacon)c.material.opacity=0.5+0.5*Math.sin(t*6);});});
  if(ET.dead<=0)sync('hET'+(xmOK('tank',1)?'x':''),buildETo,o=>{o.position.set(ET.x,0,ET.z);let d=-ET.yaw-(o.userData.a??-ET.yaw);d=Math.atan2(Math.sin(d),Math.cos(d));o.userData.a=(o.userData.a??-ET.yaw)+d*Math.min(1,dt*5);o.rotation.y=o.userData.a;o.children.forEach(c=>{if(c.userData.beacon)c.material.opacity=0.5+0.5*Math.sin(t*6);});});
  if(ED.dead<=0)sync('hED',buildEDo,o=>{o.position.set(ED.x,ED.y,ED.z);o.rotation.y=-ED.yaw;o.children.forEach(c=>{if(c.userData.spin)c.rotation.y=t*40;});});
- if(EF.dead<=0)sync('hEF',()=>{const g=instantiate(proto('Uplane1',()=>buildUnit('plane',1)));g.scale.setScalar(1.5);return g;},o=>{o.position.set(EF.x,EF.y,EF.z);o.rotation.set(0,-EF.yaw,0);o.rotateX(-EF.bank);});
+ if(EF.dead<=0)sync('hEF'+(xmOK('jet',1)?'x':''),()=>{if(xmOK('jet',1))return buildJet(1);const g=instantiate(proto('Uplane1',()=>buildUnit('plane',1)));g.scale.setScalar(1.5);return g;},o=>{o.position.set(EF.x,o.userData.jet?jetPose(o,EF.y):EF.y,EF.z);if(o.userData.jet)jetGear(o,EF.y);o.rotation.set(0,-EF.yaw,0);o.rotateX(-EF.bank);});
  for(const s of ETS)sync('hs'+s.id,()=>{const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.glow,color:0xFF8060,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}));sp.scale.set(8,8,1);return sp;},o=>o.position.set(s.x,s.y,s.z));
  for(const r of EFR)if(r.t>=0)sync('hr'+r.id,()=>{const g=new THREE.Group();const b=new THREE.Mesh(new THREE.CylinderGeometry(0.7,0.7,7,8),std(0xB0B0A8,0.5,0.4));b.rotation.z=Math.PI/2;g.add(b);const f=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.glow,color:0xFF7050,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}));f.scale.set(9,9,1);f.position.x=-5;g.add(f);return g;},o=>{o.position.set(r.x,r.y,r.z);o.rotation.set(0,-Math.atan2(r.vz||0,r.vx||1),Math.atan2(r.vy||0,Math.hypot(r.vx||1,r.vz||0)));});
  /* where the bot's shells will land: a pulsing red ring on the ground */
